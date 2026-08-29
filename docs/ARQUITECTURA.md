@@ -51,6 +51,7 @@ El trabajo pesado (OCR, lectura de documentos, preprocesamiento de imágenes) co
 | **Word** | mammoth.js | Conversión `.docx` → texto |
 | **Preprocesamiento imagen** | canvas API + OpenCV.js (opcional) | Grayscale, contraste, rotación → mejor precisión OCR |
 | **Parser a campos** | Reglas en JS (regex + heurística validada) | Convierte texto → formularios de la sección 5 de requerimientos |
+| **Diccionario configurable** | Módulo JS (`lib/contexto/diccionario.js`) | Cargos (familias + sinónimos), habilidades, secciones de CV por empresa; carga inicial orientada a servicios administrativos/operativos |
 | **Backend / BD** | Supabase (PostgreSQL + Auth + Storage + Edge Functions + pg_cron) | Todo incluido, plan Free generoso, RLS nativo |
 | **API de correo** | Resend (plan Free: 3.000 correos/mes) | Alertas automáticas (M8) |
 | **Hosting** | Netlify o Cloudflare Pages (Free) | Uso comercial permitido; Vercel Hobby *no* lo permite |
@@ -87,6 +88,23 @@ Detalles de precisión:
 - **Letra manuscrita**: precisión menor; el flujo de edición/revisión manual la cubre (RN-7).
 - Primera vez de uso baja el modelo OCR (~5–15 MB), se **cachea en IndexedDB**.
 - Procesamiento en **Web Worker** (no congela la interfaz); cola de 2–4 workers para lotes.
+
+### 3.1 Detección de cargos (F1)
+
+Tras el parseo, un módulo de **detección de cargos** (`lib/ocr/cargos.js`) cruza la experiencia extraída con el **diccionario configurable** (`lib/contexto/diccionario.js`):
+
+- Normaliza sinónimos (p. ej., "asesor comercial" y "agente de ventas" → familia "ventas") mediante el diccionario de familias y sinónimos.
+- Entrega el **cargo principal** (el de la experiencia más reciente) y la **lista de todos los cargos** detectados/normalizados.
+- El diccionario es editable por entorno de empresa sin reescribir el parser (carga inicial: servicios administrativos/operativos).
+
+### 3.2 Filtros de búsqueda en sesión (F1)
+
+Los CV **extraídos y confirmados** (RN-7) se acumulan en una **bandeja de sesión** en memoria (sin persistencia; la nube llega en F2 con Supabase). Un **panel de filtros** permite depurar esa bandeja por:
+
+- Cargo detectado (familia/término del diccionario).
+- Ciudad, habilidad, idioma, nivel educativo y estado civil.
+
+Esta bandeja es la **vista previa** de la búsqueda y el `matching` de M4: el cargo principal normalizado y las habilidades/idiomas extraídos son la base de la coincidencia candidato↔vacante en fases posteriores.
 
 ## 4. Modelo de datos (PostgreSQL — Supabase)
 
@@ -198,7 +216,9 @@ cv-parser/
 │       │   ├── app/           (rutas y layout)
 │       │   ├── features/      (candidatos, empleados, contratos, memorandos,
 │       │   │                   vacantes, alertas, reportes, dashboard)
-│       │   ├── lib/ocr/       (pipeline lector: tesseract, pdf, docx, parser)
+│       │   ├── lib/ocr/       (pipeline lector: tesseract, pdf, docx, parser, cargos)
+│       │   ├── lib/contexto/  (diccionario configurable: cargos, habilidades, secciones)
+│       │   ├── lib/sesion/    (bandeja de CVs en memoria + filtros de búsqueda)
 │       │   ├── lib/offline/   (IndexedDB, cola de sincronización)
 │       │   ├── lib/api/       (cliente Supabase)
 │       │   └── components/
@@ -216,7 +236,7 @@ cv-parser/
 | Fase | Entregable | Estado |
 |---|---|---|
 | **F0 — Base** | Repo en GitHub, docs (requerimientos/arquitectura), git config | ✅ Hecho |
-| **F1 — Lector (CORE)** | Prototipo del lector (foto/PDF/Word → formulario editable), validación con CV reales de Rosimar | **En curso** |
+| **F1 — Lector (CORE)** | Prototipo del lector (foto/PDF/Word → formulario editable), **detección de cargos** (cargo principal + lista, diccionario configurable) y **filtros de búsqueda en sesión**; validación con CV reales de Rosimar | **En curso** |
 | **F2 — Nube** | Supabase (auth, roles, RLS, storage), persistencia de candidatos, deploy estático, PWA offline/sync | Pendiente |
 | **F3 — Empleados y contratos** | Conversión candidato→empleado, ingreso/salida + razón, contratos (todos los campos), EPS/salud | Pendiente |
 | **F4 — Memorandos y alertas** | Memorandos + contador 3, flujo manual revisión/cancelación, alertas sistema+correo, cron | Pendiente |

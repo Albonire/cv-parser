@@ -85,6 +85,15 @@ Controles de calidad de extracción:
 - Resaltado de campos vacíos o dudosos para revisión.
 - Guardar el documento original en el almacenamiento (histórico).
 
+**Detección de cargos (F1):**
+- El lector identifica los **cargos** a partir de la experiencia laboral extraída y los contrasta con un **diccionario configurable** de cargos (normalización de sinónimos y agrupación por familia).
+- Entrega el **cargo principal** (el de la experiencia más reciente, normalizado a su familia) y la **lista de todos los cargos** detectados.
+- El diccionario es configurable por entorno de la empresa (carga inicial orientada a servicios administrativos/operativos), de modo que adaptar el vocabulario no requiera reescribir el parser.
+
+**Filtros de búsqueda en sesión (F1):**
+- Los CV extraídos y **confirmados** por el usuario se acumulan en una **bandeja de sesión** (en memoria, aún sin persistencia).
+- Un **panel de filtros** permite buscar y depurar en esa bandeja por: cargo detectado (familia/término del diccionario), ciudad, habilidad, idioma, nivel educativo y estado civil.
+
 ### M4. Candidatos / Reclutamiento
 - Registro manual, por lectura de documento o carga masiva.
 - Ficha completa del candidato (sección 5).
@@ -93,6 +102,7 @@ Controles de calidad de extracción:
 - Búsqueda y filtros: nombre, cargo, ciudad, habilidades, experiencia, estudios, estado.
 - **Vacantes**: creación de vacantes con requisitos y pesos.
 - **Matching**: ranking automático de candidatos vs. vacante (coincidencia de habilidades, experiencia, estudios) + calificación humana opcional del reclutador.
+  - En **F1** se entrega una **vista previa** de esto: filtros de búsqueda en sesión (por cargo detectado, ciudad, habilidades, idioma, nivel educativo, estado civil) sobre los CV extraídos y confirmados, y el **cargo principal** normalizado se usa como base para el matching posterior.
 
 ### M5. Empleados
 - Alta de empleado desde un candidato (`Contratado`) o registro directo.
@@ -169,6 +179,7 @@ Canal: **Centro de alertas** dentro del sistema (badge y listado) + **correo ele
 - Foto del aspirante (imagen adjunta).
 - **Formación educativa:** nivel, institución, título, año (primaria, bachiller, técnico, tecnólogo, universitario, posgrado).
 - **Experiencia laboral:** empresa, cargo, fechas, funciones.
+- **Cargo(s) detectado(s):** **cargo principal** (el de la experiencia más reciente) y **lista de todos los cargos** del historial, normalizados según el diccionario configurable (ver M3).
 - Habilidades y competencias, idiomas.
 - **Referencias familiares:** nombre, parentesco, teléfono.
 - **Referencias personales:** nombre, relación, teléfono.
