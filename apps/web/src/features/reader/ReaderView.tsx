@@ -12,7 +12,7 @@ import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
-import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, DocumentValidationIcon, Layers01Icon, ArrowRight01Icon } from 'hugeicons-react';
+import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, Layers01Icon } from 'hugeicons-react';
 
 interface ReaderViewProps {
   onCandidateSaved?: (candidate: CandidateFormData) => void;
@@ -31,6 +31,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [batchQueue, setBatchQueue] = useState<BatchItem[]>([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState<number>(0);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [showRawText, setShowRawText] = useState(false);
 
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
@@ -69,35 +70,41 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   };
 
+  /**
+   * Procesa el lote documento por documento. Cada actualizacion crea objetos
+   * nuevos: mutar los elementos del arreglo de estado en sitio hacia que React
+   * no siempre volviera a pintar el avance de la bandeja.
+   */
   const processBatchQueue = async (items: BatchItem[], index: number) => {
-    if (index >= items.length) return;
+    if (index >= items.length) {
+      setIsProcessing(false);
+      return;
+    }
 
     setIsProcessing(true);
-    const updated = [...items];
-    updated[index].status = 'processing';
-    setBatchQueue(updated);
+    const marcar = (cambios: Partial<BatchItem>) =>
+      setBatchQueue((previo) =>
+        previo.map((item, i) => (i === index ? { ...item, ...cambios } : item))
+      );
+
+    marcar({ status: 'processing' });
 
     try {
       const result = await processDocument(items[index].file, (p, msg) => {
         setProgressPercent(p);
         setProgressMessage(`[${index + 1}/${items.length}] ${msg}`);
       });
-      updated[index].status = 'done';
-      updated[index].result = result;
-      setBatchQueue(updated);
 
-      if (index === 0) {
-        setCurrentResult(result);
-      }
+      marcar({ status: 'done', result, progress: 100 });
+      if (index === 0) setCurrentResult(result);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error al procesar archivo';
-      updated[index].status = 'error';
-      updated[index].error = errorMessage;
-      setBatchQueue(updated);
+      marcar({ status: 'error', error: errorMessage });
     } finally {
-      setIsProcessing(false);
       if (index + 1 < items.length) {
-        processBatchQueue(items, index + 1);
+        await processBatchQueue(items, index + 1);
+      } else {
+        setIsProcessing(false);
       }
     }
   };
@@ -178,7 +185,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       });
       handleNextOrClear();
     } catch (err) {
-      setNotification({ type: "error", message: "Error guardando cédula" });
+      console.error(err);
+      setNotification({ type: 'error', message: 'Error guardando la cédula.' });
     }
   };
 
@@ -194,7 +202,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       });
       handleNextOrClear();
     } catch (err) {
-      setNotification({ type: "error", message: "Error guardando afiliaciones" });
+      console.error(err);
+      setNotification({ type: 'error', message: 'Error guardando las afiliaciones.' });
     }
   };
 
@@ -310,6 +319,88 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             </button>
           </div>
 
+          {/* Calidad de la extraccion: avisos, campos vacios y cargo detectado (RN-7) */}
+          <div className="bg-white rounded-xl border border-navy-200 p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-navy-800">Calidad de la extraccion</span>
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    currentResult.confidenceScore >= 0.8
+                      ? 'bg-brand-100 text-brand-800'
+                      : currentResult.confidenceScore >= 0.55
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}
+                >
+                  Confianza {(currentResult.confidenceScore * 100).toFixed(0)}%
+                </span>
+              </div>
+              <button
+                onClick={() => setShowRawText((v) => !v)}
+                className="text-xs font-semibold text-brand-700 hover:text-brand-900 underline"
+              >
+                {showRawText ? 'Ocultar texto reconocido' : 'Ver texto reconocido'}
+              </button>
+            </div>
+
+            {currentResult.detectedRoles?.cargoPrincipal && (
+              <p className="text-xs text-navy-600">
+                Cargo principal detectado:{' '}
+                <strong className="text-navy-900">{currentResult.detectedRoles.cargoPrincipal}</strong>
+                {currentResult.detectedRoles.familiaPrincipal !==
+                  currentResult.detectedRoles.cargoPrincipal && (
+                  <span className="text-navy-500">
+                    {' '}
+                    (familia: {currentResult.detectedRoles.familiaPrincipal})
+                  </span>
+                )}
+              </p>
+            )}
+
+            {currentResult.warnings && currentResult.warnings.length > 0 && (
+              <ul className="space-y-1">
+                {currentResult.warnings.map((warning) => (
+                  <li key={warning} className="text-xs text-amber-800 flex items-start">
+                    <Alert01Icon className="h-3.5 w-3.5 mr-1.5 mt-0.5 shrink-0 text-amber-600" />
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {currentResult.fieldConfidence && currentResult.fieldConfidence.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {currentResult.fieldConfidence.map((field) => (
+                  <span
+                    key={field.field}
+                    title={
+                      field.level === 'vacio'
+                        ? 'Sin detectar: complete este campo manualmente'
+                        : 'Detectado automaticamente: verifique antes de guardar'
+                    }
+                    className={`text-[11px] px-2 py-0.5 rounded border ${
+                      field.level === 'vacio'
+                        ? 'bg-red-50 border-red-200 text-red-700'
+                        : field.level === 'media'
+                        ? 'bg-amber-50 border-amber-200 text-amber-800'
+                        : 'bg-brand-50 border-brand-200 text-brand-800'
+                    }`}
+                  >
+                    {field.label}
+                    {field.level === 'vacio' ? ' - vacio' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {showRawText && (
+              <pre className="p-3 bg-navy-50 rounded-lg text-[11px] font-mono text-navy-800 max-h-80 overflow-y-auto whitespace-pre-wrap">
+                {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
+              </pre>
+            )}
+          </div>
+
           {currentResult.detectedType === 'cv' && currentResult.candidateData && (
             <EditableCvForm
               initialData={currentResult.candidateData}
@@ -346,27 +437,31 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             />
           )}
 
-          {currentResult.detectedType === 'unknown' && (
-            <div className="bg-white p-6 rounded-xl border border-navy-200 shadow-sm space-y-4">
-              <h3 className="text-base font-bold text-navy-900">
-                Texto Reconocido del Documento
-              </h3>
-              <p className="text-xs text-navy-500">
-                Se detecto tipo: <strong>{currentResult.detectedType.toUpperCase()}</strong>. Puedes revisar el texto extraido a continuacion:
-              </p>
-              <pre className="p-4 bg-navy-50 rounded-lg text-xs font-mono text-navy-800 max-h-96 overflow-y-auto whitespace-pre-wrap">
-                {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
-              </pre>
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setCurrentResult(null)}
-                  className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-sm font-semibold rounded-lg"
-                >
-                  Volver al Lector
-                </button>
+          {!currentResult.candidateData &&
+            !currentResult.contractData &&
+            !currentResult.idCardData &&
+            !currentResult.healthData && (
+              <div className="bg-white p-6 rounded-xl border border-navy-200 shadow-sm space-y-4">
+                <h3 className="text-base font-bold text-navy-900">
+                  No se pudo estructurar el documento
+                </h3>
+                <p className="text-xs text-navy-500">
+                  Tipo detectado: <strong>{currentResult.detectedType.toUpperCase()}</strong>. Revise
+                  el texto reconocido para decidir si conviene volver a escanear el documento.
+                </p>
+                <pre className="p-4 bg-navy-50 rounded-lg text-xs font-mono text-navy-800 max-h-96 overflow-y-auto whitespace-pre-wrap">
+                  {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
+                </pre>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setCurrentResult(null)}
+                    className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-sm font-semibold rounded-lg"
+                  >
+                    Volver al lector
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
     </div>

@@ -5,7 +5,7 @@ import { parseIdCardText } from './parser-id';
 import { parseHealthText } from './parser-health';
 import { classifyDocumentType } from './document-classifier';
 import { extractSkillsFromText } from './skills-taxonomy';
-import { sortTextItemsByColumns, TextItemWithCoords } from './column-layout';
+import { buildLayout, Word } from './layout';
 
 describe('Skills Taxonomy Extractor', () => {
   it('debe extraer habilidades tecnicas y blandas sin falsos positivos', () => {
@@ -21,18 +21,93 @@ describe('Skills Taxonomy Extractor', () => {
   });
 });
 
-describe('Column Layout Segmenter', () => {
-  it('debe ordenar bloques de 2 columnas separando la izquierda de la derecha', () => {
-    const items: TextItemWithCoords[] = [
-      { text: 'Datos Personales', x: 50, y: 100, width: 100, height: 12, fontSize: 12 },
-      { text: 'Experiencia Laboral', x: 400, y: 100, width: 150, height: 12, fontSize: 12 },
-      { text: 'Telefono: 3123456789', x: 50, y: 130, width: 120, height: 10, fontSize: 10 },
-      { text: 'Empresa ABC - 2020 a 2023', x: 400, y: 130, width: 180, height: 10, fontSize: 10 },
+describe('Motor de maquetacion', () => {
+  function palabra(text: string, x: number, y: number, width: number, fontSize = 10): Word {
+    return { text, x, y, width, height: fontSize, fontSize, confidence: 1 };
+  }
+
+  it('lee primero la columna izquierda completa y despues la derecha', () => {
+    // Caso real de CV_01: barra lateral estrecha a la izquierda y contenido a la
+    // derecha. Los titulos cortos de la derecha ("EDUCACION") caian antes en la
+    // columna izquierda porque la pagina se partia por la mitad exacta.
+    const words: Word[] = [
+      palabra('CONTACTO', 40, 40, 60, 11),
+      palabra('Celular: 318 456 7890', 40, 60, 100),
+      palabra('HABILIDADES', 40, 90, 70, 11),
+      palabra('Python', 40, 110, 40),
+      palabra('IDIOMAS', 40, 140, 50, 11),
+      palabra('Ingles: C1', 40, 160, 45),
+      palabra('Frances: B1', 40, 180, 50),
+      palabra('CERTIFICACIONES', 40, 210, 90, 11),
+      palabra('Scrum Master', 40, 230, 65),
+      palabra('CAMILO ANDRES VEGA ORTIZ', 300, 40, 200, 16),
+      palabra('EXPERIENCIA LABORAL', 300, 90, 120, 11),
+      palabra('Soluciones Mecatronicas SAS', 300, 110, 160),
+      palabra('EDUCACION', 300, 140, 70, 11),
+      palabra('Universidad Industrial de Santander', 300, 160, 190),
+      palabra('REFERENCIAS', 300, 210, 80, 11),
+      palabra('Ing. Rodrigo Perez - 310 987 6543', 300, 230, 185),
     ];
 
-    const result = sortTextItemsByColumns(items, 800);
-    expect(result).toContain('Datos Personales');
-    expect(result).toContain('Experiencia Laboral');
+    const layout = buildLayout([{ words, width: 595, height: 842 }]);
+    const lineas = layout.lines.map((l) => l.text);
+
+    expect(layout.columnsPerPage).toEqual([2]);
+    // Ningun renglon mezcla las dos columnas.
+    expect(lineas).not.toContain('IDIOMAS EDUCACION');
+    expect(lineas.some((l) => l.includes('IDIOMAS') && l.includes('EDUCACION'))).toBe(false);
+    // La columna izquierda va completa antes de la derecha.
+    expect(lineas.indexOf('IDIOMAS')).toBeLessThan(lineas.indexOf('CAMILO ANDRES VEGA ORTIZ'));
+    // Cada titulo queda pegado a su propio contenido.
+    expect(lineas.indexOf('EXPERIENCIA LABORAL') + 1).toBe(
+      lineas.indexOf('Soluciones Mecatronicas SAS')
+    );
+    expect(lineas.indexOf('EDUCACION') + 1).toBe(
+      lineas.indexOf('Universidad Industrial de Santander')
+    );
+  });
+
+  it('no parte en columnas un formulario con etiqueta y valor en el mismo renglon', () => {
+    // Caso real de CV_10 (formato DAFP): una sola columna con dos campos por
+    // renglon. Partirla separaba cada "Cargo:" de su "Empresa:".
+    const words: Word[] = [
+      palabra('NOMBRES: ANA MARIA', 45, 40, 150, 9),
+      palabra('APELLIDOS: PEREZ LOPEZ', 255, 40, 160, 9),
+      palabra('Cedula de ciudadania No.: 45987123', 45, 60, 195, 9),
+      palabra('Sexo: Femenino', 255, 60, 100, 9),
+      palabra('Lugar de nacimiento: Bogota D.C.', 45, 80, 195, 9),
+      palabra('Nacionalidad: Colombiana', 297, 80, 150, 9),
+      palabra('Empresa: Ministerio de Justicia', 45, 100, 190, 9),
+      palabra('Cargo: Asesora Juridica', 340, 100, 140, 9),
+      palabra('Titulo: Especialista en Derecho Administrativo', 198, 120, 250, 9),
+    ];
+
+    const layout = buildLayout([{ words, width: 595, height: 842 }]);
+
+    expect(layout.columnsPerPage).toEqual([1]);
+    // Etiqueta y valor permanecen en el mismo renglon.
+    expect(layout.lines[0].text).toContain('NOMBRES: ANA MARIA');
+    expect(layout.lines[0].text).toContain('APELLIDOS: PEREZ LOPEZ');
+    expect(layout.lines.some((l) => l.text.includes('Empresa') && l.text.includes('Cargo'))).toBe(
+      true
+    );
+  });
+
+  it('no confunde una columna de fechas alineada a la derecha con dos columnas', () => {
+    const words: Word[] = [
+      palabra('Soluciones Mecatronicas SAS', 40, 40, 200),
+      palabra('2021-2023', 480, 40, 60),
+      palabra('Lider tecnico de automatizacion', 40, 60, 220),
+      palabra('Robotica Andina Ltda', 40, 90, 180),
+      palabra('2018-2021', 480, 90, 60),
+      palabra('Desarrollador de firmware', 40, 110, 190),
+    ];
+
+    const layout = buildLayout([{ words, width: 595, height: 842 }]);
+
+    expect(layout.columnsPerPage).toEqual([1]);
+    expect(layout.lines[0].text).toContain('Soluciones Mecatronicas SAS');
+    expect(layout.lines[0].text).toContain('2021-2023');
   });
 });
 

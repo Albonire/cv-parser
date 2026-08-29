@@ -46,12 +46,15 @@ El trabajo pesado (OCR, lectura de documentos, preprocesamiento de imágenes) co
 | **Frontend (SPA)** | React + Vite + TailwindCSS | Rápido, responsive, ecosistema PWA maduro |
 | **PWA / offline** | Vite PWA + IndexedDB (localForage/Dexie) + librería de sincronización | Funciona sin internet y sincroniza (RNF-3) |
 | **Gráficos** | Recharts | Dashboards interactivos (M9) |
-| **OCR** | Tesseract.js (WASM, idioma `spa`) | OCR en español, 100% en navegador, $0, offline, privado |
-| **PDF** | pdf.js | Extracción de texto y renderizado de páginas escaneadas |
+| **OCR** | Tesseract.js (WASM, `spa+eng`) | OCR en español, 100% en navegador, $0, offline, privado |
+| **PDF** | pdf.js | Extracción de palabras con coordenadas y render de páginas escaneadas |
 | **Word** | mammoth.js | Conversión `.docx` → texto |
-| **Preprocesamiento imagen** | canvas API + OpenCV.js (opcional) | Grayscale, contraste, rotación → mejor precisión OCR |
-| **Parser a campos** | Reglas en JS (regex + heurística validada) | Convierte texto → formularios de la sección 5 de requerimientos |
-| **Diccionario configurable** | Módulo JS (`lib/contexto/diccionario.js`) | Cargos (familias + sinónimos), habilidades, secciones de CV por empresa; carga inicial orientada a servicios administrativos/operativos |
+| **Preprocesamiento imagen** | Canvas API | Reescalado a ~300 DPI, grises, binarización de Otsu, corrección de inclinación |
+| **Maquetación** | `lib/ocr/layout.ts` | Renglones y columnas a partir de coordenadas; común a PDF, imagen y Word |
+| **Segmentación** | `lib/ocr/sections.ts` | Encabezados por léxico ES/EN + señales de formato, tolerante a ruido de OCR |
+| **Parser a campos** | `lib/ocr/fields/` | Un extractor por campo; convierte secciones → formularios de la sección 5 |
+| **Gazetteer de lugares** | `lib/contexto/lugares.ts` | Municipios y departamentos DANE, para reconocer cualquier ciudad del país |
+| **Diccionario configurable** | `lib/contexto/diccionario.ts` | Cargos (familias + sinónimos); carga inicial orientada a servicios administrativos/operativos |
 | **Backend / BD** | Supabase (PostgreSQL + Auth + Storage + Edge Functions + pg_cron) | Todo incluido, plan Free generoso, RLS nativo |
 | **API de correo** | Resend (plan Free: 3.000 correos/mes) | Alertas automáticas (M8) |
 | **Hosting** | Netlify o Cloudflare Pages (Free) | Uso comercial permitido; Vercel Hobby *no* lo permite |
@@ -61,37 +64,85 @@ El trabajo pesado (OCR, lectura de documentos, preprocesamiento de imágenes) co
 
 ## 3. Pipeline del lector (CORE — M3)
 
+El lector es un **pipeline determinista de cuatro etapas**. La clave está en que los cuatro orígenes
+(PDF digital, PDF escaneado, imagen y Word) producen la **misma representación intermedia**: palabras
+con su caja delimitadora. Así el orden de lectura se reconstruye una sola vez y de la misma forma
+para todos.
+
 ```
-Entrada (foto/PDF/Word)
+Entrada (foto / PDF / Word)
    │
-   ├─ ¿DOCX?         → mammoth.js → texto
-   ├─ ¿PDF?  → ¿trae capa de texto?
-   │            ├─ Sí → pdf.js → texto por página
-   │            └─ No → pdf.js render página (escala 2.5 ≈180 DPI)
-   │                  → canvas → Tesseract.js → texto
-   └─ ¿Imagen?       → preprocesar (gray/contraste/rotación)
-                      → Tesseract.js (spa) → texto
+   ├─ ¿DOCX?   → mammoth.js ──────────────────────────┐
+   ├─ ¿PDF con capa de texto? → pdf.js ───────────────┤
+   ├─ ¿PDF escaneado? → pdf.js render (~300 DPI) ─┐   │
+   └─ ¿Imagen? ───────────────────────────────────┤   │
+                                                  ▼   │
+                         preprocesado de imagen (lib/ocr/image-prep.ts)
+                         reescalado → grises → Otsu → corrección de inclinación
+                                                  │   │
+                                                  ▼   │
+                         Tesseract.js (spa+eng, WASM, cajas de palabra)
+                                                  │   │
+   [1] EXTRACCIÓN ────────────────────────────────┴───┘
+                         → Word[] { texto, x, y, ancho, alto, fuente, confianza }
    │
    ▼
-Texto unificado → Parser por secciones:
-   • Hoja de vida   → campos 5.1
-   • Contrato       → campos 5.2
-   • Cédula         → campos 5.3
-   • EPS/Salud      → campos 5.4
+   [2] MAQUETACIÓN (lib/ocr/layout.ts)
+       • renglones por solapamiento vertical real de las cajas
+       • columnas por canal vertical vacío (perfil de proyección), no por mitad de página
+       • bandas separadas por renglones a todo el ancho
+       → DocumentLayout { líneas con columna, tamaño de fuente, negrita, mayúsculas }
    │
    ▼
-Formulario editable → revisión humana → confirmar → persistir
+   [3] SECCIONES (lib/ocr/sections.ts)
+       léxico de encabezados ES/EN con tolerancia a ruido de OCR
+       + señales de formato (negrita, mayúsculas, tamaño, renglón corto)
+       → contacto | perfil | experiencia | educación | habilidades | idiomas |
+         certificaciones | referencias
+   │
+   ▼
+   [4] EXTRACTORES POR CAMPO (lib/ocr/fields/)
+       personal · experience · education · extras · dates · phone
+       apoyados en gazetteers (lib/contexto/lugares.ts) y en el
+       diccionario configurable de cargos (lib/contexto/diccionario.ts)
+       → campos 5.1 (hoja de vida) / 5.2 (contrato) / 5.3 (cédula) / 5.4 (salud)
+   │
+   ▼
+Formulario editable + confianza por campo → revisión humana (RN-7) → confirmar → persistir
 ```
+
+### 3.0 Por qué la maquetación va antes que el parser
+
+Un CV a dos columnas y un formulario oficial con etiqueta y valor en el mismo renglón exigen
+decisiones opuestas: el primero hay que partirlo verticalmente, el segundo no. Partir la página por
+la mitad falla en ambos sentidos —manda los títulos cortos de la columna derecha a la izquierda y
+separa cada `Cargo:` de su `Empresa:`—, y ningún ajuste del parser lo compensa, porque para cuando
+el parser actúa el texto ya perdió el orden.
+
+Por eso la detección de columnas busca un **canal vertical vacío continuo** (mínimo 3% del ancho de
+página, con renglones suficientes a ambos lados). Un formulario de una sola columna no tiene ese
+canal, y una columna de fechas alineada a la derecha no aporta renglones suficientes.
+
+### 3.0.1 Banco de precisión
+
+`apps/web/src/lib/ocr/reader-accuracy.test.ts` corre el **pipeline real** sobre los 10 PDF de
+`apps/web/test-pdfs/` y compara 165 campos contra la verdad de referencia de
+`src/lib/ocr/__fixtures__/ground-truth.json`. Imprime una tabla por documento y guarda
+`eval-report.json`. El umbral se ajusta con `CV_EVAL_THRESHOLD`.
+
+Es la salvaguarda contra el error que tenía el proyecto: las pruebas anteriores extraían el texto en
+el orden crudo del PDF, un orden que el parser nunca recibe en producción, así que pasaban en verde
+mientras el lector fallaba con esos mismos archivos.
 
 Detalles de precisión:
 - Las fotos/escaneos limpios e impresos tienen **buena precisión** con Tesseract (`spa`).
 - **Letra manuscrita**: precisión menor; el flujo de edición/revisión manual la cubre (RN-7).
-- Primera vez de uso baja el modelo OCR (~5–15 MB), se **cachea en IndexedDB**.
+- El motor de OCR (worker, núcleo WebAssembly y modelos `spa`/`eng`) se sirve **desde la propia aplicación**, no desde un CDN: el lector funciona sin conexión y en redes que bloqueen CDNs externos. La primera lectura descarga ~10 MB y el service worker los conserva en caché.
 - Procesamiento en **Web Worker** (no congela la interfaz); cola de 2–4 workers para lotes.
 
 ### 3.1 Detección de cargos (F1)
 
-Tras el parseo, un módulo de **detección de cargos** (`lib/ocr/cargos.js`) cruza la experiencia extraída con el **diccionario configurable** (`lib/contexto/diccionario.js`):
+Tras el parseo, el módulo de **detección de cargos** (`lib/ocr/cargos.ts`) cruza la experiencia extraída con el **diccionario configurable** (`lib/contexto/diccionario.ts`):
 
 - Normaliza sinónimos (p. ej., "asesor comercial" y "agente de ventas" → familia "ventas") mediante el diccionario de familias y sinónimos.
 - Entrega el **cargo principal** (el de la experiencia más reciente) y la **lista de todos los cargos** detectados/normalizados.

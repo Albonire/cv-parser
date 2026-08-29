@@ -1,4 +1,5 @@
-import { ExtractedDocumentData } from '../../types/reader';
+import { ExtractedDocumentData, FieldConfidence } from '../../types/reader';
+import { CandidateFormData } from '../../types/candidate';
 import { readDocxFile } from './docx-reader';
 import { readPdfFile } from './pdf-reader';
 import { performOcr } from './tesseract-worker';
@@ -7,10 +8,14 @@ import { parseCvText } from './parser-cv';
 import { parseContractText } from './parser-contract';
 import { parseIdCardText } from './parser-id';
 import { parseHealthText } from './parser-health';
+import { detectarCargos } from './cargos';
+import { DocumentLayout, layoutFromPlainText } from './layout';
+
+const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
 
 /**
- * Orquestador principal de lectura y extraccion de documentos en el navegador.
- * 100% Client-side, costo $0, soporte offline.
+ * Orquestador de lectura y extraccion de documentos. Todo corre en el navegador
+ * (costo $0) y de forma determinista: sin modelos de lenguaje.
  */
 export async function processDocument(
   file: File,
@@ -20,102 +25,66 @@ export async function processDocument(
   const extension = file.name.split('.').pop()?.toLowerCase() || '';
 
   let extractedText = '';
-  let method: 'pdf_text' | 'pdf_ocr' | 'image_ocr' | 'docx' = 'pdf_text';
+  let layout: DocumentLayout | undefined;
+  let method: ExtractedDocumentData['method'] = 'pdf_text';
   let rawConfidence = 0.95;
 
-  if (onProgress) {
-    onProgress(5, `Iniciando analisis de ${file.name}...`);
-  }
+  onProgress?.(5, `Iniciando analisis de ${file.name}...`);
 
-  // 1. Archivos Word (.docx)
   if (extension === 'docx') {
     method = 'docx';
-    if (onProgress) onProgress(30, 'Extrayendo texto del documento Word...');
+    onProgress?.(30, 'Extrayendo texto del documento Word...');
     const result = await readDocxFile(file);
     extractedText = result.text;
+    layout = layoutFromPlainText(result.text);
     rawConfidence = 0.98;
-  }
-  // 2. Archivos PDF
-  else if (extension === 'pdf') {
-    if (onProgress) onProgress(20, 'Analizando capas del PDF...');
+  } else if (extension === 'pdf') {
+    onProgress?.(20, 'Analizando capas del PDF...');
     const pdfResult = await readPdfFile(file, onProgress);
 
     if (pdfResult.isDigitalText) {
       method = 'pdf_text';
       extractedText = pdfResult.text;
+      layout = pdfResult.layout;
       rawConfidence = 0.96;
     } else if (pdfResult.renderedPages && pdfResult.renderedPages.length > 0) {
       method = 'pdf_ocr';
-      if (onProgress) onProgress(50, 'Ejecutando OCR sobre paginas escaneadas...');
+      onProgress?.(50, 'Ejecutando OCR sobre paginas escaneadas...');
       const ocrRes = await performOcr(pdfResult.renderedPages, onProgress);
       extractedText = ocrRes.text;
+      layout = ocrRes.layout;
       rawConfidence = ocrRes.confidence;
     }
-  }
-  // 3. Imagenes y fotos (JPG, PNG, WEBP, BMP, GIF)
-  else if (['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif'].includes(extension)) {
+  } else if (EXTENSIONES_IMAGEN.includes(extension)) {
     method = 'image_ocr';
-    if (onProgress) onProgress(25, 'Preprocesando imagen y ejecutando OCR...');
+    onProgress?.(25, 'Preprocesando imagen y ejecutando OCR...');
     const ocrRes = await performOcr(file, onProgress);
     extractedText = ocrRes.text;
+    layout = ocrRes.layout;
     rawConfidence = ocrRes.confidence;
   } else {
-    throw new Error(`Formato no soportado: .${extension}. Use PDF, DOCX, JPG, PNG, WEBP o GIF.`);
+    throw new Error(
+      `Formato no soportado: .${extension}. Use PDF, DOCX, JPG, PNG, WEBP, BMP, GIF o TIFF.`
+    );
   }
 
-  if (onProgress) {
-    onProgress(90, 'Clasificando y estructurando campos del formulario...');
-  }
+  onProgress?.(90, 'Clasificando y estructurando campos del formulario...');
 
-  // 4. Clasificar tipo de documento
   const detectedType = classifyDocumentType(extractedText);
 
-  // 5. Extraer segun tipo detectado
-  const candidateData = detectedType === 'cv' ? parseCvText(extractedText) : undefined;
+  const candidateData = detectedType === 'cv' ? parseCvText(extractedText, layout) : undefined;
   const contractData = detectedType === 'contract' ? parseContractText(extractedText) : undefined;
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;
   const healthData = detectedType === 'health' ? parseHealthText(extractedText) : undefined;
 
-  // 6. Calculo de Score de Confianza Real y Compuesto
-  const warnings: string[] = [];
-  let compositeConfidence = rawConfidence;
+  const { confidence, warnings, fieldConfidence } = evaluarCalidad(
+    detectedType,
+    candidateData,
+    extractedText,
+    rawConfidence
+  );
 
-  if (detectedType === 'cv' && candidateData) {
-    let score = (rawConfidence * 0.3); // 30% base de claridad OCR
-
-    if (candidateData.firstNames || candidateData.lastNames) {
-      score += 0.25;
-    } else {
-      warnings.push('No se detectó el nombre del candidato en el encabezado. Ingréselo manualmente.');
-    }
-
-    if (candidateData.email || candidateData.phone) {
-      score += 0.20;
-    } else {
-      warnings.push('No se detectó información de contacto (email ni teléfono).');
-    }
-
-    if (candidateData.experience.length > 0 || candidateData.education.length > 0) {
-      score += 0.15;
-    }
-
-    if (candidateData.skills.length > 0 || candidateData.summary) {
-      score += 0.10;
-    }
-
-    compositeConfidence = Math.min(1.0, Math.max(0.2, score));
-  }
-
-  if (extractedText.length < 40) {
-    warnings.push('Poco texto detectado en el documento. Verifique la calidad del escaneo.');
-    compositeConfidence = Math.min(compositeConfidence, 0.4);
-  }
-
-  const durationMs = Math.round(performance.now() - startTime);
-
-  if (onProgress) {
-    onProgress(100, 'Extraccion completada con exito.');
-  }
+  onProgress?.(100, 'Extraccion completada con exito.');
 
   return {
     detectedType,
@@ -123,22 +92,109 @@ export async function processDocument(
     fileSize: file.size,
     fileType: file.type || extension,
     extractedText,
-    confidenceScore: compositeConfidence,
-    processingTimeMs: durationMs,
+    confidenceScore: confidence,
+    processingTimeMs: Math.round(performance.now() - startTime),
     method,
     candidateData,
     contractData,
     idCardData,
     healthData,
     warnings: warnings.length > 0 ? warnings : undefined,
+    fieldConfidence,
+    detectedRoles: candidateData ? detectarCargos(candidateData.experience) : undefined,
+  };
+}
+
+/** Campos clave de una hoja de vida y su peso en el puntaje de confianza. */
+const CAMPOS_CLAVE: { field: keyof CandidateFormData; label: string; peso: number }[] = [
+  { field: 'firstNames', label: 'Nombres', peso: 0.14 },
+  { field: 'lastNames', label: 'Apellidos', peso: 0.14 },
+  { field: 'documentNumber', label: 'Numero de documento', peso: 0.1 },
+  { field: 'email', label: 'Correo electronico', peso: 0.08 },
+  { field: 'phone', label: 'Telefono', peso: 0.08 },
+  { field: 'cityResidence', label: 'Ciudad de residencia', peso: 0.06 },
+  { field: 'headline', label: 'Cargo o titular', peso: 0.05 },
+  { field: 'experience', label: 'Experiencia laboral', peso: 0.1 },
+  { field: 'education', label: 'Formacion academica', peso: 0.1 },
+  { field: 'skills', label: 'Habilidades', peso: 0.05 },
+];
+
+/**
+ * Calcula la confianza compuesta y marca que campos quedaron vacios o dudosos,
+ * que es lo que la persona de RRHH debe revisar antes de guardar (RN-7).
+ */
+function evaluarCalidad(
+  detectedType: ExtractedDocumentData['detectedType'],
+  candidato: CandidateFormData | undefined,
+  texto: string,
+  confianzaOcr: number
+): { confidence: number; warnings: string[]; fieldConfidence: FieldConfidence[] } {
+  const warnings: string[] = [];
+  const fieldConfidence: FieldConfidence[] = [];
+
+  if (texto.trim().length < 40) {
+    warnings.push('Se reconocio muy poco texto. Verifique la calidad del escaneo o la foto.');
+  }
+
+  if (detectedType !== 'cv' || !candidato) {
+    return {
+      confidence: texto.trim().length < 40 ? Math.min(confianzaOcr, 0.4) : confianzaOcr,
+      warnings,
+      fieldConfidence,
+    };
+  }
+
+  // 30% del puntaje viene de la claridad del OCR y 70% de cuantos campos se llenaron.
+  let puntaje = confianzaOcr * 0.3;
+
+  for (const campo of CAMPOS_CLAVE) {
+    const valor = candidato[campo.field];
+    const lleno = Array.isArray(valor) ? valor.length > 0 : Boolean(valor && String(valor).trim());
+
+    if (lleno) {
+      puntaje += campo.peso * 0.7;
+      fieldConfidence.push({
+        field: campo.field,
+        label: campo.label,
+        level: confianzaOcr >= 0.85 ? 'alta' : 'media',
+      });
+    } else {
+      fieldConfidence.push({ field: campo.field, label: campo.label, level: 'vacio' });
+    }
+  }
+
+  if (!candidato.firstNames && !candidato.lastNames) {
+    warnings.push('No se detecto el nombre del candidato. Escribalo manualmente.');
+  }
+  if (!candidato.email && !candidato.phone) {
+    warnings.push('No se detecto informacion de contacto (ni correo ni telefono).');
+  }
+  if (candidato.experience.length === 0) {
+    warnings.push('No se detecto experiencia laboral. Revise el documento original.');
+  }
+  if (confianzaOcr < 0.7) {
+    warnings.push(
+      'La calidad del reconocimiento es baja. Revise campo por campo antes de guardar.'
+    );
+  }
+
+  const confianza = Math.min(1, Math.max(0.2, puntaje));
+
+  return {
+    confidence: texto.trim().length < 40 ? Math.min(confianza, 0.4) : confianza,
+    warnings,
+    fieldConfidence,
   };
 }
 
 export * from './skills-taxonomy';
+export * from './layout';
 export * from './pdf-reader';
 export * from './docx-reader';
 export * from './tesseract-worker';
 export * from './document-classifier';
+export * from './sections';
+export * from './cargos';
 export * from './parser-cv';
 export * from './parser-contract';
 export * from './parser-id';

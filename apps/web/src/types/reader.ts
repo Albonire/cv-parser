@@ -5,6 +5,13 @@ import { HealthFormData } from './health';
 
 export type DetectedDocumentType = 'cv' | 'contract' | 'id_card' | 'health' | 'unknown';
 
+/** Confianza de un campo concreto, para resaltarlo en el formulario de revision. */
+export interface FieldConfidence {
+  field: string;
+  label: string;
+  level: 'alta' | 'media' | 'baja' | 'vacio';
+}
+
 export interface ExtractedDocumentData {
   detectedType: DetectedDocumentType;
   fileName: string;
@@ -19,6 +26,14 @@ export interface ExtractedDocumentData {
   idCardData?: IdCardFormData;
   healthData?: HealthFormData;
   warnings?: string[];
+  /** Confianza por campo (RN-7: resaltar lo dudoso antes de guardar). */
+  fieldConfidence?: FieldConfidence[];
+  /** Cargo principal y familias detectadas contra el diccionario configurable. */
+  detectedRoles?: {
+    cargoPrincipal: string;
+    familiaPrincipal: string;
+    cargos: { cargo: string; familia: string | null }[];
+  };
 }
 
 export interface BatchItem {

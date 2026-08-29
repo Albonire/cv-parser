@@ -81,9 +81,17 @@ Permite **subir** una hoja de vida, contrato, documento de identidad o afiliaci�
 El sistema extrae automáticamente los campos del **Formulario de Datos** (ver sección 5) y los **presenta en pantalla siempre editables** antes de guardar. El usuario revisa, corrige y confirma; nada se guarda sin revisión.
 
 Controles de calidad de extracción:
-- Indicador de confianza del OCR por documento.
-- Resaltado de campos vacíos o dudosos para revisión.
-- Guardar el documento original en el almacenamiento (histórico).
+- Indicador de confianza compuesto por documento (30% claridad del OCR, 70% campos efectivamente
+  reconocidos).
+- Resaltado de campos vacíos o dudosos para revisión, con distintivo por campo.
+- Panel de **texto reconocido** siempre disponible junto al formulario, para contrastar contra el
+  documento original.
+- Guardar el documento original en el almacenamiento (histórico). *Pendiente: requiere Supabase
+  Storage (F2).*
+
+**Estado de implementación (F1):** el pipeline se documenta en
+[ARQUITECTURA.md §3](ARQUITECTURA.md#3-pipeline-del-lector-core--m3) y su precisión se mide de forma
+automática sobre el banco de pruebas del repositorio.
 
 **Detección de cargos (F1):**
 - El lector identifica los **cargos** a partir de la experiencia laboral extraída y los contrasta con un **diccionario configurable** de cargos (normalización de sinónimos y agrupación por familia).
