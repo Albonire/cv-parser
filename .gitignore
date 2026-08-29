@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Archivos de prueba temporales
 .muestra/
+
+# Volcados de memoria
+core.**.tsbuildinfo
