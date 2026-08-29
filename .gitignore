@@ -1,0 +1,31 @@
+# Dependencias
+node_modules/
+.pnp/
+.pnp.js
+
+# Compilación / build
+dist/
+build/
+out/
+.next/
+eslintcache
+
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Archivos de prueba temporales
+.muestra/
