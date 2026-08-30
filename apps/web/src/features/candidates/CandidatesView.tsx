@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { CandidateFormData, CandidateStatus } from '../../types/candidate';
+import { familiaDeCargo } from '../../lib/contexto/diccionario';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
 import { EmployeeItem } from '../../types/employee';
@@ -15,6 +16,40 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
   const [selectedStatus, setSelectedStatus] = useState<string>('todos');
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateFormData | null>(null);
 
+  // Filtros por facetas (F1 de docs/ARQUITECTURA.md 3.2)
+  const [filtroCargo, setFiltroCargo] = useState('todos');
+  const [filtroCiudad, setFiltroCiudad] = useState('todos');
+  const [filtroHabilidad, setFiltroHabilidad] = useState('todos');
+  const [filtroIdioma, setFiltroIdioma] = useState('todos');
+  const [filtroNivel, setFiltroNivel] = useState('todos');
+  const [filtroEstadoCivil, setFiltroEstadoCivil] = useState('todos');
+
+  /** Cargo principal normalizado del candidato: el de su experiencia mas reciente. */
+  const cargoDe = (c: CandidateFormData): string => {
+    const posicion = c.experience?.[0]?.position?.trim() || c.headline?.trim() || '';
+    return posicion ? familiaDeCargo(posicion) ?? posicion : '';
+  };
+
+  const ciudadDe = (c: CandidateFormData): string =>
+    (c.cityResidence || '').split(',')[0].trim();
+
+  /** Opciones disponibles, construidas con lo que realmente hay en la bandeja. */
+  const opciones = useMemo(() => {
+    const unicos = (valores: string[]) =>
+      [...new Set(valores.filter((v) => v && v.length > 1))].sort((a, b) =>
+        a.localeCompare(b, 'es')
+      );
+
+    return {
+      cargos: unicos(candidates.map(cargoDe)),
+      ciudades: unicos(candidates.map(ciudadDe)),
+      habilidades: unicos(candidates.flatMap((c) => (c.skills ?? []).map((s) => s.skillName))),
+      idiomas: unicos(candidates.flatMap((c) => (c.languages ?? []).map((l) => l.language))),
+      niveles: unicos(candidates.flatMap((c) => (c.education ?? []).map((e) => e.level))),
+      estadosCiviles: unicos(candidates.map((c) => c.maritalStatus ?? '')),
+    };
+  }, [candidates]);
+
   const filteredCandidates = candidates.filter((c) => {
     const matchesSearch =
       `${c.firstNames} ${c.lastNames} ${c.documentNumber} ${c.email} ${c.phone} ${c.cityResidence || ''}`
@@ -22,8 +57,46 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
         .includes(searchTerm.toLowerCase());
 
     const matchesStatus = selectedStatus === 'todos' || c.status === selectedStatus;
-    return matchesSearch && matchesStatus;
+    const matchesCargo = filtroCargo === 'todos' || cargoDe(c) === filtroCargo;
+    const matchesCiudad = filtroCiudad === 'todos' || ciudadDe(c) === filtroCiudad;
+    const matchesHabilidad =
+      filtroHabilidad === 'todos' || (c.skills ?? []).some((s) => s.skillName === filtroHabilidad);
+    const matchesIdioma =
+      filtroIdioma === 'todos' || (c.languages ?? []).some((l) => l.language === filtroIdioma);
+    const matchesNivel =
+      filtroNivel === 'todos' || (c.education ?? []).some((e) => e.level === filtroNivel);
+    const matchesEstadoCivil =
+      filtroEstadoCivil === 'todos' || c.maritalStatus === filtroEstadoCivil;
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesCargo &&
+      matchesCiudad &&
+      matchesHabilidad &&
+      matchesIdioma &&
+      matchesNivel &&
+      matchesEstadoCivil
+    );
   });
+
+  const filtrosActivos = [
+    filtroCargo,
+    filtroCiudad,
+    filtroHabilidad,
+    filtroIdioma,
+    filtroNivel,
+    filtroEstadoCivil,
+  ].filter((f) => f !== 'todos').length;
+
+  const limpiarFiltros = () => {
+    setFiltroCargo('todos');
+    setFiltroCiudad('todos');
+    setFiltroHabilidad('todos');
+    setFiltroIdioma('todos');
+    setFiltroNivel('todos');
+    setFiltroEstadoCivil('todos');
+  };
 
   const handleConvertToEmployee = async (candidate: CandidateFormData) => {
     if (
@@ -118,6 +191,53 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
             <option value="contratado">Contratado</option>
             <option value="descartado">Descartado</option>
           </select>
+        </div>
+      </div>
+
+      {/* Filtros por facetas sobre los CV extraidos y confirmados (F1) */}
+      <div className="bg-white p-4 rounded-xl border border-navy-200 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-navy-800">Filtros de busqueda</h3>
+          {filtrosActivos > 0 && (
+            <button
+              onClick={limpiarFiltros}
+              className="text-xs font-semibold text-brand-700 hover:text-brand-900 underline"
+            >
+              Limpiar {filtrosActivos} filtro{filtrosActivos > 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          {(
+            [
+              { etiqueta: 'Cargo', valor: filtroCargo, set: setFiltroCargo, items: opciones.cargos },
+              { etiqueta: 'Ciudad', valor: filtroCiudad, set: setFiltroCiudad, items: opciones.ciudades },
+              { etiqueta: 'Habilidad', valor: filtroHabilidad, set: setFiltroHabilidad, items: opciones.habilidades },
+              { etiqueta: 'Idioma', valor: filtroIdioma, set: setFiltroIdioma, items: opciones.idiomas },
+              { etiqueta: 'Nivel educativo', valor: filtroNivel, set: setFiltroNivel, items: opciones.niveles },
+              { etiqueta: 'Estado civil', valor: filtroEstadoCivil, set: setFiltroEstadoCivil, items: opciones.estadosCiviles },
+            ] as const
+          ).map((faceta) => (
+            <label key={faceta.etiqueta} className="block">
+              <span className="block text-[11px] font-medium text-navy-600 mb-0.5">
+                {faceta.etiqueta}
+              </span>
+              <select
+                value={faceta.valor}
+                onChange={(e) => faceta.set(e.target.value)}
+                disabled={faceta.items.length === 0}
+                className="w-full px-2 py-1.5 border border-navy-300 rounded-lg text-xs bg-white focus:outline-none disabled:bg-navy-50 disabled:text-navy-400"
+              >
+                <option value="todos">Todos</option>
+                {faceta.items.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
         </div>
       </div>
 

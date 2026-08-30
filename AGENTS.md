@@ -10,10 +10,20 @@ El sistema es una aplicacion web progresiva (PWA) disenada para operar con **cos
 
 - **Frontend:** React + Vite + TypeScript + Tailwind CSS (en `apps/web/`)
 - **Lector de Documentos en Navegador (WASM / Client-Side):**
-  - `pdfjs-dist`: Extraccion de texto y renderizado de paginas a Canvas
-  - `tesseract.js`: Motor OCR en WebAssembly (idioma espanol `spa`) ejecutado en Web Workers
+  - `pdfjs-dist`: Extraccion de palabras con coordenadas y renderizado de paginas a Canvas
+  - `tesseract.js`: Motor OCR en WebAssembly (`spa+eng`) con cajas de palabra, servido en local
   - `mammoth`: Extraccion directa de texto desde archivos `.docx`
-  - Canvas API: Preprocesamiento de imagenes (escala de grises, contraste, binarizacion)
+  - Canvas API: Preprocesamiento de imagenes (reescalado, grises, Otsu, correccion de inclinacion)
+
+- **Pipeline del lector (`src/lib/ocr/`):** extraccion -> `layout.ts` (renglones y columnas) ->
+  `sections.ts` (segmentacion por encabezados) -> `fields/` (un extractor por campo).
+  Toda etapa nueva debe trabajar sobre `DocumentLayout`, nunca sobre texto plano: el orden de lectura
+  se reconstruye una sola vez y se comparte entre PDF, imagen y Word.
+
+- **Regla de pruebas:** cualquier prueba del lector debe usar el mismo camino que la aplicacion
+  (`layoutFromPdfFile` en `src/lib/ocr/__fixtures__/pdf-pipeline.ts`). Construir el texto por fuera
+  de ese camino produce pruebas en verde con la aplicacion rota. El banco de precision
+  (`reader-accuracy.test.ts`) es la referencia: si un cambio lo baja, el cambio esta mal.
 - **Persistencia y Backend:**
   - `Supabase`: PostgreSQL, Auth (roles y RLS), Storage y Edge Functions
   - `Dexie.js` / `localForage`: IndexedDB para almacenamiento local y cola de sincronizacion offline (PWA)

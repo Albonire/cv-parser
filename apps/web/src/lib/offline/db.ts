@@ -14,7 +14,15 @@ export interface SyncQueueItem {
   recordId: string;
   payload: Record<string, unknown>;
   timestamp: string;
-  synced: boolean;
+  /**
+   * 0 = pendiente, 1 = sincronizado.
+   *
+   * IndexedDB no admite booleanos como clave de indice: con `synced: false` el
+   * registro quedaba fuera del indice y `where('synced').equals(0)` no devolvia
+   * nada, de modo que la cola nunca se sincronizaba y el contador de pendientes
+   * siempre marcaba cero.
+   */
+  synced: 0 | 1;
 }
 
 export class TalentDatabase extends Dexie {
@@ -30,7 +38,7 @@ export class TalentDatabase extends Dexie {
   constructor() {
     super('RosimarTalentDB');
 
-    this.version(2).stores({
+    this.version(3).stores({
       candidates: 'id, documentNumber, status, firstNames, lastNames, email, phone, createdAt',
       employees: 'id, employeeCode, status, candidateId, hireDate, memoCount',
       contracts: 'id, employeeId, workerDocumentNumber, status, startDate, endDate',

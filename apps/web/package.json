@@ -9,7 +9,11 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "copy:ocr": "node scripts/copy-ocr-assets.mjs",
+    "predev": "npm run copy:ocr",
+    "prebuild": "npm run copy:ocr",
+    "pretest": "npm run copy:ocr"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -43,6 +47,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
+    "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.11"
   }
 }

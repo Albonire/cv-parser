@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { CloudUploadIcon, LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, Loading03Icon } from 'hugeicons-react';
+import { CloudUploadIcon, CheckmarkCircle01Icon, Loading03Icon } from 'hugeicons-react';
 
 interface ReaderUploaderProps {
   onFilesSelected: (files: File[]) => void;
@@ -57,7 +57,7 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp"
+          accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.gif,.tif,.tiff"
           onChange={handleFileChange}
           className="hidden"
         />

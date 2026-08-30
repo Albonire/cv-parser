@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Motor de OCR: copias generadas por scripts/copy-ocr-assets.mjs
+public/tesseract/
+public/tessdata/
+
+# Informe generado por el banco de precision del lector
+eval-report.json
+
+*.tsbuildinfo

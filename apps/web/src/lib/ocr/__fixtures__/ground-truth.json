@@ -1,0 +1,235 @@
+{
+  "_convencion": {
+    "campo": "igualdad exacta tras normalizar espacios y mayusculas",
+    "campo~": "el valor esperado debe estar contenido en el extraido",
+    "campo#": "la lista extraida debe tener al menos esta cantidad de elementos",
+    "campo[]": "todos los valores esperados deben aparecer en la lista extraida"
+  },
+  "documentos": [
+    {
+      "archivo": "CV_01_DobleColumna_Ingeniero.pdf",
+      "nota": "Dos columnas reales: barra lateral izquierda y contenido a la derecha",
+      "campos": {
+        "firstNames": "CAMILO ANDRÉS",
+        "lastNames": "VEGA ORTIZ",
+        "documentType": "CC",
+        "documentNumber": "1098765432",
+        "email": "camilo.vega@ingenieria.com",
+        "phone": "+57 318 456 7890",
+        "cityResidence~": "Bucaramanga",
+        "headline~": "Ingeniero de Automatización",
+        "summary~": "Ingeniero electrónico y de sistemas",
+        "experience#": 2,
+        "experience[].company": ["Soluciones Mecatrónicas de Colombia SAS", "Robótica Andina Ltda."],
+        "experience[].position": ["Líder Técnico de Automatización", "Desarrollador de Firmware"],
+        "education#": 2,
+        "education[].level": ["Posgrado", "Universitario"],
+        "certifications#": 2,
+        "references#": 2,
+        "languages[]": ["Español", "Inglés", "Francés"],
+        "skills[]": ["Python", "Docker", "Linux", "Trabajo en Equipo"]
+      }
+    },
+    {
+      "archivo": "CV_02_Ejecutivo_Administrativo.pdf",
+      "nota": "Encabezado centrado con datos separados por barras verticales",
+      "campos": {
+        "firstNames": "VALERIA SOFÍA",
+        "lastNames": "RESTREPO HENAO",
+        "documentNumber": "1020304050",
+        "email": "valeria.restrepo@financiera.com",
+        "phone": "+57 301 234 5678",
+        "cityResidence~": "Medellín",
+        "headline~": "Directora Administrativa",
+        "maritalStatus": "Casada",
+        "birthDate~": "14 de Mayo de 1988",
+        "salaryExpectation": 5800000,
+        "availability~": "Inmediata",
+        "summary~": "Administradora de Empresas y Especialista en Finanzas",
+        "experience#": 2,
+        "experience[].company": ["Grupo Empresarial del Café SAS", "Logística y Distribución Nacional SA"],
+        "experience[].position": ["Directora Administrativa y Financiera", "Coordinadora de Presupuestos"],
+        "education#": 2,
+        "education[].level": ["Posgrado", "Universitario"],
+        "languages[]": ["Español", "Inglés"],
+        "certifications#": 1,
+        "references#": 2
+      }
+    },
+    {
+      "archivo": "CV_03_Tecnico_Industrial_SENA.pdf",
+      "nota": "Tecnico SENA, una sola columna con titulos de seccion",
+      "campos": {
+        "firstNames": "JORGE ELIÉCER",
+        "lastNames": "MORALES CASTRO",
+        "documentNumber": "1094876123",
+        "email": "jorge.morales@tecnicos.co",
+        "phone~": "314 567 8901",
+        "cityResidence~": "Pamplona",
+        "headline~": "Técnico en Mantenimiento Electromecánico",
+        "maritalStatus": "Soltero",
+        "summary~": "Técnico graduado del SENA",
+        "experience#": 2,
+        "experience[].company": ["Industrias Metalmecánicas del Oriente SAS", "Agroindustrias del Norte"],
+        "experience[].position": ["Operario Técnico de Mantenimiento", "Auxiliar Electromecánico"],
+        "education#": 2,
+        "education[].level": ["Tecnico", "Bachiller"],
+        "certifications#": 2,
+        "certifications[].name": ["Trabajo Seguro en Alturas"],
+        "references#": 2
+      }
+    },
+    {
+      "archivo": "CV_04_Coordinadora_TalentoHumano.pdf",
+      "nota": "Perfil de talento humano con aspiracion salarial y tres idiomas",
+      "campos": {
+        "firstNames": "DIANA MARCELA",
+        "lastNames": "GUERRERO PARRA",
+        "documentNumber": "1092789456",
+        "email": "diana.guerrero@recursoshumanos.com",
+        "phone": "+57 320 987 6543",
+        "cityResidence~": "Bogotá",
+        "headline~": "Coordinadora de Talento Humano",
+        "salaryExpectation": 4200000,
+        "availability~": "15 días",
+        "summary~": "Psicóloga con Especialización",
+        "experience#": 2,
+        "experience[].company": ["Consultores de Talento Humano SAS", "Alimentos del Campo SA"],
+        "experience[].position": ["Coordinadora de Selección", "Analista de Gestión Humana"],
+        "education#": 2,
+        "education[].degree": ["Psicología"],
+        "languages[]": ["Español", "Inglés", "Portugués"],
+        "certifications#": 1,
+        "references#": 2
+      }
+    },
+    {
+      "archivo": "CV_05_Diseno_Compacto_Multicursos.pdf",
+      "nota": "Compacto, empresa y cargo en el mismo renglon separados por guion",
+      "campos": {
+        "firstNames": "SEBASTIÁN",
+        "lastNames": "QUINTERO ARDILA",
+        "documentNumber": "1088765432",
+        "email": "sebastian.quintero@devstack.org",
+        "phone": "+57 300 123 9876",
+        "cityResidence~": "Pereira",
+        "headline~": "Desarrollador Full Stack",
+        "summary~": "Ingeniero de sistemas con 6 años",
+        "experience#": 2,
+        "experience[].company": ["CloudTech Solutions SAS", "Digital Factory Latam"],
+        "education#": 1,
+        "languages#": 3,
+        "languages[]": ["Español", "Inglés", "Alemán"],
+        "certifications#": 3,
+        "references#": 2,
+        "skills[]": ["PostgreSQL", "React", "Docker", "Node.js"]
+      }
+    },
+    {
+      "archivo": "CV_06_SinTitulos_ParrafoDirecto.pdf",
+      "nota": "Sin titulos de seccion: todo se infiere por contenido",
+      "campos": {
+        "firstNames": "MARÍA ALEJANDRA",
+        "lastNames": "OSORIO GÓMEZ",
+        "documentNumber": "1095678123",
+        "email": "maria.osorio@contabilidad.co",
+        "phone~": "315 890 1234",
+        "cityResidence~": "Bucaramanga",
+        "headline~": "Contadora Pública",
+        "summary~": "Contadora pública con 8 años de trayectoria",
+        "experience#": 2,
+        "experience[].company": ["Auditoría Contable del Oriente SAS", "Distribuidora Mayorista SA"],
+        "experience[].position": ["Contadora Senior", "Auxiliar Contable"],
+        "education#": 2,
+        "education[].level": ["Posgrado", "Universitario"],
+        "languages[]": ["Inglés"],
+        "certifications#": 1,
+        "certifications[].name": ["Facturación Electrónica"],
+        "references#": 1
+      }
+    },
+    {
+      "archivo": "CV_07_SinTitulos_EstiloMinimalista.pdf",
+      "nota": "Minimalista sin titulos, una sola experiencia",
+      "campos": {
+        "firstNames": "ANDRÉS FELIPE",
+        "lastNames": "CARMONA BEDOYA",
+        "email": "andres.carmona@creativo.com",
+        "phone~": "300 456 7890",
+        "cityResidence~": "Medellín",
+        "headline~": "Diseñador Gráfico",
+        "summary~": "Diseñador visual y productor multimedia",
+        "experience#": 1,
+        "experience[].company": ["Agencia Creativa Nova SAS"],
+        "experience[].position": ["Diseñador Lead"],
+        "education#": 1,
+        "education[].degree": ["Diseñador Gráfico"],
+        "languages[]": ["Español", "Inglés"],
+        "certifications#": 1,
+        "certifications[].name": ["Animación 3D"]
+      }
+    },
+    {
+      "archivo": "CV_08_SinTitulos_TecnicoOperativo.pdf",
+      "nota": "Tecnico operativo sin titulos de seccion",
+      "campos": {
+        "firstNames": "GUSTAVO ADOLFO",
+        "lastNames": "SILVA PEÑA",
+        "documentNumber": "1098456123",
+        "email": "gustavo.silva@industrias.com",
+        "phone~": "318 765 4321",
+        "cityResidence~": "Pamplona",
+        "summary~": "Técnico electromecánico con 6 años de experiencia",
+        "experience#": 1,
+        "experience[].company": ["Frigoríficos del Norte SAS"],
+        "experience[].position": ["Técnico de Refrigeración"],
+        "education#": 1,
+        "education[].level": ["Tecnico"],
+        "certifications#": 2
+      }
+    },
+    {
+      "archivo": "CV_09_Computrabajo_Junior.pdf",
+      "nota": "Perfil junior sin experiencia, con licencia y libreta militar",
+      "campos": {
+        "firstNames": "JUAN DAVID",
+        "lastNames": "HERRERA RAMÍREZ",
+        "documentNumber": "1001234567",
+        "email": "juan.herrera@correo.com",
+        "phone~": "312 987 6543",
+        "cityResidence~": "Cartagena",
+        "headline~": "Técnico en Logística",
+        "driverLicense": "C1",
+        "militaryCard": "Segunda clase",
+        "summary~": "Joven proactivo",
+        "experience#": 1,
+        "experience[].company": ["Sin Experiencia / Perfil Junior"],
+        "education#": 1
+      }
+    },
+    {
+      "archivo": "CV_10_Formato_Publico_DAFP.pdf",
+      "nota": "Formulario de una sola columna con etiqueta y valor en el mismo renglon",
+      "campos": {
+        "firstNames": "ANA MARÍA",
+        "lastNames": "PÉREZ LÓPEZ",
+        "documentNumber": "45987123",
+        "email": "ana.perez@abogados.co",
+        "phone~": "300 123 4567",
+        "cityResidence~": "Bogotá",
+        "gender": "Femenino",
+        "nationality": "Colombiana",
+        "birthPlace~": "Bogotá D.C.",
+        "professionalCard": "123456-T",
+        "socialLinks#": 1,
+        "socialLinks[]": ["linkedin.com/in/anaperezlaw"],
+        "experience#": 2,
+        "experience[].company": ["Ministerio de Justicia y del Derecho", "Contraloría General de la República"],
+        "experience[].position": ["Asesora Jurídica", "Auxiliar Jurídico"],
+        "education#": 2,
+        "education[].level": ["Universitario", "Posgrado"],
+        "education[].degree": ["Abogada", "Especialista en Derecho Administrativo"]
+      }
+    }
+  ]
+}

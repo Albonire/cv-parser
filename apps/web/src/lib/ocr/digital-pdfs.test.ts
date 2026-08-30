@@ -1,30 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import * as fs from 'fs';
 import * as path from 'path';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { parseCvText } from './parser-cv';
+import { layoutFromPdfFile } from './__fixtures__/pdf-pipeline';
+import { DocumentLayout } from './layout';
 
-async function extractDigitalPdfText(pdfPath: string): Promise<string> {
-  const data = new Uint8Array(fs.readFileSync(pdfPath));
-  const doc = await pdfjsLib.getDocument({ data }).promise;
-  let fullText = '';
-
-  for (let i = 1; i <= doc.numPages; i++) {
-    const page = await doc.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items.map((item: any) => item.str).join('\n');
-    fullText += pageText + '\n';
-  }
-
-  return fullText;
+/**
+ * Estas pruebas usan el pipeline real de la aplicacion (pdf.js -> palabras ->
+ * maquetacion). Antes concatenaban `items.map(i => i.str)` en el orden crudo del
+ * PDF, un orden que el parser nunca recibe en produccion: por eso pasaban en
+ * verde mientras el lector fallaba con los mismos archivos.
+ */
+async function extractDigitalPdfText(pdfPath: string): Promise<DocumentLayout> {
+  return layoutFromPdfFile(pdfPath);
 }
 
 describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () => {
   const pdfDir = path.join(process.cwd(), 'test-pdfs');
 
   it('CV_01_DobleColumna_Ingeniero.pdf: debe extraer datos personales, posgrado, idiomas y certificaciones', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_01_DobleColumna_Ingeniero.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_01_DobleColumna_Ingeniero.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('CAMILO ANDRÉS');
     expect(parsed.lastNames).toBe('VEGA ORTIZ');
@@ -50,8 +45,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_02_Ejecutivo_Administrativo.pdf: debe extraer expectativa salarial, estado civil y disponibilidad', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_02_Ejecutivo_Administrativo.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_02_Ejecutivo_Administrativo.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('VALERIA SOFÍA');
     expect(parsed.lastNames).toBe('RESTREPO HENAO');
@@ -66,8 +61,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_03_Tecnico_Industrial_SENA.pdf: debe extraer tecnico SENA, PAMPLONA y cursos de alturas', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_03_Tecnico_Industrial_SENA.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_03_Tecnico_Industrial_SENA.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('JORGE ELIÉCER');
     expect(parsed.lastNames).toBe('MORALES CASTRO');
@@ -81,8 +76,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_04_Coordinadora_TalentoHumano.pdf: debe extraer psicologia, idiomas C1/B1 y aspiracion salarial', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_04_Coordinadora_TalentoHumano.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_04_Coordinadora_TalentoHumano.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('DIANA MARCELA');
     expect(parsed.lastNames).toBe('GUERRERO PARRA');
@@ -96,8 +91,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_05_Diseno_Compacto_Multicursos.pdf: debe extraer multicursos AWS/PostgreSQL, Pereira e ingenieria', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_05_Diseno_Compacto_Multicursos.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_05_Diseno_Compacto_Multicursos.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('SEBASTIÁN');
     expect(parsed.lastNames).toBe('QUINTERO ARDILA');
@@ -110,8 +105,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_06_SinTitulos_ParrafoDirecto.pdf: debe extraer resumen, experiencia, educacion y NIIF sin encabezados de seccion', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_06_SinTitulos_ParrafoDirecto.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_06_SinTitulos_ParrafoDirecto.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('MARÍA ALEJANDRA');
     expect(parsed.lastNames).toBe('OSORIO GÓMEZ');
@@ -131,8 +126,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_07_SinTitulos_EstiloMinimalista.pdf: debe extraer diseñador grafico, resumen y certificacion 3D sin encabezados', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_07_SinTitulos_EstiloMinimalista.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_07_SinTitulos_EstiloMinimalista.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('ANDRÉS FELIPE');
     expect(parsed.lastNames).toBe('CARMONA BEDOYA');
@@ -145,8 +140,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_08_SinTitulos_TecnicoOperativo.pdf: debe extraer tecnico Pamplona, calderas y alturas sin titulos', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_08_SinTitulos_TecnicoOperativo.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_08_SinTitulos_TecnicoOperativo.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('GUSTAVO ADOLFO');
     expect(parsed.lastNames).toBe('SILVA PEÑA');
@@ -159,8 +154,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_09_Computrabajo_Junior.pdf: debe extraer licencia de conducción, libreta militar y perfil junior', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_09_Computrabajo_Junior.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_09_Computrabajo_Junior.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('JUAN DAVID');
     expect(parsed.lastNames).toBe('HERRERA RAMÍREZ');
@@ -173,8 +168,8 @@ describe('Pruebas exhaustivas con 8 PDFs digitales en español (sin OCR)', () =>
   });
 
   it('CV_10_Formato_Publico_DAFP.pdf: debe extraer lugar de nacimiento, género, tarjeta profesional y redes', async () => {
-    const text = await extractDigitalPdfText(path.join(pdfDir, 'CV_10_Formato_Publico_DAFP.pdf'));
-    const parsed = parseCvText(text);
+    const layout = await extractDigitalPdfText(path.join(pdfDir, 'CV_10_Formato_Publico_DAFP.pdf'));
+    const parsed = parseCvText(layout.text, layout);
 
     expect(parsed.firstNames).toBe('ANA MARÍA');
     expect(parsed.lastNames).toBe('PÉREZ LÓPEZ');

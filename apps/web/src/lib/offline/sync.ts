@@ -1,9 +1,14 @@
 import { db } from './db';
-import { supabase } from '../supabase';
+import { isSupabaseConfigured, supabase } from '../api/supabase';
 
 export async function processSyncQueue() {
   if (!navigator.onLine) {
-    console.log('Dispositivo sin conexión, saltando sincronización.');
+    console.log('Dispositivo sin conexion, se conserva la cola local.');
+    return;
+  }
+
+  if (!isSupabaseConfigured) {
+    // Sin credenciales la aplicacion opera 100% local; la cola espera.
     return;
   }
 
@@ -32,7 +37,7 @@ export async function processSyncQueue() {
         if (error) throw error;
       }
 
-      await db.syncQueue.update(item.id!, { synced: true });
+      await db.syncQueue.update(item.id!, { synced: 1 });
     } catch (err) {
       console.error(`Error sincronizando item ${item.id}:`, err);
       // Se mantiene en la cola para la próxima vez
@@ -64,7 +69,7 @@ export async function queueMutation(
     recordId,
     payload,
     timestamp: new Date().toISOString(),
-    synced: false,
+    synced: 0,
   });
 
   if (navigator.onLine) {
