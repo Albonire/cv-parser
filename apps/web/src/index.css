@@ -1,31 +1,129 @@
+/*
+ * Sistema de diseño — Rosimar S.A.S.
+ * Referencia: Monotype (museo tipográfico editorial sobre papel blanco).
+ * Documentación completa y reglas: docs/DESIGN_SYSTEM.md
+ *
+ * IMPORTANTE: los tokens van aquí, en @theme, NO en tailwind.config.js.
+ * Tailwind v4 ignora ese archivo salvo que se cargue con @config, y por eso
+ * las clases de color del proyecto no generaban ningún CSS: la barra de
+ * navegación y los botones quedaban con texto blanco sobre fondo transparente,
+ * es decir, invisibles.
+ */
+
 @import "tailwindcss";
 
+/* Tipografía empaquetada con la aplicación (no desde un CDN) para no romper
+   el funcionamiento sin conexión. Inter e Inter Tight son los sustitutos que
+   el propio sistema de referencia indica para HelveticaNow, que es comercial. */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource-variable/inter-tight/index.css";
+
+@theme {
+  /* ---------------------------------------------------------------- COLOR */
+  /* Monocromo: el texto es el protagonista, el chrome desaparece. */
+  --color-ink: #1e242c;        /* Texto principal, bordes de énfasis, superficie invertida */
+  --color-steel: #576579;      /* Texto secundario, etiquetas, iconos */
+  --color-paper: #ffffff;      /* Lienzo y superficie de tarjetas */
+  --color-mist: #e7eaee;       /* Divisores y separadores sutiles */
+  --color-fog: #dbdfe5;        /* Bordes de tarjeta y bloques de contenido */
+  --color-ash: #cfd5dd;        /* Realimentación de interacción: foco, hover */
+  --color-signal-blue: #1a73e8; /* ÚNICO color de acción. Solo en el CTA primario */
+
+  /* Extensión funcional aprobada — ver docs/DESIGN_SYSTEM.md § Extensión.
+     El sistema base prohíbe color en estados, pero RN-2 exige que el contador
+     de 3 memorandos se destaque en rojo y RN-3 define preavisos por vencimiento.
+     Se reserva EXCLUSIVAMENTE para reglas de negocio y severidad de alertas:
+     nunca para decoración, categorías ni confirmaciones. */
+  --color-alert: #b3261e;
+  --color-alert-surface: #fdf0ee;
+  --color-warning: #8a6116;
+  --color-warning-surface: #fdf7e9;
+
+  /* ----------------------------------------------------------- TIPOGRAFÍA */
+  --font-display: 'Inter Tight Variable', 'Inter Tight', 'Helvetica Neue', system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --text-micro: 11px;
+  --text-micro--line-height: 1.45;
+  --text-caption: 13px;
+  --text-caption--line-height: 1.23;
+  --text-body: 16px;
+  --text-body--line-height: 1.5;
+  --text-subheading: 26px;
+  --text-subheading--line-height: 1.2;
+  /* El sistema prohíbe la familia display por debajo de 40px: en pantallas
+     estrechas se reduce hasta ese piso, nunca por debajo. */
+  --text-display: clamp(40px, 4.5vw, 57px);
+  --text-display--line-height: 1.12;
+
+  /* ------------------------------------------------------------- ESPACIO */
+  --spacing: 8px;
+
+  /* -------------------------------------------------------------- FORMAS */
+  /* El sistema es binario: 8px para interfaz, 16px para imágenes. */
+  --radius-lg: 8px;
+  --radius-2xl: 16px;
+
+  --shadow-subtle: 0px 0px 2px 0px rgba(0, 0, 0, 0.16);
+}
+
+/* ------------------------------------------------------------------ BASE */
+
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
   min-height: 100vh;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Scrollbar estilizado */
+/* El interletrado cerrado en negritas es la firma tipográfica del sistema. */
+strong,
+b,
+th,
+.font-bold,
+.font-semibold {
+  letter-spacing: -0.02em;
+}
+
+/* Foco visible y coherente en toda la aplicación. Requisito de accesibilidad:
+   la interfaz se opera por completo con teclado. */
+:focus-visible {
+  outline: 2px solid var(--color-signal-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background-color: var(--color-ash);
+  color: var(--color-ink);
+}
+
+/* Barra de desplazamiento discreta, en la escala de grises del sistema. */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
+  background: var(--color-fog);
+  border-radius: 8px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--color-ash);
 }

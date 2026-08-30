@@ -1,6 +1,6 @@
 import { db } from './db';
 import { queueMutation } from './sync';
-import { AlertItem, AlertType, AlertSeverity } from '../../types/alert';
+import { AlertItem, AlertType } from '../../types/alert';
 
 const NOTICE_DAYS = 30; // RN-3: preaviso
 const PROBATION_DAYS = 60; // RN-4: periodo prueba 2 meses (aprox 60 dias)

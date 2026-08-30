@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Navbar, TabType } from './components/Navbar';
+import { Navbar } from './components/Navbar';
+import { PageHeader } from './components/PageHeader';
+import { useRoute } from './lib/navigation/useRoute';
 import { ReaderView } from './features/reader/ReaderView';
 import { CandidatesView } from './features/candidates/CandidatesView';
 import { EmployeesView } from './features/employees/EmployeesView';
@@ -19,7 +21,11 @@ import { initOfflineSync } from './lib/offline/sync';
 import { generateSystemAlerts } from './lib/offline/alerts';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('reader');
+  // La sección activa vive en la URL, no en el estado: así funcionan el botón
+  // "atrás", la recarga y los enlaces profundos.
+  const { route, navegarA } = useRoute();
+  const activeSection = route.section.id;
+
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueueCount, setSyncQueueCount] = useState(0);
 
@@ -30,8 +36,9 @@ export const App: React.FC = () => {
   const [memoranda, setMemoranda] = useState<MemorandumItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
 
-  // Filtro de memorandos desde empleados
-  const [memoEmployeeFilter, setMemoEmployeeFilter] = useState<string | undefined>(undefined);
+  // El empleado preseleccionado en memorandos llega por la URL
+  // (#/memorandos?empleado=emp-1), de modo que el enlace se puede compartir.
+  const memoEmployeeFilter = route.params.get('empleado') ?? undefined;
 
   // Cargar datos desde IndexedDB
   const loadData = useCallback(async () => {
@@ -71,38 +78,37 @@ export const App: React.FC = () => {
     };
   }, [loadData]);
 
-  const handleNavigateToMemo = (empId: string) => {
-    setMemoEmployeeFilter(empId);
-    setActiveTab('memoranda');
-  };
+  const handleNavigateToMemo = (empId: string) => navegarA('memoranda', { empleado: empId });
 
   const pendingAlertCount = alerts.filter((a) => a.status !== 'resuelta').length;
 
   return (
-    <div className="min-h-screen bg-navy-50/70 flex flex-col font-sans">
-      <Navbar syncQueueCount={syncQueueCount}
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setMemoEmployeeFilter(undefined);
-          setActiveTab(tab);
-        }}
+    <div className="flex min-h-screen flex-col bg-paper">
+      <Navbar
+        activeSection={activeSection}
         alertCount={pendingAlertCount}
         isOnline={isOnline}
+        syncQueueCount={syncQueueCount}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'reader' && (
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-24">
+        <PageHeader
+          title={route.section.title}
+          description={route.section.description}
+        />
+
+        {activeSection === 'reader' && (
           <ReaderView
             onCandidateSaved={() => loadData()}
             onContractSaved={() => loadData()}
           />
         )}
 
-        {activeTab === 'candidates' && (
+        {activeSection === 'candidates' && (
           <CandidatesView candidates={candidates} onReload={loadData} />
         )}
 
-        {activeTab === 'employees' && (
+        {activeSection === 'employees' && (
           <EmployeesView
             employees={employees}
             onReload={loadData}
@@ -110,11 +116,11 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'contracts' && (
+        {activeSection === 'contracts' && (
           <ContractsView contracts={contracts} onReload={loadData} />
         )}
 
-        {activeTab === 'memoranda' && (
+        {activeSection === 'memoranda' && (
           <MemorandaView
             memoranda={memoranda}
             employees={employees}
@@ -123,11 +129,11 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'alerts' && (
+        {activeSection === 'alerts' && (
           <AlertsView alerts={alerts} onReload={loadData} />
         )}
 
-        {activeTab === 'dashboard' && (
+        {activeSection === 'dashboard' && (
           <DashboardView
             candidates={candidates}
             employees={employees}
@@ -136,7 +142,7 @@ export const App: React.FC = () => {
           />
         )}
 
-        {activeTab === 'reports' && (
+        {activeSection === 'reports' && (
           <ReportsView
             candidates={candidates}
             employees={employees}
@@ -145,7 +151,7 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      <footer className="bg-white border-t border-navy-200 py-4 text-center text-xs text-navy-500">
+      <footer className="bg-paper border-t border-fog py-4 text-center text-xs text-steel">
         Rosimar S.A.S. — Sistema de Gestion de Talento Humano y Analisis de Hojas de Vida · Operacion 100% en Navegador (Costo $0)
       </footer>
     </div>

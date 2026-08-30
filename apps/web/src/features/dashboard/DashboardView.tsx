@@ -3,19 +3,8 @@ import { CandidateFormData } from '../../types/candidate';
 import { EmployeeItem } from '../../types/employee';
 import { ContractFormData } from '../../types/contract';
 import { AlertItem } from '../../types/alert';
-import { UserGroupIcon, Briefcase01Icon, DocumentValidationIcon, Notification01Icon, BarChartIcon, Shield01Icon } from 'hugeicons-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from 'recharts';
+import { UserGroupIcon, Briefcase01Icon, DocumentValidationIcon, Notification01Icon } from 'hugeicons-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface DashboardViewProps {
   candidates: CandidateFormData[];
@@ -69,43 +58,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="space-y-6">
       {/* Tarjetas de Metricas Clave */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-blue-100 text-blue-700 rounded-lg">
+        <div className="bg-paper p-5 rounded-lg border border-fog flex items-center space-x-4">
+          <div className="p-3 text-steel">
             <UserGroupIcon className="h-6 w-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">Candidatos</span>
-            <h3 className="text-2xl font-extrabold text-navy-900">{totalCandidates}</h3>
+            <span className="text-xs font-semibold text-steel uppercase tracking-wider">Candidatos</span>
+            <h3 className="text-2xl font-extrabold text-ink">{totalCandidates}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-green-100 text-green-700 rounded-lg">
+        <div className="bg-paper p-5 rounded-lg border border-fog flex items-center space-x-4">
+          <div className="p-3 text-steel">
             <Briefcase01Icon className="h-6 w-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">Empleados Activos</span>
-            <h3 className="text-2xl font-extrabold text-navy-900">{activeEmployees}</h3>
+            <span className="text-xs font-semibold text-steel uppercase tracking-wider">Empleados Activos</span>
+            <h3 className="text-2xl font-extrabold text-ink">{activeEmployees}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm flex items-center space-x-4">
+        <div className="bg-paper p-5 rounded-lg border border-fog flex items-center space-x-4">
           <div className="p-3 bg-purple-100 text-purple-700 rounded-lg">
             <DocumentValidationIcon className="h-6 w-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">Contratos Vigentes</span>
-            <h3 className="text-2xl font-extrabold text-navy-900">{activeContracts}</h3>
+            <span className="text-xs font-semibold text-steel uppercase tracking-wider">Contratos Vigentes</span>
+            <h3 className="text-2xl font-extrabold text-ink">{activeContracts}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm flex items-center space-x-4">
-          <div className="p-3 bg-amber-100 text-amber-700 rounded-lg">
+        <div className="bg-paper p-5 rounded-lg border border-fog flex items-center space-x-4">
+          <div className="p-3 bg-warning-surface text-warning rounded-lg">
             <Notification01Icon className="h-6 w-6" />
           </div>
           <div>
-            <span className="text-xs font-semibold text-navy-500 uppercase tracking-wider">Alertas Pendientes</span>
-            <h3 className="text-2xl font-extrabold text-navy-900">{pendingAlerts}</h3>
+            <span className="text-xs font-semibold text-steel uppercase tracking-wider">Alertas Pendientes</span>
+            <h3 className="text-2xl font-extrabold text-ink">{pendingAlerts}</h3>
           </div>
         </div>
       </div>
@@ -113,9 +102,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Graficos Estadisticos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Grafico de Candidatos por Estado */}
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm space-y-3">
-          <h3 className="text-sm font-bold text-navy-900 flex items-center">
-            <BarChartIcon className="h-4 w-4 mr-1.5 text-brand-600" />
+        <div className="bg-paper p-5 rounded-lg border border-fog space-y-3">
+          <h3 className="text-sm font-bold text-ink flex items-center">
             Candidatos por Estado en el Pipeline
           </h3>
           <div className="h-64">
@@ -131,9 +119,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Grafico de Contratos por Tipo */}
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm space-y-3">
-          <h3 className="text-sm font-bold text-navy-900 flex items-center">
-            <DocumentValidationIcon className="h-4 w-4 mr-1.5 text-brand-600" />
+        <div className="bg-paper p-5 rounded-lg border border-fog space-y-3">
+          <h3 className="text-sm font-bold text-ink flex items-center">
             Distribucion de Contratos por Tipo
           </h3>
           <div className="h-64">
@@ -157,7 +144,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-navy-400 italic">
+              <div className="h-full flex items-center justify-center text-xs text-steel italic">
                 No hay contratos suficientes para graficar.
               </div>
             )}

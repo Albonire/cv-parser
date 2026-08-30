@@ -41,7 +41,7 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-navy-200 p-6 shadow-sm">
+    <div className="bg-paper rounded-lg border border-fog p-6">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -49,8 +49,8 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
         onClick={() => !isProcessing && fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
           isDragOver
-            ? 'border-brand-500 bg-brand-50/50 scale-[0.99]'
-            : 'border-navy-300 hover:border-brand-400 bg-navy-50/30'
+            ? 'border-ink bg-mist'
+            : 'border-fog hover:border-steel bg-paper'
         } ${isProcessing ? 'pointer-events-none opacity-80' : ''}`}
       >
         <input
@@ -64,50 +64,50 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
 
         {isProcessing ? (
           <div className="flex flex-col items-center justify-center py-4">
-            <Loading03Icon className="h-12 w-12 text-brand-600 animate-spin mb-4" />
-            <h3 className="text-base font-semibold text-navy-800">
+            <Loading03Icon className="h-12 w-12 text-steel animate-spin mb-4" />
+            <h3 className="text-base font-semibold text-ink">
               {progressMessage || 'Procesando documento...'}
             </h3>
-            <p className="text-xs text-navy-500 mt-1">
+            <p className="text-xs text-steel mt-1">
               Ejecutando analisis y OCR local en WebAssembly (100% en tu navegador)
             </p>
 
             {/* Barra de progreso */}
-            <div className="w-full max-w-md bg-navy-100 rounded-full h-3 mt-4 overflow-hidden">
+            <div className="w-full max-w-md bg-mist rounded-full h-3 mt-4 overflow-hidden">
               <div
-                className="bg-brand-600 h-3 rounded-full transition-all duration-300"
+                className="bg-signal-blue h-3 rounded-full transition-all duration-300 shadow-subtle"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <span className="text-xs font-semibold text-brand-700 mt-1">
+            <span className="text-xs font-semibold text-ink mt-1">
               {progressPercent}%
             </span>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center">
-            <div className="p-3 bg-brand-100 text-brand-700 rounded-full mb-3">
+            <div className="p-3 bg-mist text-ink rounded-full mb-3">
               <CloudUploadIcon className="h-8 w-8" />
             </div>
-            <h3 className="text-base font-semibold text-navy-900">
+            <h3 className="text-base font-semibold text-ink">
               Arrastra y suelta tus hojas de vida o documentos aqui
             </h3>
-            <p className="text-sm text-navy-600 mt-1">
+            <p className="text-sm text-steel mt-1">
               O haz clic para seleccionar archivos desde tu equipo
             </p>
-            <p className="text-xs text-navy-400 mt-2">
+            <p className="text-xs text-steel mt-2">
               Formatos soportados: <strong>PDF (digital y escaneado), Word (.docx), JPG, PNG, WEBP</strong>
             </p>
-            <div className="mt-4 flex items-center space-x-3 text-xs text-navy-600 bg-navy-100/70 px-3 py-1.5 rounded-md">
+            <div className="mt-4 flex items-center space-x-3 text-xs text-steel bg-mist/70 px-3 py-1.5 rounded-lg">
               <span className="flex items-center">
-                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-brand-600 mr-1" />
+                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-steel mr-1" />
                 Costo $0
               </span>
               <span className="flex items-center">
-                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-brand-600 mr-1" />
+                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-steel mr-1" />
                 100% Privado (en tu CPU)
               </span>
               <span className="flex items-center">
-                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-brand-600 mr-1" />
+                <CheckmarkCircle01Icon className="h-3.5 w-3.5 text-steel mr-1" />
                 Revision humana antes de guardar
               </span>
             </div>

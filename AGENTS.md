@@ -70,11 +70,21 @@ npm run build
    - Sin emojis en documentacion, codigo o salidas del sistema.
    - Todo formulario extraido por OCR debe ser **siempre editable por el usuario** antes de guardarse (regla RN-7).
 
-3. **Idioma y Localizacion:**
+3. **Sistema de Diseno:**
+   - El estandar visual del proyecto esta en [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)
+     y es de obligado cumplimiento para cualquier cambio de interfaz.
+   - Los tokens viven en `@theme`, dentro de `apps/web/src/index.css`. NO se usa
+     `tailwind.config.js`: Tailwind v4 lo ignora y por eso la paleta anterior no
+     generaba CSS y la interfaz quedaba invisible.
+   - Reglas que no se negocian: diseno plano (filete de 1px, sin sombras salvo la del
+     boton primario), monocromo salvo la extension funcional de estado documentada,
+     sin iconos decorativos, y sin tarjetas anidadas dentro de otras tarjetas.
+
+4. **Idioma y Localizacion:**
    - Toda la interfaz de usuario, formularios, mensajes de error, reportes e informes deben estar **100% en espanol**.
    - El codigo fuente (nombres de variables, funciones, componentes) se escribe en **ingles** para mantener la coherencia con el ecosistema.
 
-4. **Reglas de Negocio Centrales (Rosimar S.A.S.):**
+5. **Reglas de Negocio Centrales (Rosimar S.A.S.):**
    - **RN-1:** Un candidato solo se convierte en empleado desde el estado `Contratado`.
    - **RN-2:** Acumular 3 memorandos destaca el contador en rojo y genera alerta para revision manual (el sistema no cancela contratos automaticamente).
    - **RN-3:** Alerta de preaviso de vencimiento de contrato (por defecto 30 dias).
@@ -89,6 +99,7 @@ npm run build
 - `README.md`: Indice y descripcion general del proyecto.
 - `docs/REQUERIMIENTOS.md`: Especificacion de modulos (M1 a M13), formularios y reglas de negocio.
 - `docs/ARQUITECTURA.md`: Arquitectura tecnica, modelo de base de datos y hosting.
+- `docs/DESIGN_SYSTEM.md`: Sistema de diseno, tokens, componentes y reglas de interfaz.
 - `SPECS.md`: Resumen tecnico operativo para implementacion.
 - `AGENTS.md`: Esta guia de desarrollo para agentes IA.
 - `apps/web/`: Aplicacion web PWA en React + Vite.

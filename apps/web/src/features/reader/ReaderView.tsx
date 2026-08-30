@@ -12,7 +12,7 @@ import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
-import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, Layers01Icon } from 'hugeicons-react';
+import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon } from 'hugeicons-react';
 
 interface ReaderViewProps {
   onCandidateSaved?: (candidate: CandidateFormData) => void;
@@ -225,23 +225,23 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* Alerta / Notificacion */}
       {notification && (
         <div
-          className={`p-4 rounded-lg flex items-center justify-between shadow-sm border ${
+          className={`p-4 rounded-lg flex items-center justify-between border ${
             notification.type === 'success'
-              ? 'bg-brand-50 border-brand-300 text-brand-900'
-              : 'bg-red-50 border-red-300 text-red-900'
+              ? 'bg-mist border-fog text-ink'
+              : 'bg-alert-surface border-alert text-alert'
           }`}
         >
           <div className="flex items-center space-x-2">
             {notification.type === 'success' ? (
-              <CheckmarkCircle01Icon className="h-5 w-5 text-brand-600" />
+              <CheckmarkCircle01Icon className="h-5 w-5 text-steel" />
             ) : (
-              <Alert01Icon className="h-5 w-5 text-red-600" />
+              <Alert01Icon className="h-5 w-5 text-alert" />
             )}
             <span className="text-sm font-medium">{notification.message}</span>
           </div>
           <button
             onClick={() => setNotification(null)}
-            className="text-xs font-semibold text-navy-500 hover:text-navy-800"
+            className="text-xs font-semibold text-steel hover:text-ink"
           >
             Cerrar
           </button>
@@ -260,13 +260,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
       {/* Bandeja de Lote Masivo (M12) */}
       {batchQueue.length > 1 && (
-        <div className="bg-white rounded-xl border border-navy-200 p-4 shadow-sm">
+        <div className="bg-paper rounded-lg border border-fog p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 flex items-center">
-              <Layers01Icon className="h-4 w-4 mr-1.5 text-brand-600" />
-              Bandeja de Revision por Lotes ({batchQueue.length} documentos)
+            <h3 className="text-sm font-bold text-ink flex items-center">
+            Bandeja de Revision por Lotes ({batchQueue.length} documentos)
             </h3>
-            <span className="text-xs text-navy-500">
+            <span className="text-xs text-steel">
               Documento actual: {currentBatchIndex + 1} de {batchQueue.length}
             </span>
           </div>
@@ -282,16 +281,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 }}
                 className={`p-2 rounded border text-left text-xs transition-all ${
                   idx === currentBatchIndex
-                    ? 'border-brand-600 bg-brand-50 font-bold text-brand-900'
+                    ? 'border-signal-blue bg-mist font-bold text-ink'
                     : item.status === 'done'
-                    ? 'border-navy-200 bg-navy-50/50 hover:bg-navy-100 text-navy-700'
+                    ? 'border-fog bg-paper hover:bg-mist text-ink'
                     : item.status === 'processing'
-                    ? 'border-amber-400 bg-amber-50 text-amber-800 animate-pulse'
-                    : 'border-navy-200 opacity-60'
+                    ? 'border-fog bg-mist text-steel animate-pulse'
+                    : 'border-fog opacity-60'
                 }`}
               >
                 <div className="truncate font-medium">{item.file.name}</div>
-                <div className="text-[10px] text-navy-500 uppercase mt-0.5">{item.status}</div>
+                <div className="text-[10px] text-steel uppercase mt-0.5">{item.status}</div>
               </button>
             ))}
           </div>
@@ -301,36 +300,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* Vista de Formulario Editable para Revision Humana (RN-7) */}
       {currentResult && (
         <div className="space-y-4">
-          <div className="bg-navy-900 text-white px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-fog bg-paper px-4 py-3">
             <div className="flex items-center space-x-2">
-              <LegalDocument02Icon className="h-5 w-5 text-brand-400" />
+              <LegalDocument02Icon className="h-5 w-5 shrink-0 text-steel" />
               <div>
-                <span className="text-sm font-semibold">{currentResult.fileName}</span>
-                <span className="ml-2 text-xs text-navy-300">
+                <span className="text-caption font-semibold tracking-[-0.02em] text-ink">{currentResult.fileName}</span>
+                <span className="ml-2 text-micro text-steel">
                   ({(currentResult.fileSize / 1024).toFixed(1)} KB · Metodo: {currentResult.method} · {currentResult.processingTimeMs} ms)
                 </span>
               </div>
             </div>
             <button
               onClick={() => setCurrentResult(null)}
-              className="text-xs bg-navy-800 hover:bg-navy-700 text-navy-200 px-3 py-1.5 rounded transition-colors"
+              className="shrink-0 rounded-lg border border-fog px-3 py-1.5 text-caption text-steel transition-colors hover:border-ink hover:text-ink"
             >
               Cargar otro archivo
             </button>
           </div>
 
           {/* Calidad de la extraccion: avisos, campos vacios y cargo detectado (RN-7) */}
-          <div className="bg-white rounded-xl border border-navy-200 p-4 shadow-sm space-y-3">
+          <div className="bg-paper rounded-lg border border-fog p-4 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-bold text-navy-800">Calidad de la extraccion</span>
+                <span className="text-sm font-bold text-ink">Calidad de la extraccion</span>
                 <span
                   className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                     currentResult.confidenceScore >= 0.8
-                      ? 'bg-brand-100 text-brand-800'
+                      ? 'bg-mist text-ink'
                       : currentResult.confidenceScore >= 0.55
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-red-100 text-red-800'
+                      ? 'bg-warning-surface text-warning'
+                      : 'bg-alert-surface text-alert'
                   }`}
                 >
                   Confianza {(currentResult.confidenceScore * 100).toFixed(0)}%
@@ -338,19 +337,19 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               </div>
               <button
                 onClick={() => setShowRawText((v) => !v)}
-                className="text-xs font-semibold text-brand-700 hover:text-brand-900 underline"
+                className="text-xs font-semibold text-ink hover:text-ink underline"
               >
                 {showRawText ? 'Ocultar texto reconocido' : 'Ver texto reconocido'}
               </button>
             </div>
 
             {currentResult.detectedRoles?.cargoPrincipal && (
-              <p className="text-xs text-navy-600">
+              <p className="text-xs text-steel">
                 Cargo principal detectado:{' '}
-                <strong className="text-navy-900">{currentResult.detectedRoles.cargoPrincipal}</strong>
+                <strong className="text-ink">{currentResult.detectedRoles.cargoPrincipal}</strong>
                 {currentResult.detectedRoles.familiaPrincipal !==
                   currentResult.detectedRoles.cargoPrincipal && (
-                  <span className="text-navy-500">
+                  <span className="text-steel">
                     {' '}
                     (familia: {currentResult.detectedRoles.familiaPrincipal})
                   </span>
@@ -361,8 +360,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             {currentResult.warnings && currentResult.warnings.length > 0 && (
               <ul className="space-y-1">
                 {currentResult.warnings.map((warning) => (
-                  <li key={warning} className="text-xs text-amber-800 flex items-start">
-                    <Alert01Icon className="h-3.5 w-3.5 mr-1.5 mt-0.5 shrink-0 text-amber-600" />
+                  <li key={warning} className="text-xs text-warning flex items-start">
+                    <Alert01Icon className="h-3.5 w-3.5 mr-1.5 mt-0.5 shrink-0 text-warning" />
                     {warning}
                   </li>
                 ))}
@@ -381,10 +380,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                     }
                     className={`text-[11px] px-2 py-0.5 rounded border ${
                       field.level === 'vacio'
-                        ? 'bg-red-50 border-red-200 text-red-700'
+                        ? 'bg-alert-surface border-alert text-alert'
                         : field.level === 'media'
-                        ? 'bg-amber-50 border-amber-200 text-amber-800'
-                        : 'bg-brand-50 border-brand-200 text-brand-800'
+                        ? 'bg-warning-surface border-warning text-warning'
+                        : 'bg-mist border-fog text-ink'
                     }`}
                   >
                     {field.label}
@@ -395,7 +394,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             )}
 
             {showRawText && (
-              <pre className="p-3 bg-navy-50 rounded-lg text-[11px] font-mono text-navy-800 max-h-80 overflow-y-auto whitespace-pre-wrap">
+              <pre className="p-3 bg-mist rounded-lg text-[11px] font-mono text-ink max-h-80 overflow-y-auto whitespace-pre-wrap">
                 {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
               </pre>
             )}
@@ -441,21 +440,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             !currentResult.contractData &&
             !currentResult.idCardData &&
             !currentResult.healthData && (
-              <div className="bg-white p-6 rounded-xl border border-navy-200 shadow-sm space-y-4">
-                <h3 className="text-base font-bold text-navy-900">
+              <div className="bg-paper p-6 rounded-lg border border-fog space-y-4">
+                <h3 className="text-base font-bold text-ink">
                   No se pudo estructurar el documento
                 </h3>
-                <p className="text-xs text-navy-500">
+                <p className="text-xs text-steel">
                   Tipo detectado: <strong>{currentResult.detectedType.toUpperCase()}</strong>. Revise
                   el texto reconocido para decidir si conviene volver a escanear el documento.
                 </p>
-                <pre className="p-4 bg-navy-50 rounded-lg text-xs font-mono text-navy-800 max-h-96 overflow-y-auto whitespace-pre-wrap">
+                <pre className="p-4 bg-mist rounded-lg text-xs font-mono text-ink max-h-96 overflow-y-auto whitespace-pre-wrap">
                   {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
                 </pre>
                 <div className="flex justify-end">
                   <button
                     onClick={() => setCurrentResult(null)}
-                    className="px-4 py-2 bg-navy-800 hover:bg-navy-900 text-white text-sm font-semibold rounded-lg"
+                    className="px-4 py-2 bg-ink hover:bg-ink text-white text-sm font-semibold rounded-lg"
                   >
                     Volver al lector
                   </button>
