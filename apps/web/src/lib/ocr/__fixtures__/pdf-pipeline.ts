@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import '../compat-upsert';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { buildLayout, DocumentLayout, PageInput } from '../layout';
 import { pdfItemsToWords } from '../pdf-words';

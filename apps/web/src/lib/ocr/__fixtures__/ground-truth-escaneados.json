@@ -1,0 +1,1359 @@
+{
+  "_convencion": {
+    "campo": "igualdad tras normalizar espacios, mayusculas y tildes",
+    "campo~": "el valor esperado debe estar contenido en el extraido",
+    "campo#": "la lista extraida debe tener al menos esta cantidad de elementos",
+    "campo[]": "cada valor esperado debe aparecer en la lista extraida"
+  },
+  "_origen": "Generado por scripts/generar-cv-escaneados.mjs a partir de scripts/datos-cv-sinteticos.mjs. No editar a mano.",
+  "documentos": [
+    {
+      "archivo": "CV_01_una-columna_limpio.pdf",
+      "plantilla": "una-columna",
+      "perfil": "limpio",
+      "nota": "Una columna clásica, degradado limpio",
+      "campos": {
+        "firstNames": "MARTHA LUCÍA",
+        "lastNames": "CAICEDO BERMÚDEZ",
+        "documentNumber": "1098234567",
+        "email": "martha.caicedo@correo.com",
+        "phone": "318 456 7821",
+        "cityResidence~": "Pamplona",
+        "headline~": "Auxiliar Administrativa",
+        "experience#": 4,
+        "experience[].company": [
+          "Servicios Integrales del Norte SAS",
+          "Comercializadora Andina Ltda.",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Auxiliar Administrativa",
+          "Recepcionista",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Norte de Santander",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Asistencia Administrativa",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_02_dos-columnas_medio.pdf",
+      "plantilla": "dos-columnas",
+      "perfil": "medio",
+      "nota": "Dos columnas con barra de color, degradado medio",
+      "campos": {
+        "firstNames": "JHON FREDY",
+        "lastNames": "OSPINA CARDONA",
+        "documentNumber": "1045678901",
+        "email": "jhon.ospina@gmail.com",
+        "phone": "312 334 5566",
+        "cityResidence~": "Medellín",
+        "headline~": "Operario de Producción",
+        "experience#": 2,
+        "experience[].company": [
+          "Alimentos del Valle SAS",
+          "Empaques Plásticos Nacionales"
+        ],
+        "experience[].position": [
+          "Operario de Producción",
+          "Auxiliar de Empaque"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Marco Fidel Suárez"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_03_sin-encabezados_limpio.pdf",
+      "plantilla": "sin-encabezados",
+      "perfil": "limpio",
+      "nota": "Sin encabezados de sección, degradado limpio",
+      "campos": {
+        "firstNames": "DIANA CAROLINA",
+        "lastNames": "MURILLO ESCOBAR",
+        "documentNumber": "52987654",
+        "email": "dcmurillo@hotmail.com",
+        "phone": "301 223 4455",
+        "cityResidence~": "Bogotá D.C.",
+        "headline~": "Coordinadora de Talento Humano",
+        "experience#": 2,
+        "experience[].company": [
+          "Consultores Empresariales SAS",
+          "Grupo Logístico Colombiano"
+        ],
+        "experience[].position": [
+          "Coordinadora de Talento Humano",
+          "Analista de Selección"
+        ],
+        "education#": 2,
+        "education[].institution": [
+          "Universidad del Rosario",
+          "Universidad Nacional de Colombia"
+        ],
+        "education[].degree": [
+          "Especialización en Gerencia del Talento Humano",
+          "Psicología"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_04_formulario_duro.pdf",
+      "plantilla": "formulario",
+      "perfil": "duro",
+      "nota": "Formulario tipo Minerva, degradado duro",
+      "campos": {
+        "firstNames": "WILSON ANDRÉS",
+        "lastNames": "PEÑA ROJAS",
+        "documentNumber": "1090345678",
+        "email": "wilson.pena@servicios.co",
+        "phone": "316 778 9900",
+        "cityResidence~": "Cúcuta",
+        "headline~": "Conductor de Vehículo de Carga",
+        "experience#": 2,
+        "experience[].company": [
+          "Transportes del Oriente SAS",
+          "Distribuidora La Frontera"
+        ],
+        "experience[].position": [
+          "Conductor",
+          "Conductor Repartidor"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Institución Educativa Municipal Cúcuta"
+        ],
+        "education[].degree": [
+          "Bachiller Técnico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_05_denso-2p_medio.pdf",
+      "plantilla": "denso-2p",
+      "perfil": "medio",
+      "nota": "Denso 7,5 pt en dos páginas, degradado medio",
+      "campos": {
+        "firstNames": "SANDRA MILENA",
+        "lastNames": "VARGAS QUINTERO",
+        "documentNumber": "43567890",
+        "email": "sandra.vargas@contable.co",
+        "phone": "304 556 7788",
+        "cityResidence~": "Bucaramanga",
+        "headline~": "Auxiliar Contable",
+        "experience#": 4,
+        "experience[].company": [
+          "Auditoría y Consultoría Santander SAS",
+          "Ferretería Industrial del Norte",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Auxiliar Contable",
+          "Asistente de Facturación",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Santander",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Contabilidad y Finanzas",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_06_grande_limpio.pdf",
+      "plantilla": "grande",
+      "perfil": "limpio",
+      "nota": "Cuerpo grande y espaciado, degradado limpio",
+      "campos": {
+        "firstNames": "JOSÉ MANUEL",
+        "lastNames": "TORRES ARIZA",
+        "documentNumber": "1032456789",
+        "email": "jose.torres@mantenimiento.co",
+        "phone": "320 445 6677",
+        "cityResidence~": "Barranquilla",
+        "headline~": "Técnico de Mantenimiento Electromecánico",
+        "experience#": 2,
+        "experience[].company": [
+          "Frigoríficos del Caribe SAS",
+          "Industrias Metalmecánicas Atlántico"
+        ],
+        "experience[].position": [
+          "Técnico de Mantenimiento",
+          "Auxiliar Electromecánico"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Atlántico"
+        ],
+        "education[].degree": [
+          "Mantenimiento Electromecánico Industrial"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_07_cabecera-oscura_medio.pdf",
+      "plantilla": "cabecera-oscura",
+      "perfil": "medio",
+      "nota": "Cabecera oscura a sangre, degradado medio",
+      "campos": {
+        "firstNames": "LAURA VALENTINA",
+        "lastNames": "GIRALDO MEJÍA",
+        "documentNumber": "1001234567",
+        "email": "laura.giraldo@correo.com",
+        "phone": "313 889 0011",
+        "cityResidence~": "Pereira",
+        "headline~": "Auxiliar de Servicios Generales",
+        "experience#": 0,
+        "experience[].company": [],
+        "experience[].position": [],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Risaralda"
+        ],
+        "education[].degree": [
+          "Servicios Generales y Aseo Institucional"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_08_desordenado_duro.pdf",
+      "plantilla": "desordenado",
+      "perfil": "duro",
+      "nota": "Secciones desordenadas, degradado duro",
+      "campos": {
+        "firstNames": "RICARDO ALFONSO",
+        "lastNames": "BELTRÁN NIÑO",
+        "documentNumber": "79456123",
+        "email": "ricardo.beltran@seguridad.co",
+        "phone": "311 667 8899",
+        "cityResidence~": "Villavicencio",
+        "headline~": "Supervisor de Seguridad",
+        "experience#": 2,
+        "experience[].company": [
+          "Seguridad Privada Los Llanos Ltda.",
+          "Vigilancia Nacional SAS"
+        ],
+        "experience[].position": [
+          "Supervisor de Seguridad",
+          "Vigilante"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Departamental del Meta"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_09_tabla_limpio.pdf",
+      "plantilla": "tabla",
+      "perfil": "limpio",
+      "nota": "Tablas con bordes, degradado limpio",
+      "campos": {
+        "firstNames": "ANGÉLICA MARÍA",
+        "lastNames": "RESTREPO LONDOÑO",
+        "documentNumber": "1017890123",
+        "email": "angelica.restrepo@ventas.com",
+        "phone": "319 334 5566",
+        "cityResidence~": "Cali",
+        "headline~": "Asesora Comercial",
+        "experience#": 4,
+        "experience[].company": [
+          "Distribuciones del Pacífico SAS",
+          "Almacenes El Progreso",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Asesora Comercial",
+          "Vendedora",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Valle",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Gestión de Mercados",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_10_contacto-pie_medio.pdf",
+      "plantilla": "contacto-pie",
+      "perfil": "medio",
+      "nota": "Contacto en el pie de página, degradado medio",
+      "campos": {
+        "firstNames": "FERNANDO JOSÉ",
+        "lastNames": "MEDINA SUÁREZ",
+        "documentNumber": "1085432109",
+        "email": "fernando.medina@logistica.co",
+        "phone": "302 556 7788",
+        "cityResidence~": "Cartagena",
+        "headline~": "Coordinador Logístico",
+        "experience#": 2,
+        "experience[].company": [
+          "Operadores Logísticos del Caribe SAS",
+          "Almacenes Generales de Depósito"
+        ],
+        "experience[].position": [
+          "Coordinador Logístico",
+          "Auxiliar de Bodega"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Bolívar"
+        ],
+        "education[].degree": [
+          "Gestión Logística"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_11_nombre-pequeno_girado90.pdf",
+      "plantilla": "nombre-pequeno",
+      "perfil": "girado90",
+      "nota": "Nombre pequeño, títulos enormes, degradado girado90",
+      "campos": {
+        "firstNames": "CLAUDIA PATRICIA",
+        "lastNames": "HERRERA MOSQUERA",
+        "documentNumber": "1084197531",
+        "email": "claudia.herrera@correo.com",
+        "phone": "321 233 1187",
+        "cityResidence~": "Neiva",
+        "headline~": "Recepcionista",
+        "experience#": 2,
+        "experience[].company": [
+          "Servicios Integrales del Norte SAS",
+          "Comercializadora Andina Ltda."
+        ],
+        "experience[].position": [
+          "Recepcionista",
+          "Recepcionista"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Norte de Santander"
+        ],
+        "education[].degree": [
+          "Asistencia Administrativa"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_12_italica_duro.pdf",
+      "plantilla": "italica",
+      "perfil": "duro",
+      "nota": "Serif itálica inclinada, degradado duro",
+      "campos": {
+        "firstNames": "ÓSCAR IVÁN",
+        "lastNames": "ZAPATA MORENO",
+        "documentNumber": "1091851852",
+        "email": "oscar.zapata@correo.com",
+        "phone": "322 236 1204",
+        "cityResidence~": "Popayán",
+        "headline~": "Almacenista",
+        "experience#": 2,
+        "experience[].company": [
+          "Alimentos del Valle SAS",
+          "Empaques Plásticos Nacionales"
+        ],
+        "experience[].position": [
+          "Almacenista",
+          "Auxiliar de Empaque"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Marco Fidel Suárez"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_13_mecanografiada_limpio.pdf",
+      "plantilla": "mecanografiada",
+      "perfil": "limpio",
+      "nota": "Mecanografiada monoespaciada, degradado limpio",
+      "campos": {
+        "firstNames": "YENNIFER",
+        "lastNames": "CASTRO PALACIOS",
+        "documentNumber": "1099506173",
+        "email": "yennifer.castro@correo.com",
+        "phone": "323 239 1221",
+        "cityResidence~": "Tunja",
+        "headline~": "Auxiliar de Enfermería",
+        "experience#": 2,
+        "experience[].company": [
+          "Consultores Empresariales SAS",
+          "Grupo Logístico Colombiano"
+        ],
+        "experience[].position": [
+          "Auxiliar de Enfermería",
+          "Analista de Selección"
+        ],
+        "education#": 2,
+        "education[].institution": [
+          "Universidad del Rosario",
+          "Universidad Nacional de Colombia"
+        ],
+        "education[].degree": [
+          "Especialización en Gerencia del Talento Humano",
+          "Psicología"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_14_una-columna_medio.pdf",
+      "plantilla": "una-columna",
+      "perfil": "medio",
+      "nota": "Una columna clásica, degradado medio",
+      "campos": {
+        "firstNames": "HÉCTOR FABIO",
+        "lastNames": "LOAIZA GUTIÉRREZ",
+        "documentNumber": "1107160494",
+        "email": "hector.loaiza@correo.com",
+        "phone": "324 242 1238",
+        "cityResidence~": "Montería",
+        "headline~": "Electricista",
+        "experience#": 4,
+        "experience[].company": [
+          "Transportes del Oriente SAS",
+          "Distribuidora La Frontera",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Electricista",
+          "Conductor Repartidor",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "Institución Educativa Municipal Cúcuta",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Bachiller Técnico",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_15_dos-columnas_medio.pdf",
+      "plantilla": "dos-columnas",
+      "perfil": "medio",
+      "nota": "Dos columnas con barra de color, degradado medio",
+      "campos": {
+        "firstNames": "NUBIA ESTHER",
+        "lastNames": "PACHECO ROMERO",
+        "documentNumber": "1114814815",
+        "email": "nubia.pacheco@correo.com",
+        "phone": "325 245 1255",
+        "cityResidence~": "Pamplona",
+        "headline~": "Secretaria Ejecutiva",
+        "experience#": 2,
+        "experience[].company": [
+          "Auditoría y Consultoría Santander SAS",
+          "Ferretería Industrial del Norte"
+        ],
+        "experience[].position": [
+          "Secretaria Ejecutiva",
+          "Asistente de Facturación"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Santander"
+        ],
+        "education[].degree": [
+          "Contabilidad y Finanzas"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_16_sin-encabezados_limpio.pdf",
+      "plantilla": "sin-encabezados",
+      "perfil": "limpio",
+      "nota": "Sin encabezados de sección, degradado limpio",
+      "campos": {
+        "firstNames": "JAIRO ANTONIO",
+        "lastNames": "CUERVO SÁNCHEZ",
+        "documentNumber": "1122469136",
+        "email": "jairo.cuervo@correo.com",
+        "phone": "326 248 1272",
+        "cityResidence~": "Bucaramanga",
+        "headline~": "Mensajero",
+        "experience#": 2,
+        "experience[].company": [
+          "Frigoríficos del Caribe SAS",
+          "Industrias Metalmecánicas Atlántico"
+        ],
+        "experience[].position": [
+          "Mensajero",
+          "Auxiliar Electromecánico"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Atlántico"
+        ],
+        "education[].degree": [
+          "Mantenimiento Electromecánico Industrial"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_17_formulario_duro.pdf",
+      "plantilla": "formulario",
+      "perfil": "duro",
+      "nota": "Formulario tipo Minerva, degradado duro",
+      "campos": {
+        "firstNames": "LEIDY JOHANA",
+        "lastNames": "ARANGO VELÁSQUEZ",
+        "documentNumber": "1130123457",
+        "email": "leidy.arango@correo.com",
+        "phone": "327 251 1289",
+        "cityResidence~": "Bogotá D.C.",
+        "headline~": "Auxiliar de Nómina",
+        "experience#": 0,
+        "experience[].company": [],
+        "experience[].position": [],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Risaralda"
+        ],
+        "education[].degree": [
+          "Servicios Generales y Aseo Institucional"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_18_denso-2p_medio.pdf",
+      "plantilla": "denso-2p",
+      "perfil": "medio",
+      "nota": "Denso 7,5 pt en dos páginas, degradado medio",
+      "campos": {
+        "firstNames": "GERMÁN DARÍO",
+        "lastNames": "PULIDO ACOSTA",
+        "documentNumber": "1137777778",
+        "email": "german.pulido@correo.com",
+        "phone": "328 254 1306",
+        "cityResidence~": "Medellín",
+        "headline~": "Jefe de Bodega",
+        "experience#": 4,
+        "experience[].company": [
+          "Seguridad Privada Los Llanos Ltda.",
+          "Vigilancia Nacional SAS",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Jefe de Bodega",
+          "Vigilante",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "Colegio Departamental del Meta",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Bachiller Académico",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_19_grande_limpio.pdf",
+      "plantilla": "grande",
+      "perfil": "limpio",
+      "nota": "Cuerpo grande y espaciado, degradado limpio",
+      "campos": {
+        "firstNames": "MÓNICA ANDREA",
+        "lastNames": "SALAZAR TRIANA",
+        "documentNumber": "1145432099",
+        "email": "monica.salazar@correo.com",
+        "phone": "329 257 1323",
+        "cityResidence~": "Cali",
+        "headline~": "Analista de Compras",
+        "experience#": 2,
+        "experience[].company": [
+          "Distribuciones del Pacífico SAS",
+          "Almacenes El Progreso"
+        ],
+        "experience[].position": [
+          "Analista de Compras",
+          "Vendedora"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Valle"
+        ],
+        "education[].degree": [
+          "Gestión de Mercados"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_20_cabecera-oscura_girado180.pdf",
+      "plantilla": "cabecera-oscura",
+      "perfil": "girado180",
+      "nota": "Cabecera oscura a sangre, degradado girado180",
+      "campos": {
+        "firstNames": "ÁLVARO ENRIQUE",
+        "lastNames": "BARRIOS FONSECA",
+        "documentNumber": "1153086420",
+        "email": "alvaro.barrios@correo.com",
+        "phone": "310 260 1340",
+        "cityResidence~": "Cúcuta",
+        "headline~": "Soldador",
+        "experience#": 2,
+        "experience[].company": [
+          "Operadores Logísticos del Caribe SAS",
+          "Almacenes Generales de Depósito"
+        ],
+        "experience[].position": [
+          "Soldador",
+          "Auxiliar de Bodega"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Bolívar"
+        ],
+        "education[].degree": [
+          "Gestión Logística"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_21_desordenado_medio.pdf",
+      "plantilla": "desordenado",
+      "perfil": "medio",
+      "nota": "Secciones desordenadas, degradado medio",
+      "campos": {
+        "firstNames": "PAOLA ANDREA",
+        "lastNames": "CÉSPEDES RUEDA",
+        "documentNumber": "1160740741",
+        "email": "paola.cespedes@correo.com",
+        "phone": "311 263 1357",
+        "cityResidence~": "Barranquilla",
+        "headline~": "Auxiliar de Archivo",
+        "experience#": 2,
+        "experience[].company": [
+          "Servicios Integrales del Norte SAS",
+          "Comercializadora Andina Ltda."
+        ],
+        "experience[].position": [
+          "Auxiliar de Archivo",
+          "Recepcionista"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Norte de Santander"
+        ],
+        "education[].degree": [
+          "Asistencia Administrativa"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_22_tabla_duro.pdf",
+      "plantilla": "tabla",
+      "perfil": "duro",
+      "nota": "Tablas con bordes, degradado duro",
+      "campos": {
+        "firstNames": "EDWIN ALEXANDER",
+        "lastNames": "GALVIS MANTILLA",
+        "documentNumber": "1168395062",
+        "email": "edwin.galvis@correo.com",
+        "phone": "312 266 1374",
+        "cityResidence~": "Pereira",
+        "headline~": "Operario de Aseo",
+        "experience#": 4,
+        "experience[].company": [
+          "Alimentos del Valle SAS",
+          "Empaques Plásticos Nacionales",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Operario de Aseo",
+          "Auxiliar de Empaque",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "Colegio Marco Fidel Suárez",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Bachiller Académico",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_23_contacto-pie_limpio.pdf",
+      "plantilla": "contacto-pie",
+      "perfil": "limpio",
+      "nota": "Contacto en el pie de página, degradado limpio",
+      "campos": {
+        "firstNames": "GLORIA INÉS",
+        "lastNames": "TAMAYO BOTERO",
+        "documentNumber": "1176049383",
+        "email": "gloria.tamayo@correo.com",
+        "phone": "313 269 1391",
+        "cityResidence~": "Ibagué",
+        "headline~": "Cajera",
+        "experience#": 2,
+        "experience[].company": [
+          "Consultores Empresariales SAS",
+          "Grupo Logístico Colombiano"
+        ],
+        "experience[].position": [
+          "Cajera",
+          "Analista de Selección"
+        ],
+        "education#": 2,
+        "education[].institution": [
+          "Universidad del Rosario",
+          "Universidad Nacional de Colombia"
+        ],
+        "education[].degree": [
+          "Especialización en Gerencia del Talento Humano",
+          "Psicología"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_24_nombre-pequeno_medio.pdf",
+      "plantilla": "nombre-pequeno",
+      "perfil": "medio",
+      "nota": "Nombre pequeño, títulos enormes, degradado medio",
+      "campos": {
+        "firstNames": "NÉSTOR JULIÁN",
+        "lastNames": "ACEVEDO PARRA",
+        "documentNumber": "1183703704",
+        "email": "nestor.acevedo@correo.com",
+        "phone": "314 272 1408",
+        "cityResidence~": "Villavicencio",
+        "headline~": "Supervisor de Producción",
+        "experience#": 2,
+        "experience[].company": [
+          "Transportes del Oriente SAS",
+          "Distribuidora La Frontera"
+        ],
+        "experience[].position": [
+          "Supervisor de Producción",
+          "Conductor Repartidor"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Institución Educativa Municipal Cúcuta"
+        ],
+        "education[].degree": [
+          "Bachiller Técnico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_25_italica_limpio.pdf",
+      "plantilla": "italica",
+      "perfil": "limpio",
+      "nota": "Serif itálica inclinada, degradado limpio",
+      "campos": {
+        "firstNames": "MARÍA FERNANDA",
+        "lastNames": "DUARTE VILLAMIZAR",
+        "documentNumber": "1191358025",
+        "email": "maria.duarte@correo.com",
+        "phone": "315 275 1425",
+        "cityResidence~": "Manizales",
+        "headline~": "Asistente de Gerencia",
+        "experience#": 2,
+        "experience[].company": [
+          "Auditoría y Consultoría Santander SAS",
+          "Ferretería Industrial del Norte"
+        ],
+        "experience[].position": [
+          "Asistente de Gerencia",
+          "Asistente de Facturación"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Santander"
+        ],
+        "education[].degree": [
+          "Contabilidad y Finanzas"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_26_mecanografiada_duro.pdf",
+      "plantilla": "mecanografiada",
+      "perfil": "duro",
+      "nota": "Mecanografiada monoespaciada, degradado duro",
+      "campos": {
+        "firstNames": "CÉSAR AUGUSTO",
+        "lastNames": "MONSALVE OTÁLORA",
+        "documentNumber": "1199012346",
+        "email": "cesar.monsalve@correo.com",
+        "phone": "316 278 1442",
+        "cityResidence~": "Neiva",
+        "headline~": "Auxiliar de Mantenimiento",
+        "experience#": 2,
+        "experience[].company": [
+          "Frigoríficos del Caribe SAS",
+          "Industrias Metalmecánicas Atlántico"
+        ],
+        "experience[].position": [
+          "Auxiliar de Mantenimiento",
+          "Auxiliar Electromecánico"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Atlántico"
+        ],
+        "education[].degree": [
+          "Mantenimiento Electromecánico Industrial"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_27_una-columna_medio.pdf",
+      "plantilla": "una-columna",
+      "perfil": "medio",
+      "nota": "Una columna clásica, degradado medio",
+      "campos": {
+        "firstNames": "LUZ DARY",
+        "lastNames": "ESCOBAR CIFUENTES",
+        "documentNumber": "1206666667",
+        "email": "luz.escobar@correo.com",
+        "phone": "317 281 1459",
+        "cityResidence~": "Popayán",
+        "headline~": "Coordinadora de Calidad",
+        "experience#": 3,
+        "experience[].company": [
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente",
+          "Inversiones Santa Marta Ltda."
+        ],
+        "experience[].position": [
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo",
+          "Asistente de Oficina"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Risaralda",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Servicios Generales y Aseo Institucional",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_28_dos-columnas_limpio.pdf",
+      "plantilla": "dos-columnas",
+      "perfil": "limpio",
+      "nota": "Dos columnas con barra de color, degradado limpio",
+      "campos": {
+        "firstNames": "IVÁN CAMILO",
+        "lastNames": "NAVARRO BUITRAGO",
+        "documentNumber": "1214320988",
+        "email": "ivan.navarro@correo.com",
+        "phone": "318 284 1476",
+        "cityResidence~": "Tunja",
+        "headline~": "Auxiliar Logístico",
+        "experience#": 2,
+        "experience[].company": [
+          "Seguridad Privada Los Llanos Ltda.",
+          "Vigilancia Nacional SAS"
+        ],
+        "experience[].position": [
+          "Auxiliar Logístico",
+          "Vigilante"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Departamental del Meta"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_29_sin-encabezados_medio.pdf",
+      "plantilla": "sin-encabezados",
+      "perfil": "medio",
+      "nota": "Sin encabezados de sección, degradado medio",
+      "campos": {
+        "firstNames": "ROSA ELVIRA",
+        "lastNames": "MENDOZA CALDERÓN",
+        "documentNumber": "1221975309",
+        "email": "rosa.mendoza@correo.com",
+        "phone": "319 287 1493",
+        "cityResidence~": "Montería",
+        "headline~": "Servicios Generales",
+        "experience#": 2,
+        "experience[].company": [
+          "Distribuciones del Pacífico SAS",
+          "Almacenes El Progreso"
+        ],
+        "experience[].position": [
+          "Servicios Generales",
+          "Vendedora"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Valle"
+        ],
+        "education[].degree": [
+          "Gestión de Mercados"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_30_formulario_girado90.pdf",
+      "plantilla": "formulario",
+      "perfil": "girado90",
+      "nota": "Formulario tipo Minerva, degradado girado90",
+      "campos": {
+        "firstNames": "ANDRÉS MAURICIO",
+        "lastNames": "GUZMÁN LEÓN",
+        "documentNumber": "1229629630",
+        "email": "andres.guzman@correo.com",
+        "phone": "320 290 1510",
+        "cityResidence~": "Pamplona",
+        "headline~": "Técnico en Refrigeración",
+        "experience#": 2,
+        "experience[].company": [
+          "Operadores Logísticos del Caribe SAS",
+          "Almacenes Generales de Depósito"
+        ],
+        "experience[].position": [
+          "Técnico en Refrigeración",
+          "Auxiliar de Bodega"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Bolívar"
+        ],
+        "education[].degree": [
+          "Gestión Logística"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_31_denso-2p_duro.pdf",
+      "plantilla": "denso-2p",
+      "perfil": "duro",
+      "nota": "Denso 7,5 pt en dos páginas, degradado duro",
+      "campos": {
+        "firstNames": "SOR ÁNGELA",
+        "lastNames": "PRIETO VALENCIA",
+        "documentNumber": "1237283951",
+        "email": "sor.prieto@correo.com",
+        "phone": "321 293 1527",
+        "cityResidence~": "Bucaramanga",
+        "headline~": "Auxiliar Contable",
+        "experience#": 4,
+        "experience[].company": [
+          "Servicios Integrales del Norte SAS",
+          "Comercializadora Andina Ltda.",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Auxiliar Contable",
+          "Recepcionista",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Norte de Santander",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Asistencia Administrativa",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_32_grande_medio.pdf",
+      "plantilla": "grande",
+      "perfil": "medio",
+      "nota": "Cuerpo grande y espaciado, degradado medio",
+      "campos": {
+        "firstNames": "JUAN SEBASTIÁN",
+        "lastNames": "ROMERO CANO",
+        "documentNumber": "1244938272",
+        "email": "juan.romero@correo.com",
+        "phone": "322 296 1544",
+        "cityResidence~": "Bogotá D.C.",
+        "headline~": "Conductor",
+        "experience#": 2,
+        "experience[].company": [
+          "Alimentos del Valle SAS",
+          "Empaques Plásticos Nacionales"
+        ],
+        "experience[].position": [
+          "Conductor",
+          "Auxiliar de Empaque"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Marco Fidel Suárez"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_33_cabecera-oscura_limpio.pdf",
+      "plantilla": "cabecera-oscura",
+      "perfil": "limpio",
+      "nota": "Cabecera oscura a sangre, degradado limpio",
+      "campos": {
+        "firstNames": "MARTHA CECILIA",
+        "lastNames": "BOHÓRQUEZ RINCÓN",
+        "documentNumber": "1252592593",
+        "email": "martha.bohorquez@correo.com",
+        "phone": "323 299 1561",
+        "cityResidence~": "Medellín",
+        "headline~": "Jefe de Personal",
+        "experience#": 2,
+        "experience[].company": [
+          "Consultores Empresariales SAS",
+          "Grupo Logístico Colombiano"
+        ],
+        "experience[].position": [
+          "Jefe de Personal",
+          "Analista de Selección"
+        ],
+        "education#": 2,
+        "education[].institution": [
+          "Universidad del Rosario",
+          "Universidad Nacional de Colombia"
+        ],
+        "education[].degree": [
+          "Especialización en Gerencia del Talento Humano",
+          "Psicología"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_34_desordenado_medio.pdf",
+      "plantilla": "desordenado",
+      "perfil": "medio",
+      "nota": "Secciones desordenadas, degradado medio",
+      "campos": {
+        "firstNames": "DIEGO ARMANDO",
+        "lastNames": "LOZANO SEPÚLVEDA",
+        "documentNumber": "1260246914",
+        "email": "diego.lozano@correo.com",
+        "phone": "324 302 1578",
+        "cityResidence~": "Cali",
+        "headline~": "Vigilante",
+        "experience#": 2,
+        "experience[].company": [
+          "Transportes del Oriente SAS",
+          "Distribuidora La Frontera"
+        ],
+        "experience[].position": [
+          "Vigilante",
+          "Conductor Repartidor"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Institución Educativa Municipal Cúcuta"
+        ],
+        "education[].degree": [
+          "Bachiller Técnico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_35_tabla_duro.pdf",
+      "plantilla": "tabla",
+      "perfil": "duro",
+      "nota": "Tablas con bordes, degradado duro",
+      "campos": {
+        "firstNames": "ADRIANA LUCÍA",
+        "lastNames": "FORERO CHAPARRO",
+        "documentNumber": "1267901235",
+        "email": "adriana.forero@correo.com",
+        "phone": "325 305 1595",
+        "cityResidence~": "Cúcuta",
+        "headline~": "Analista de Cartera",
+        "experience#": 4,
+        "experience[].company": [
+          "Auditoría y Consultoría Santander SAS",
+          "Ferretería Industrial del Norte",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Analista de Cartera",
+          "Asistente de Facturación",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Santander",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Contabilidad y Finanzas",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_36_contacto-pie_limpio.pdf",
+      "plantilla": "contacto-pie",
+      "perfil": "limpio",
+      "nota": "Contacto en el pie de página, degradado limpio",
+      "campos": {
+        "firstNames": "LUIS EDUARDO",
+        "lastNames": "CANTOR PIÑEROS",
+        "documentNumber": "1275555556",
+        "email": "luis.cantor@correo.com",
+        "phone": "326 308 1612",
+        "cityResidence~": "Barranquilla",
+        "headline~": "Operario de Planta",
+        "experience#": 2,
+        "experience[].company": [
+          "Frigoríficos del Caribe SAS",
+          "Industrias Metalmecánicas Atlántico"
+        ],
+        "experience[].position": [
+          "Operario de Planta",
+          "Auxiliar Electromecánico"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Atlántico"
+        ],
+        "education[].degree": [
+          "Mantenimiento Electromecánico Industrial"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_37_nombre-pequeno_medio.pdf",
+      "plantilla": "nombre-pequeno",
+      "perfil": "medio",
+      "nota": "Nombre pequeño, títulos enormes, degradado medio",
+      "campos": {
+        "firstNames": "SANDRA JOHANA",
+        "lastNames": "ALVARADO NÚÑEZ",
+        "documentNumber": "1283209877",
+        "email": "sandra.alvarado@correo.com",
+        "phone": "327 311 1629",
+        "cityResidence~": "Pereira",
+        "headline~": "Auxiliar de Compras",
+        "experience#": 0,
+        "experience[].company": [],
+        "experience[].position": [],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Risaralda"
+        ],
+        "education[].degree": [
+          "Servicios Generales y Aseo Institucional"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_38_italica_limpio.pdf",
+      "plantilla": "italica",
+      "perfil": "limpio",
+      "nota": "Serif itálica inclinada, degradado limpio",
+      "campos": {
+        "firstNames": "JORGE ENRIQUE",
+        "lastNames": "MOLINA TOVAR",
+        "documentNumber": "1290864198",
+        "email": "jorge.molina@correo.com",
+        "phone": "328 314 1646",
+        "cityResidence~": "Ibagué",
+        "headline~": "Tecnólogo Industrial",
+        "experience#": 2,
+        "experience[].company": [
+          "Seguridad Privada Los Llanos Ltda.",
+          "Vigilancia Nacional SAS"
+        ],
+        "experience[].position": [
+          "Tecnólogo Industrial",
+          "Vigilante"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "Colegio Departamental del Meta"
+        ],
+        "education[].degree": [
+          "Bachiller Académico"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_39_mecanografiada_medio.pdf",
+      "plantilla": "mecanografiada",
+      "perfil": "medio",
+      "nota": "Mecanografiada monoespaciada, degradado medio",
+      "campos": {
+        "firstNames": "CARMEN ALICIA",
+        "lastNames": "SIERRA OSORIO",
+        "documentNumber": "1298518519",
+        "email": "carmen.sierra@correo.com",
+        "phone": "329 317 1663",
+        "cityResidence~": "Villavicencio",
+        "headline~": "Auxiliar Administrativa",
+        "experience#": 2,
+        "experience[].company": [
+          "Distribuciones del Pacífico SAS",
+          "Almacenes El Progreso"
+        ],
+        "experience[].position": [
+          "Auxiliar Administrativa",
+          "Vendedora"
+        ],
+        "education#": 1,
+        "education[].institution": [
+          "SENA Regional Valle"
+        ],
+        "education[].degree": [
+          "Gestión de Mercados"
+        ],
+        "skills#": 2
+      }
+    },
+    {
+      "archivo": "CV_40_una-columna_duro.pdf",
+      "plantilla": "una-columna",
+      "perfil": "duro",
+      "nota": "Una columna clásica, degradado duro",
+      "campos": {
+        "firstNames": "FABIÁN RICARDO",
+        "lastNames": "CORREA JIMÉNEZ",
+        "documentNumber": "1306172840",
+        "email": "fabian.correa@correo.com",
+        "phone": "310 320 1680",
+        "cityResidence~": "Manizales",
+        "headline~": "Coordinador SST",
+        "experience#": 4,
+        "experience[].company": [
+          "Operadores Logísticos del Caribe SAS",
+          "Almacenes Generales de Depósito",
+          "Distribuidora Nacional de Insumos SAS",
+          "Cooperativa Multiactiva del Oriente"
+        ],
+        "experience[].position": [
+          "Coordinador SST",
+          "Auxiliar de Bodega",
+          "Auxiliar de Servicios Generales",
+          "Auxiliar Operativo"
+        ],
+        "education#": 3,
+        "education[].institution": [
+          "SENA Regional Bolívar",
+          "SENA Centro de Comercio",
+          "Cámara de Comercio de Bogotá"
+        ],
+        "education[].degree": [
+          "Gestión Logística",
+          "Manejo de Herramientas Ofimáticas",
+          "Servicio al Cliente y Comunicación Efectiva"
+        ],
+        "skills#": 2
+      }
+    }
+  ]
+}

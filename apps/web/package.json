@@ -11,6 +11,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "copy:ocr": "node scripts/copy-ocr-assets.mjs",
+    "gen:scans": "node scripts/generar-cv-escaneados.mjs",
+    "bench:ocr": "npm run copy:ocr && node scripts/bench-ocr.mjs",
     "predev": "npm run copy:ocr",
     "prebuild": "npm run copy:ocr",
     "pretest": "npm run copy:ocr"

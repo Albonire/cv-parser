@@ -30,3 +30,6 @@ public/tessdata/
 eval-report.json
 
 *.tsbuildinfo
+
+# Banco de escaneos sinteticos: 22 MB de JPEG que se regeneran con `npm run gen:scans`
+test-scans/
