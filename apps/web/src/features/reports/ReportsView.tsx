@@ -2,7 +2,7 @@ import React from 'react';
 import { CandidateFormData } from '../../types/candidate';
 import { EmployeeItem } from '../../types/employee';
 import { ContractFormData } from '../../types/contract';
-import { Download01Icon, DocumentValidationIcon, LegalDocument02Icon, Building01Icon, CheckmarkCircle01Icon } from 'hugeicons-react';
+import { Download01Icon } from 'hugeicons-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -161,13 +161,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 rounded-xl border border-navy-200 shadow-sm flex items-center space-x-3">
-        <Download01Icon className="h-6 w-6 text-brand-600" />
+      <div className="bg-paper p-4 rounded-lg border border-fog flex items-center space-x-3">
+        <Download01Icon className="h-6 w-6 text-steel" />
         <div>
-          <h2 className="text-lg font-bold text-navy-900">
+          <h2 className="text-lg font-bold text-ink">
             Modulo de Reportes e Informes (M10)
           </h2>
-          <p className="text-xs text-navy-500">
+          <p className="text-xs text-steel">
             Exporta listados y documentos con logo y formato institucional para Rosimar S.A.S.
           </p>
         </div>
@@ -175,55 +175,53 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Reportes en Excel */}
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-navy-900 flex items-center">
-            <DocumentValidationIcon className="h-5 w-5 mr-2 text-green-600" />
+        <div className="bg-paper p-5 rounded-lg border border-fog space-y-4">
+          <h3 className="text-sm font-bold text-ink flex items-center">
             Exportacion a Microsoft Excel (.xlsx)
           </h3>
-          <p className="text-xs text-navy-600">
+          <p className="text-xs text-steel">
             Genera hojas de calculo con todos los campos estructurados para analisis o respaldo.
           </p>
           <div className="space-y-2">
             <button
               onClick={exportCandidatesToExcel}
-              className="w-full flex items-center justify-between p-3 bg-navy-50 hover:bg-navy-100 rounded-lg border border-navy-200 text-xs font-semibold text-navy-800 transition-colors"
+              className="w-full flex items-center justify-between p-3 bg-mist hover:bg-mist rounded-lg border border-fog text-xs font-semibold text-ink transition-colors"
             >
               <span>Exportar Listado de Candidatos ({candidates.length})</span>
-              <Download01Icon className="h-4 w-4 text-navy-500" />
+              <Download01Icon className="h-4 w-4 text-steel" />
             </button>
             <button
               onClick={exportEmployeesToExcel}
-              className="w-full flex items-center justify-between p-3 bg-navy-50 hover:bg-navy-100 rounded-lg border border-navy-200 text-xs font-semibold text-navy-800 transition-colors"
+              className="w-full flex items-center justify-between p-3 bg-mist hover:bg-mist rounded-lg border border-fog text-xs font-semibold text-ink transition-colors"
             >
               <span>Exportar Plantilla de Empleados ({employees.length})</span>
-              <Download01Icon className="h-4 w-4 text-navy-500" />
+              <Download01Icon className="h-4 w-4 text-steel" />
             </button>
             <button
               onClick={exportContractsToExcel}
-              className="w-full flex items-center justify-between p-3 bg-navy-50 hover:bg-navy-100 rounded-lg border border-navy-200 text-xs font-semibold text-navy-800 transition-colors"
+              className="w-full flex items-center justify-between p-3 bg-mist hover:bg-mist rounded-lg border border-fog text-xs font-semibold text-ink transition-colors"
             >
               <span>Exportar Contratos Laborales ({contracts.length})</span>
-              <Download01Icon className="h-4 w-4 text-navy-500" />
+              <Download01Icon className="h-4 w-4 text-steel" />
             </button>
           </div>
         </div>
 
         {/* Informes en PDF */}
-        <div className="bg-white p-5 rounded-xl border border-navy-200 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-navy-900 flex items-center">
-            <LegalDocument02Icon className="h-5 w-5 mr-2 text-red-600" />
+        <div className="bg-paper p-5 rounded-lg border border-fog space-y-4">
+          <h3 className="text-sm font-bold text-ink flex items-center">
             Informes Oficiales en PDF (con Membrete)
           </h3>
-          <p className="text-xs text-navy-600">
+          <p className="text-xs text-steel">
             Genera documentos formateados listos para impresion con membrete oficial de Rosimar S.A.S.
           </p>
           <div className="space-y-2">
             <button
               onClick={exportPdfReport}
-              className="w-full flex items-center justify-between p-3 bg-brand-50 hover:bg-brand-100 rounded-lg border border-brand-200 text-xs font-semibold text-brand-900 transition-colors"
+              className="w-full flex items-center justify-between p-3 bg-mist hover:bg-mist rounded-lg border border-fog text-xs font-semibold text-ink transition-colors"
             >
               <span>Descargar Informe General Ejecutivo (PDF)</span>
-              <Download01Icon className="h-4 w-4 text-brand-600" />
+              <Download01Icon className="h-4 w-4 text-steel" />
             </button>
           </div>
         </div>

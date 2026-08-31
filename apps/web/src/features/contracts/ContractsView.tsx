@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ContractFormData } from '../../types/contract';
-import { DocumentValidationIcon, Search01Icon, Calendar01Icon, Dollar01Icon, Clock01Icon } from 'hugeicons-react';
+import { Search01Icon } from 'hugeicons-react';
 
 interface ContractsViewProps {
   contracts: ContractFormData[];
@@ -18,30 +18,27 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 rounded-xl border border-navy-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <DocumentValidationIcon className="h-6 w-6 text-brand-600" />
-          <h2 className="text-lg font-bold text-navy-900">
-            Contratos Laborales Registrados ({filteredContracts.length})
-          </h2>
-        </div>
+      <div className="flex flex-col items-start justify-between gap-4 pt-8 sm:flex-row sm:items-center">
+        <p className="text-caption text-steel">
+            {filteredContracts.length} {filteredContracts.length === 1 ? 'contrato' : 'contratos'}
+          </p>
 
         <div className="relative w-full sm:w-64">
-          <Search01Icon className="h-4 w-4 absolute left-3 top-2.5 text-navy-400" />
+          <Search01Icon className="h-4 w-4 absolute left-3 top-2.5 text-steel" />
           <input
             type="text"
             placeholder="Buscar por trabajador, cargo..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border border-navy-300 rounded-lg text-xs focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 border border-fog rounded-lg text-xs focus:outline-none"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-navy-200 shadow-sm overflow-hidden">
+      <div className="bg-paper rounded-lg border border-fog overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-navy-200 text-left text-xs">
-            <thead className="bg-navy-50 text-navy-600 font-semibold uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-mist text-left text-xs">
+            <thead className="bg-mist text-steel font-semibold uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">Trabajador</th>
                 <th className="px-4 py-3">Cargo</th>
@@ -51,29 +48,29 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts }) => {
                 <th className="px-4 py-3">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-100 bg-white">
+            <tbody className="divide-y divide-mist bg-paper">
               {filteredContracts.map((con) => (
-                <tr key={con.id} className="hover:bg-navy-50/50 transition-colors">
+                <tr key={con.id} className="hover:bg-paper transition-colors">
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-navy-900">{con.workerName}</div>
-                    <div className="text-[11px] text-navy-500 font-mono">CC: {con.workerDocumentNumber}</div>
+                    <div className="font-semibold text-ink">{con.workerName}</div>
+                    <div className="text-[11px] text-steel font-mono">CC: {con.workerDocumentNumber}</div>
                   </td>
-                  <td className="px-4 py-3 font-medium text-navy-700">{con.position}</td>
-                  <td className="px-4 py-3 text-navy-600 capitalize">
+                  <td className="px-4 py-3 font-medium text-ink">{con.position}</td>
+                  <td className="px-4 py-3 text-steel capitalize">
                     {con.contractType.replace(/_/g, ' ')}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-brand-700">
+                  <td className="px-4 py-3 font-semibold text-ink">
                     ${con.salary.toLocaleString('es-CO')} COP
                   </td>
-                  <td className="px-4 py-3 text-navy-600">
+                  <td className="px-4 py-3 text-steel">
                     <div>Inicio: {con.startDate}</div>
-                    <div className="text-[11px] text-navy-500">
+                    <div className="text-[11px] text-steel">
                       Fin: {con.endDate || 'Indefinido'}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      con.status === 'vigente' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                      con.status === 'vigente' ? 'border border-ink text-ink font-semibold' : 'bg-warning-surface text-warning'
                     }`}>
                       {con.status}
                     </span>
@@ -82,7 +79,7 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts }) => {
               ))}
               {filteredContracts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-navy-400 italic">
+                  <td colSpan={6} className="px-4 py-8 text-center text-steel italic">
                     No hay contratos registrados. Puedes escanearlos desde el <strong>Lector OCR</strong>.
                   </td>
                 </tr>

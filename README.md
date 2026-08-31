@@ -12,6 +12,7 @@ Sistema de control, optimización y análisis de hojas de vida + gestión labora
 |---|---|
 | [docs/REQUERIMIENTOS.md](docs/REQUERIMIENTOS.md) | Alcance funcional, formularios de datos capturados por OCR, reglas de negocio, requisitos no funcionales |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Stack técnico, diagramas, modelo de datos, estrategia offline, hosting gratis, roadmap |
+| [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) | Sistema de diseño: tokens, tipografía, componentes y reglas de interfaz |
 
 ## Módulos principales
 

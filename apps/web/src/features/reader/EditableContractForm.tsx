@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ContractFormData, ContractType, PaymentFrequency, ContractStatus } from '../../types/contract';
-import { DocumentValidationIcon, Building01Icon, UserIcon, Calendar01Icon, Dollar01Icon, FloppyDiskIcon } from 'hugeicons-react';
+import { ContractFormData, ContractType, PaymentFrequency } from '../../types/contract';
 
 interface EditableContractFormProps {
   initialData: ContractFormData;
@@ -25,76 +24,70 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-navy-200 shadow-md p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-navy-200 mb-6 gap-3">
+    <div className="rounded-lg border border-fog bg-paper p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-fog mb-6 gap-3">
         <div>
-          <h2 className="text-xl font-bold text-navy-900 flex items-center">
-            <DocumentValidationIcon className="h-5 w-5 mr-2 text-brand-600" />
+          <h2 className="text-subheading font-semibold tracking-[-0.02em] text-ink">
             Formulario 5.2: Contrato de Trabajo (Colombia)
           </h2>
-          <p className="text-xs text-navy-500 mt-0.5">
+          <p className="text-xs text-steel mt-0.5">
             Revisa y confirma las condiciones contractuales extraidas del documento.
           </p>
         </div>
         {confidenceScore !== undefined && (
-          <div className="flex items-center space-x-2 bg-navy-50 px-3 py-1.5 rounded-lg border border-navy-200">
-            <span className="text-xs text-navy-600 font-medium">Confianza OCR:</span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-green-100 text-green-800">
-              {Math.round(confidenceScore * 100)}%
-            </span>
-          </div>
+          <p className="text-micro text-steel">
+            Confianza de extracción {Math.round(confidenceScore * 100)}%
+          </p>
         )}
       </div>
 
       <div className="space-y-6">
         {/* Seccion 1: Empleador y Trabajador */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="p-4 bg-navy-50/50 rounded-lg border border-navy-200 space-y-3">
-            <h3 className="text-xs font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <Building01Icon className="h-4 w-4 mr-1 text-brand-600" />
-              1. Datos del Empleador
+          <div className="space-y-3">
+            <h3 className="text-caption font-semibold uppercase tracking-[0.08em] text-steel">
+            1. Datos del Empleador
             </h3>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Razon Social</label>
+              <label className="block text-xs font-medium text-ink mb-1">Razon Social</label>
               <input
                 type="text"
                 value={formData.employerName}
                 onChange={(e) => handleFieldChange('employerName', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm bg-white"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">NIT</label>
+              <label className="block text-xs font-medium text-ink mb-1">NIT</label>
               <input
                 type="text"
                 value={formData.employerNit}
                 onChange={(e) => handleFieldChange('employerNit', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm bg-white"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
           </div>
 
-          <div className="p-4 bg-navy-50/50 rounded-lg border border-navy-200 space-y-3">
-            <h3 className="text-xs font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <UserIcon className="h-4 w-4 mr-1 text-brand-600" />
-              2. Datos del Trabajador
+          <div className="space-y-3">
+            <h3 className="text-caption font-semibold uppercase tracking-[0.08em] text-steel">
+            2. Datos del Trabajador
             </h3>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Nombre Completo</label>
+              <label className="block text-xs font-medium text-ink mb-1">Nombre Completo</label>
               <input
                 type="text"
                 value={formData.workerName}
                 onChange={(e) => handleFieldChange('workerName', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm bg-white"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Cedula / Documento</label>
+              <label className="block text-xs font-medium text-ink mb-1">Cedula / Documento</label>
               <input
                 type="text"
                 value={formData.workerDocumentNumber}
                 onChange={(e) => handleFieldChange('workerDocumentNumber', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm bg-white"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
           </div>
@@ -102,35 +95,34 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
 
         {/* Seccion 2: Condiciones Laborales */}
         <div>
-          <h3 className="text-xs font-bold text-navy-800 uppercase tracking-wider mb-3 flex items-center">
-            <Dollar01Icon className="h-4 w-4 mr-1 text-brand-600" />
+          <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-3 flex items-center">
             3. Cargo, Salario y Modalidad
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Cargo a Desempeñar</label>
+              <label className="block text-xs font-medium text-ink mb-1">Cargo a Desempeñar</label>
               <input
                 type="text"
                 value={formData.position}
                 onChange={(e) => handleFieldChange('position', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Salario (Monto)</label>
+              <label className="block text-xs font-medium text-ink mb-1">Salario (Monto)</label>
               <input
                 type="number"
                 value={formData.salary}
                 onChange={(e) => handleFieldChange('salary', parseFloat(e.target.value) || 0)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Forma de Pago</label>
+              <label className="block text-xs font-medium text-ink mb-1">Forma de Pago</label>
               <select
                 value={formData.paymentFrequency}
                 onChange={(e) => handleFieldChange('paymentFrequency', e.target.value as PaymentFrequency)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               >
                 <option value="mensual">Mensual</option>
                 <option value="quincenal">Quincenal</option>
@@ -138,11 +130,11 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Tipo de Contrato</label>
+              <label className="block text-xs font-medium text-ink mb-1">Tipo de Contrato</label>
               <select
                 value={formData.contractType}
                 onChange={(e) => handleFieldChange('contractType', e.target.value as ContractType)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               >
                 <option value="termino_fijo">A Termino Fijo</option>
                 <option value="indefinido">A Termino Indefinido</option>
@@ -156,76 +148,74 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
 
         {/* Seccion 3: Fechas, Periodo de Prueba y Preaviso */}
         <div>
-          <h3 className="text-xs font-bold text-navy-800 uppercase tracking-wider mb-3 flex items-center">
-            <Calendar01Icon className="h-4 w-4 mr-1 text-brand-600" />
+          <h3 className="text-xs font-bold text-ink uppercase tracking-wider mb-3 flex items-center">
             4. Fechas, Periodo de Prueba y Preaviso (RN-3 y RN-4)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Fecha de Inicio</label>
+              <label className="block text-xs font-medium text-ink mb-1">Fecha de Inicio</label>
               <input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => handleFieldChange('startDate', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Fecha de Vencimiento</label>
+              <label className="block text-xs font-medium text-ink mb-1">Fecha de Vencimiento</label>
               <input
                 type="date"
                 value={formData.endDate || ''}
                 disabled={formData.contractType === 'indefinido'}
                 onChange={(e) => handleFieldChange('endDate', e.target.value)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm disabled:bg-navy-100"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm disabled:bg-mist"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Periodo de Prueba (Dias)</label>
+              <label className="block text-xs font-medium text-ink mb-1">Periodo de Prueba (Dias)</label>
               <input
                 type="number"
                 value={formData.trialPeriodDays}
                 onChange={(e) => handleFieldChange('trialPeriodDays', parseInt(e.target.value, 10) || 60)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Dias de Preaviso</label>
+              <label className="block text-xs font-medium text-ink mb-1">Dias de Preaviso</label>
               <input
                 type="number"
                 value={formData.noticeDays}
                 onChange={(e) => handleFieldChange('noticeDays', parseInt(e.target.value, 10) || 30)}
-                className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
             </div>
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-navy-700 mb-1">Lugar de Ejecucion</label>
+          <label className="block text-xs font-medium text-ink mb-1">Lugar de Ejecucion</label>
           <input
             type="text"
             value={formData.executionPlace}
             onChange={(e) => handleFieldChange('executionPlace', e.target.value)}
-            className="w-full px-3 py-1.5 border border-navy-300 rounded text-sm"
+            className="w-full px-3 py-1.5 border border-fog rounded text-sm"
           />
         </div>
       </div>
 
-      <div className="mt-8 pt-4 border-t border-navy-200 flex flex-col sm:flex-row justify-end gap-3">
+      <div className="mt-8 pt-4 border-t border-fog flex flex-col sm:flex-row justify-end gap-3">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-navy-700 bg-navy-100 hover:bg-navy-200 rounded-lg transition-colors"
+          className="px-4 py-2 text-sm font-medium text-ink bg-mist hover:bg-fog rounded-lg transition-colors"
         >
           Descartar / Cancelar
         </button>
         <button
           type="button"
           onClick={() => onSave(formData)}
-          className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition-colors"
+          className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-signal-blue hover:bg-signal-blue rounded-lg transition-colors shadow-subtle"
         >
-          <FloppyDiskIcon className="h-4 w-4 mr-1.5" />
           Guardar Contrato en el Sistema
         </button>
       </div>

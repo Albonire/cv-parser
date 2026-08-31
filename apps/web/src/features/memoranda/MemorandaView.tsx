@@ -3,7 +3,7 @@ import { MemorandumItem, MemorandumType } from '../../types/memorandum';
 import { EmployeeItem } from '../../types/employee';
 import { db } from '../../lib/offline/db';
 import { AlertItem } from '../../types/alert';
-import { Alert02Icon, PlusSignIcon, Alert01Icon, Search01Icon, Shield02Icon, CheckmarkCircle01Icon } from 'hugeicons-react';
+import { PlusSignIcon, Shield02Icon } from 'hugeicons-react';
 
 interface MemorandaViewProps {
   memoranda: MemorandumItem[];
@@ -91,37 +91,34 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
   const getMemoBadge = (type: MemorandumType) => {
     switch (type) {
       case 'llamado_atencion':
-        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">Llamado de Atencion</span>;
+        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-warning-surface text-warning">Llamado de Atencion</span>;
       case 'amonestacion_preventiva':
         return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">Amonestacion Preventiva</span>;
       case 'amonestacion_disciplinaria':
-        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">Amonestacion Disciplinaria</span>;
+        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-alert-surface text-alert">Amonestacion Disciplinaria</span>;
       default:
-        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-navy-100 text-navy-800">Otro</span>;
+        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-mist text-ink">Otro</span>;
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Banner de regla de negocio RN-2 */}
-      <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start space-x-3 text-amber-900">
-        <Shield02Icon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+      <div className="bg-warning-surface border border-warning rounded-lg p-4 flex items-start space-x-3 text-warning">
+        <Shield02Icon className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
         <div className="text-xs">
           <strong className="font-bold">Regla de Negocio RN-2 (Rosimar S.A.S.):</strong> Al acumular 3 memorandos, el contador del empleado se destaca en rojo y se genera una alerta informativa para la revision manual del contrato. El sistema orienta el proceso pero nunca cancela contratos de forma automatica.
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-navy-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <Alert01Icon className="h-6 w-6 text-brand-600" />
-          <h2 className="text-lg font-bold text-navy-900">
-            Registro de Memorandos ({memoranda.length})
-          </h2>
-        </div>
+      <div className="flex flex-col items-start justify-between gap-4 pt-8 sm:flex-row sm:items-center">
+        <p className="text-caption text-steel">
+            {memoranda.length} {memoranda.length === 1 ? 'memorando' : 'memorandos'}
+          </p>
 
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+          className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle"
         >
           <PlusSignIcon className="h-4 w-4 mr-1" />
           Registrar Nuevo Memorando
@@ -129,10 +126,10 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
       </div>
 
       {/* Tabla de Memorandos */}
-      <div className="bg-white rounded-xl border border-navy-200 shadow-sm overflow-hidden">
+      <div className="bg-paper rounded-lg border border-fog overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-navy-200 text-left text-xs">
-            <thead className="bg-navy-50 text-navy-600 font-semibold uppercase tracking-wider">
+          <table className="min-w-full divide-y divide-mist text-left text-xs">
+            <thead className="bg-mist text-steel font-semibold uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-3">Fecha</th>
                 <th className="px-4 py-3">Empleado</th>
@@ -142,19 +139,19 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
                 <th className="px-4 py-3">Estado</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-navy-100 bg-white">
+            <tbody className="divide-y divide-mist bg-paper">
               {memoranda.map((m) => (
-                <tr key={m.id} className="hover:bg-navy-50/50 transition-colors">
-                  <td className="px-4 py-3 text-navy-600 font-mono">{m.memoDate}</td>
-                  <td className="px-4 py-3 font-semibold text-navy-900">{m.employeeName || 'Empleado'}</td>
+                <tr key={m.id} className="hover:bg-paper transition-colors">
+                  <td className="px-4 py-3 text-steel font-mono">{m.memoDate}</td>
+                  <td className="px-4 py-3 font-semibold text-ink">{m.employeeName || 'Empleado'}</td>
                   <td className="px-4 py-3">{getMemoBadge(m.memoType)}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-navy-800">{m.subject}</div>
-                    <div className="text-[11px] text-navy-500 line-clamp-1">{m.description}</div>
+                    <div className="font-medium text-ink">{m.subject}</div>
+                    <div className="text-[11px] text-steel line-clamp-1">{m.description}</div>
                   </td>
-                  <td className="px-4 py-3 text-navy-600">{m.responsiblePerson}</td>
+                  <td className="px-4 py-3 text-steel">{m.responsiblePerson}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-navy-100 text-navy-800 capitalize">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-mist text-ink capitalize">
                       {m.status.replace(/_/g, ' ')}
                     </span>
                   </td>
@@ -162,7 +159,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
               ))}
               {memoranda.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-navy-400 italic">
+                  <td colSpan={6} className="px-4 py-8 text-center text-steel italic">
                     No se han registrado memorandos. Haz clic en "Registrar Nuevo Memorando".
                   </td>
                 </tr>
@@ -175,18 +172,18 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
       {/* Modal Registrar Memorando */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <form onSubmit={handleRegisterMemo} className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-navy-900 border-b border-navy-200 pb-2">
+          <form onSubmit={handleRegisterMemo} className="bg-paper rounded-lg max-w-lg w-full p-6 space-y-4">
+            <h3 className="text-base font-bold text-ink border-b border-fog pb-2">
               Registrar Memorando a Empleado
             </h3>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block font-medium text-navy-700 mb-1">Empleado *</label>
+                <label className="block font-medium text-ink mb-1">Empleado *</label>
                 <select
                   value={selectedEmployeeId}
                   onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                  className="w-full px-3 py-2 border border-navy-300 rounded text-xs bg-white focus:outline-none"
+                  className="w-full px-3 py-2 border border-fog rounded text-xs bg-paper focus:outline-none"
                   required
                 >
                   {employees.filter((e) => e.status === 'activo').map((emp) => (
@@ -202,11 +199,11 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium text-navy-700 mb-1">Tipo de Memorando *</label>
+                  <label className="block font-medium text-ink mb-1">Tipo de Memorando *</label>
                   <select
                     value={memoType}
                     onChange={(e) => setMemoType(e.target.value as MemorandumType)}
-                    className="w-full px-3 py-2 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-3 py-2 border border-fog rounded text-xs bg-paper"
                   >
                     <option value="llamado_atencion">Llamado de Atencion</option>
                     <option value="amonestacion_preventiva">Amonestacion Preventiva</option>
@@ -215,63 +212,63 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium text-navy-700 mb-1">Fecha *</label>
+                  <label className="block font-medium text-ink mb-1">Fecha *</label>
                   <input
                     type="date"
                     value={memoDate}
                     onChange={(e) => setMemoDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-navy-300 rounded text-xs"
+                    className="w-full px-3 py-2 border border-fog rounded text-xs"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-medium text-navy-700 mb-1">Asunto *</label>
+                <label className="block font-medium text-ink mb-1">Asunto *</label>
                 <input
                   type="text"
                   placeholder="Ej. Incumplimiento reiterado de horario laboral"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-navy-300 rounded text-xs"
+                  className="w-full px-3 py-2 border border-fog rounded text-xs"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-navy-700 mb-1">Descripcion Detallada *</label>
+                <label className="block font-medium text-ink mb-1">Descripcion Detallada *</label>
                 <textarea
                   rows={3}
                   placeholder="Detalle los hechos observados y compromisos..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-navy-300 rounded text-xs"
+                  className="w-full px-3 py-2 border border-fog rounded text-xs"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-navy-700 mb-1">Responsable / Emisor</label>
+                <label className="block font-medium text-ink mb-1">Responsable / Emisor</label>
                 <input
                   type="text"
                   value={responsiblePerson}
                   onChange={(e) => setResponsiblePerson(e.target.value)}
-                  className="w-full px-3 py-2 border border-navy-300 rounded text-xs"
+                  className="w-full px-3 py-2 border border-fog rounded text-xs"
                 />
               </div>
             </div>
 
-            <div className="pt-3 border-t border-navy-200 flex justify-end gap-2">
+            <div className="pt-3 border-t border-fog flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-3 py-1.5 bg-navy-100 hover:bg-navy-200 text-navy-800 rounded text-xs font-semibold"
+                className="px-3 py-1.5 bg-mist hover:bg-fog text-ink rounded text-xs font-semibold"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-semibold"
+                className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold shadow-subtle"
               >
                 Guardar Memorando
               </button>

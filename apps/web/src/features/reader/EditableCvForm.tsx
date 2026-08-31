@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  CandidateFormData,
-  EducationItem,
-  ExperienceItem,
-  SkillItem,
-  ReferenceItem,
-  LanguageItem,
-  CertificationItem,
-} from '../../types/candidate';
-import { UserIcon, Briefcase01Icon, CapIcon, Wrench01Icon, Call02Icon, PlusSignIcon, Delete02Icon, FloppyDiskIcon, LanguageCircleIcon, Award01Icon, Dollar01Icon, Clock01Icon } from 'hugeicons-react';
+import { CandidateFormData, EducationItem, ExperienceItem, SkillItem, ReferenceItem, LanguageItem, CertificationItem } from '../../types/candidate';
+import { PlusSignIcon, Delete02Icon, Dollar01Icon, Clock01Icon } from 'hugeicons-react';
 
 interface EditableCvFormProps {
   initialData: CandidateFormData;
@@ -185,64 +177,55 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-navy-200 shadow-md p-6">
+    <div className="rounded-lg border border-fog bg-paper p-6">
       {/* Encabezado y Confianza */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-navy-200 mb-6 gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-fog mb-6 gap-3">
         <div>
-          <h2 className="text-xl font-bold text-navy-900 flex items-center">
-            <UserIcon className="h-5 w-5 mr-2 text-brand-600" />
+          <h2 className="text-subheading font-semibold tracking-[-0.02em] text-ink">
             Formulario 5.1: Hoja de Vida / Candidato
           </h2>
-          <p className="text-xs text-navy-500 mt-0.5">
+          <p className="text-xs text-steel mt-0.5">
             Revisa y edita los datos extraídos antes de guardar en la base de datos de Rosimar S.A.S.
           </p>
         </div>
         {confidenceScore !== undefined && (
-          <div className="flex items-center space-x-2 bg-navy-50 px-3 py-1.5 rounded-lg border border-navy-200">
-            <span className="text-xs text-navy-600 font-medium">Confianza OCR:</span>
-            <span
-              className={`text-xs font-bold px-2 py-0.5 rounded ${
-                confidenceScore >= 0.85 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-              }`}
-            >
-              {Math.round(confidenceScore * 100)}%
-            </span>
-          </div>
+          <p className="text-micro text-steel">
+            Confianza de extracción {Math.round(confidenceScore * 100)}%
+          </p>
         )}
       </div>
 
       <div className="space-y-6">
         {/* Seccion 1: Datos Personales */}
         <div>
-          <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider mb-3 flex items-center">
-            <UserIcon className="h-4 w-4 mr-1.5 text-brand-600" />
+          <h3 className="mb-4 text-caption font-semibold uppercase tracking-[0.08em] text-steel">
             1. Datos Personales y de Contacto
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Nombres</label>
+              <label className="block text-xs font-medium text-ink mb-1">Nombres</label>
               <input
                 type="text"
                 value={formData.firstNames}
                 onChange={(e) => handleFieldChange('firstNames', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Apellidos</label>
+              <label className="block text-xs font-medium text-ink mb-1">Apellidos</label>
               <input
                 type="text"
                 value={formData.lastNames}
                 onChange={(e) => handleFieldChange('lastNames', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Tipo de Documento</label>
+              <label className="block text-xs font-medium text-ink mb-1">Tipo de Documento</label>
               <select
                 value={formData.documentType}
                 onChange={(e) => handleFieldChange('documentType', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               >
                 <option value="CC">Cédula de Ciudadanía (CC)</option>
                 <option value="CE">Cédula de Extranjería (CE)</option>
@@ -253,57 +236,57 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Número de Identificación</label>
+              <label className="block text-xs font-medium text-ink mb-1">Número de Identificación</label>
               <input
                 type="text"
                 value={formData.documentNumber}
                 onChange={(e) => handleFieldChange('documentNumber', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Correo Electrónico</label>
+              <label className="block text-xs font-medium text-ink mb-1">Correo Electrónico</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleFieldChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Teléfono / Celular</label>
+              <label className="block text-xs font-medium text-ink mb-1">Teléfono / Celular</label>
               <input
                 type="text"
                 value={formData.phone}
                 onChange={(e) => handleFieldChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Ciudad de Residencia</label>
+              <label className="block text-xs font-medium text-ink mb-1">Ciudad de Residencia</label>
               <input
                 type="text"
                 value={formData.cityResidence || ''}
                 onChange={(e) => handleFieldChange('cityResidence', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Dirección Residencial</label>
+              <label className="block text-xs font-medium text-ink mb-1">Dirección Residencial</label>
               <input
                 type="text"
                 value={formData.address || ''}
                 placeholder="Ej. Calle 19 # 12-40"
                 onChange={(e) => handleFieldChange('address', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Estado Civil</label>
+              <label className="block text-xs font-medium text-ink mb-1">Estado Civil</label>
               <select
                 value={formData.maritalStatus || ''}
                 onChange={(e) => handleFieldChange('maritalStatus', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               >
                 <option value="">No especificado</option>
                 <option value="Soltero">Soltero(a)</option>
@@ -314,11 +297,11 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Género / Sexo</label>
+              <label className="block text-xs font-medium text-ink mb-1">Género / Sexo</label>
               <select
                 value={formData.gender || ''}
                 onChange={(e) => handleFieldChange('gender', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               >
                 <option value="">No especificado</option>
                 <option value="Femenino">Femenino</option>
@@ -326,46 +309,46 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Lugar de Nacimiento</label>
+              <label className="block text-xs font-medium text-ink mb-1">Lugar de Nacimiento</label>
               <input
                 type="text"
                 value={formData.birthPlace || ''}
                 placeholder="Ej. Bogotá"
                 onChange={(e) => handleFieldChange('birthPlace', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Libreta Militar</label>
+              <label className="block text-xs font-medium text-ink mb-1">Libreta Militar</label>
               <input
                 type="text"
                 value={formData.militaryCard || ''}
                 placeholder="Ej. Primera clase"
                 onChange={(e) => handleFieldChange('militaryCard', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Licencia de Conducción</label>
+              <label className="block text-xs font-medium text-ink mb-1">Licencia de Conducción</label>
               <input
                 type="text"
                 value={formData.driverLicense || ''}
                 placeholder="Ej. A2, C2"
                 onChange={(e) => handleFieldChange('driverLicense', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Tarjeta Profesional / T.P.</label>
+              <label className="block text-xs font-medium text-ink mb-1">Tarjeta Profesional / T.P.</label>
               <input
                 type="text"
                 value={formData.professionalCard || ''}
                 onChange={(e) => handleFieldChange('professionalCard', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-navy-700 mb-1">Redes Sociales / Enlaces</label>
+              <label className="block text-xs font-medium text-ink mb-1">Redes Sociales / Enlaces</label>
               <input
                 type="text"
                 value={formData.socialLinks ? formData.socialLinks.join(', ') : ''}
@@ -374,22 +357,22 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                   const links = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
                   handleFieldChange('socialLinks', links.length > 0 ? links : undefined);
                 }}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Fecha de Nacimiento</label>
+              <label className="block text-xs font-medium text-ink mb-1">Fecha de Nacimiento</label>
               <input
                 type="text"
                 value={formData.birthDate || ''}
                 placeholder="DD/MM/AAAA"
                 onChange={(e) => handleFieldChange('birthDate', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1 flex items-center">
-                <Dollar01Icon className="h-3 w-3 mr-0.5 text-navy-500" />
+              <label className="block text-xs font-medium text-ink mb-1 flex items-center">
+                <Dollar01Icon className="h-3 w-3 mr-0.5 text-steel" />
                 Expectativa Salarial ($ COP)
               </label>
               <input
@@ -397,12 +380,12 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                 value={formData.salaryExpectation || ''}
                 placeholder="Ej. 3500000"
                 onChange={(e) => handleFieldChange('salaryExpectation', parseInt(e.target.value, 10) || undefined)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1 flex items-center">
-                <Clock01Icon className="h-3 w-3 mr-0.5 text-navy-500" />
+              <label className="block text-xs font-medium text-ink mb-1 flex items-center">
+                <Clock01Icon className="h-3 w-3 mr-0.5 text-steel" />
                 Disponibilidad
               </label>
               <input
@@ -410,7 +393,7 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                 value={formData.availability || ''}
                 placeholder="Ej. Inmediata / 15 días"
                 onChange={(e) => handleFieldChange('availability', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
           </div>
@@ -418,27 +401,27 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
 
         {/* Seccion 2: Perfil y Resumen */}
         <div>
-          <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider mb-3">
+          <h3 className="mb-4 text-caption font-semibold uppercase tracking-[0.08em] text-steel">
             2. Perfil y Titular Profesional
           </h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Titular Profesional</label>
+              <label className="block text-xs font-medium text-ink mb-1">Titular Profesional</label>
               <input
                 type="text"
                 value={formData.headline || ''}
                 placeholder="Ej. Técnico en Automatización / Psicóloga de Selección"
                 onChange={(e) => handleFieldChange('headline', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-navy-700 mb-1">Resumen del Perfil</label>
+              <label className="block text-xs font-medium text-ink mb-1">Resumen del Perfil</label>
               <textarea
                 rows={3}
                 value={formData.summary || ''}
                 onChange={(e) => handleFieldChange('summary', e.target.value)}
-                className="w-full px-3 py-2 border border-navy-300 rounded-md text-sm focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-fog rounded-lg text-sm focus:ring-1 focus:ring-signal-blue focus:outline-none"
               />
             </div>
           </div>
@@ -447,14 +430,13 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
         {/* Seccion 3: Formacion Academica */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <CapIcon className="h-4 w-4 mr-1.5 text-brand-600" />
-              3. Formación Académica
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            3. Formación Académica
             </h3>
             <button
               type="button"
               onClick={handleAddEducation}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Estudio
@@ -464,14 +446,14 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
             {formData.education.map((item, idx) => (
               <div
                 key={idx}
-                className="flex flex-col sm:flex-row gap-3 p-3 bg-navy-50/50 rounded-lg border border-navy-200 items-start"
+                className="flex flex-col sm:flex-row gap-3 p-3 bg-paper rounded-lg border border-fog items-start"
               >
                 <div className="w-full sm:w-1/4">
-                  <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Nivel</label>
+                  <label className="block text-[11px] font-medium text-steel mb-0.5">Nivel</label>
                   <select
                     value={item.level}
                     onChange={(e) => handleEducationChange(idx, 'level', e.target.value)}
-                    className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                   >
                     <option value="Primaria">Primaria</option>
                     <option value="Bachiller">Bachiller</option>
@@ -483,37 +465,37 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                   </select>
                 </div>
                 <div className="w-full sm:w-1/3">
-                  <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Título / Área</label>
+                  <label className="block text-[11px] font-medium text-steel mb-0.5">Título / Área</label>
                   <input
                     type="text"
                     value={item.degree}
                     onChange={(e) => handleEducationChange(idx, 'degree', e.target.value)}
-                    className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                   />
                 </div>
                 <div className="w-full sm:w-1/3">
-                  <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Institución</label>
+                  <label className="block text-[11px] font-medium text-steel mb-0.5">Institución</label>
                   <input
                     type="text"
                     value={item.institution}
                     onChange={(e) => handleEducationChange(idx, 'institution', e.target.value)}
-                    className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                   />
                 </div>
                 <div className="w-full sm:w-20">
-                  <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Año</label>
+                  <label className="block text-[11px] font-medium text-steel mb-0.5">Año</label>
                   <input
                     type="text"
                     value={item.endYear || ''}
                     placeholder="2022"
                     onChange={(e) => handleEducationChange(idx, 'endYear', e.target.value)}
-                    className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => handleRemoveEducation(idx)}
-                  className="mt-4 sm:mt-5 text-red-600 hover:text-red-800 p-1"
+                  className="mt-4 sm:mt-5 text-steel transition-colors hover:text-alert p-1"
                   title="Eliminar"
                 >
                   <Delete02Icon className="h-4 w-4" />
@@ -521,7 +503,7 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
               </div>
             ))}
             {formData.education.length === 0 && (
-              <p className="text-xs text-navy-400 italic">No se detectaron estudios. Haz clic en "Agregar Estudio".</p>
+              <p className="text-xs text-steel italic">No se detectaron estudios. Haz clic en "Agregar Estudio".</p>
             )}
           </div>
         </div>
@@ -529,14 +511,13 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
         {/* Seccion 4: Experiencia Laboral */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <Briefcase01Icon className="h-4 w-4 mr-1.5 text-brand-600" />
-              4. Experiencia Laboral
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            4. Experiencia Laboral
             </h3>
             <button
               type="button"
               onClick={handleAddExperience}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Experiencia
@@ -544,70 +525,70 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
           </div>
           <div className="space-y-3">
             {formData.experience.map((item, idx) => (
-              <div key={idx} className="p-3 bg-navy-50/50 rounded-lg border border-navy-200 space-y-2">
+              <div key={idx} className="p-3 bg-paper rounded-lg border border-fog space-y-2">
                 <div className="flex flex-col sm:flex-row gap-3 items-start">
                   <div className="w-full sm:w-1/3">
-                    <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Empresa</label>
+                    <label className="block text-[11px] font-medium text-steel mb-0.5">Empresa</label>
                     <input
                       type="text"
                       value={item.company}
                       onChange={(e) => handleExperienceChange(idx, 'company', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                     />
                   </div>
                   <div className="w-full sm:w-1/3">
-                    <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Cargo</label>
+                    <label className="block text-[11px] font-medium text-steel mb-0.5">Cargo</label>
                     <input
                       type="text"
                       value={item.position}
                       onChange={(e) => handleExperienceChange(idx, 'position', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                     />
                   </div>
                   <div className="w-full sm:w-1/6">
-                    <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Inicio</label>
+                    <label className="block text-[11px] font-medium text-steel mb-0.5">Inicio</label>
                     <input
                       type="text"
                       value={item.startDate || ''}
                       placeholder="2020"
                       onChange={(e) => handleExperienceChange(idx, 'startDate', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                     />
                   </div>
                   <div className="w-full sm:w-1/6">
-                    <label className="block text-[11px] font-medium text-navy-600 mb-0.5">Fin</label>
+                    <label className="block text-[11px] font-medium text-steel mb-0.5">Fin</label>
                     <input
                       type="text"
                       value={item.endDate || ''}
                       placeholder="2022 o Actual"
                       onChange={(e) => handleExperienceChange(idx, 'endDate', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                      className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveExperience(idx)}
-                    className="mt-4 sm:mt-5 text-red-600 hover:text-red-800 p-1"
+                    className="mt-4 sm:mt-5 text-steel transition-colors hover:text-alert p-1"
                     title="Eliminar"
                   >
                     <Delete02Icon className="h-4 w-4" />
                   </button>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-medium text-navy-600 mb-0.5">
+                  <label className="block text-[11px] font-medium text-steel mb-0.5">
                     Funciones / Responsabilidades
                   </label>
                   <textarea
                     rows={2}
                     value={item.responsibilities || ''}
                     onChange={(e) => handleExperienceChange(idx, 'responsibilities', e.target.value)}
-                    className="w-full px-2 py-1.5 border border-navy-300 rounded text-xs bg-white"
+                    className="w-full px-2 py-1.5 border border-fog rounded text-xs bg-paper"
                   />
                 </div>
               </div>
             ))}
             {formData.experience.length === 0 && (
-              <p className="text-xs text-navy-400 italic">No se detectó experiencia laboral previa.</p>
+              <p className="text-xs text-steel italic">No se detectó experiencia laboral previa.</p>
             )}
           </div>
         </div>
@@ -615,14 +596,13 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
         {/* Seccion 5: Idiomas */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <LanguageCircleIcon className="h-4 w-4 mr-1.5 text-brand-600" />
-              5. Idiomas
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            5. Idiomas
             </h3>
             <button
               type="button"
               onClick={handleAddLanguage}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Idioma
@@ -630,18 +610,18 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {(formData.languages || []).map((item, idx) => (
-              <div key={idx} className="flex items-center space-x-2 bg-navy-50 p-2 rounded-lg border border-navy-200">
+              <div key={idx} className="flex items-center space-x-2 bg-mist p-2 rounded-lg border border-fog">
                 <input
                   type="text"
                   placeholder="Idioma (ej. Inglés)"
                   value={item.language}
                   onChange={(e) => handleLanguageChange(idx, 'language', e.target.value)}
-                  className="w-1/2 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-1/2 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <select
                   value={item.level}
                   onChange={(e) => handleLanguageChange(idx, 'level', e.target.value)}
-                  className="w-1/2 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-1/2 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 >
                   <option value="Básico">Básico (A1-A2)</option>
                   <option value="Intermedio">Intermedio (B1-B2)</option>
@@ -651,7 +631,7 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                 <button
                   type="button"
                   onClick={() => handleRemoveLanguage(idx)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="p-1 text-steel transition-colors hover:text-alert"
                 >
                   <Delete02Icon className="h-3.5 w-3.5" />
                 </button>
@@ -659,21 +639,20 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
             ))}
           </div>
           {(!formData.languages || formData.languages.length === 0) && (
-            <p className="text-xs text-navy-400 italic">No se detectaron idiomas adicionales.</p>
+            <p className="text-xs text-steel italic">No se detectaron idiomas adicionales.</p>
           )}
         </div>
 
         {/* Seccion 6: Certificaciones y Cursos */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <Award01Icon className="h-4 w-4 mr-1.5 text-brand-600" />
-              6. Certificaciones y Diplomados
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            6. Certificaciones y Diplomados
             </h3>
             <button
               type="button"
               onClick={handleAddCertification}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Certificación
@@ -681,32 +660,32 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
           </div>
           <div className="space-y-2">
             {(formData.certifications || []).map((item, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row gap-2 p-2 bg-navy-50/50 rounded-lg border border-navy-200 items-start sm:items-center">
+              <div key={idx} className="flex flex-col sm:flex-row gap-2 p-2 bg-paper rounded-lg border border-fog items-start sm:items-center">
                 <input
                   type="text"
                   placeholder="Nombre de la certificación o curso"
                   value={item.name}
                   onChange={(e) => handleCertificationChange(idx, 'name', e.target.value)}
-                  className="flex-1 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="flex-1 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <input
                   type="text"
                   placeholder="Institución emisora (ej. SENA, AWS)"
                   value={item.institution || ''}
                   onChange={(e) => handleCertificationChange(idx, 'institution', e.target.value)}
-                  className="w-48 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-48 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <input
                   type="text"
                   placeholder="Año"
                   value={item.year || ''}
                   onChange={(e) => handleCertificationChange(idx, 'year', e.target.value)}
-                  className="w-20 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-20 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveCertification(idx)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="p-1 text-steel transition-colors hover:text-alert"
                 >
                   <Delete02Icon className="h-3.5 w-3.5" />
                 </button>
@@ -714,21 +693,20 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
             ))}
           </div>
           {(!formData.certifications || formData.certifications.length === 0) && (
-            <p className="text-xs text-navy-400 italic">No se detectaron certificaciones previas.</p>
+            <p className="text-xs text-steel italic">No se detectaron certificaciones previas.</p>
           )}
         </div>
 
         {/* Seccion 7: Habilidades */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <Wrench01Icon className="h-4 w-4 mr-1.5 text-brand-600" />
-              7. Habilidades y Competencias
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            7. Habilidades y Competencias
             </h3>
             <button
               type="button"
               onClick={handleAddSkill}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Habilidad
@@ -736,17 +714,17 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {formData.skills.map((item, idx) => (
-              <div key={idx} className="flex items-center space-x-2 bg-navy-50 p-2 rounded border border-navy-200">
+              <div key={idx} className="flex items-center space-x-2 bg-mist p-2 rounded border border-fog">
                 <input
                   type="text"
                   value={item.skillName}
                   onChange={(e) => handleSkillChange(idx, 'skillName', e.target.value)}
-                  className="w-full px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-full px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveSkill(idx)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-steel transition-colors hover:text-alert"
                 >
                   <Delete02Icon className="h-3.5 w-3.5" />
                 </button>
@@ -758,14 +736,13 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
         {/* Seccion 8: Referencias */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-navy-800 uppercase tracking-wider flex items-center">
-              <Call02Icon className="h-4 w-4 mr-1.5 text-brand-600" />
-              8. Referencias Familiares y Personales
+            <h3 className="text-sm font-bold text-ink uppercase tracking-wider flex items-center">
+            8. Referencias Familiares y Personales
             </h3>
             <button
               type="button"
               onClick={handleAddReference}
-              className="inline-flex items-center text-xs text-brand-700 bg-brand-50 hover:bg-brand-100 font-medium px-2.5 py-1 rounded border border-brand-200"
+              className="inline-flex items-center text-xs text-ink bg-mist hover:bg-mist font-medium px-2.5 py-1 rounded border border-fog"
             >
               <PlusSignIcon className="h-3.5 w-3.5 mr-1" />
               Agregar Referencia
@@ -775,14 +752,14 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
             {formData.references.map((item, idx) => (
               <div
                 key={idx}
-                className="flex flex-col sm:flex-row gap-2 p-2 bg-navy-50/50 rounded border border-navy-200 items-start sm:items-center"
+                className="flex flex-col sm:flex-row gap-2 p-2 bg-paper rounded border border-fog items-start sm:items-center"
               >
                 <select
                   value={item.referenceType}
                   onChange={(e) =>
                     handleReferenceChange(idx, 'referenceType', e.target.value as 'familiar' | 'personal' | 'laboral')
                   }
-                  className="px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="px-2 py-1 border border-fog rounded text-xs bg-paper"
                 >
                   <option value="personal">Personal</option>
                   <option value="familiar">Familiar</option>
@@ -793,19 +770,19 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
                   placeholder="Nombre"
                   value={item.name}
                   onChange={(e) => handleReferenceChange(idx, 'name', e.target.value)}
-                  className="flex-1 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="flex-1 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <input
                   type="text"
                   placeholder="Teléfono"
                   value={item.phone}
                   onChange={(e) => handleReferenceChange(idx, 'phone', e.target.value)}
-                  className="w-36 px-2 py-1 border border-navy-300 rounded text-xs bg-white"
+                  className="w-36 px-2 py-1 border border-fog rounded text-xs bg-paper"
                 />
                 <button
                   type="button"
                   onClick={() => handleRemoveReference(idx)}
-                  className="text-red-500 hover:text-red-700 p-1"
+                  className="p-1 text-steel transition-colors hover:text-alert"
                 >
                   <Delete02Icon className="h-3.5 w-3.5" />
                 </button>
@@ -816,20 +793,19 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
       </div>
 
       {/* Botones de Accion */}
-      <div className="mt-8 pt-4 border-t border-navy-200 flex flex-col sm:flex-row justify-end gap-3">
+      <div className="mt-8 pt-4 border-t border-fog flex flex-col sm:flex-row justify-end gap-3">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-navy-700 bg-navy-100 hover:bg-navy-200 rounded-lg transition-colors"
+          className="px-4 py-2 text-sm font-medium text-ink bg-mist hover:bg-fog rounded-lg transition-colors"
         >
           Descartar / Cancelar
         </button>
         <button
           type="button"
           onClick={() => onSave(formData)}
-          className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-lg shadow-sm transition-colors"
+          className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-signal-blue hover:bg-signal-blue rounded-lg transition-colors shadow-subtle"
         >
-          <FloppyDiskIcon className="h-4 w-4 mr-1.5" />
           Guardar Candidato en el Sistema
         </button>
       </div>
