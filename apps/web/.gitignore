@@ -33,3 +33,6 @@ eval-report.json
 
 # Banco de escaneos sinteticos: 22 MB de JPEG que se regeneran con `npm run gen:scans`
 test-scans/
+
+# Fotos personales del usuario (cedulas, documentos) - NO deben versionarse
+fotos-usuario/

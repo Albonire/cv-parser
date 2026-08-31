@@ -119,3 +119,51 @@ export function findKnownPlace(text: string): string | null {
 
   return found ? found.name : null;
 }
+
+function distanciaEdicion(a: string, b: string): number {
+  if (a === b) return 0;
+  const n = a.length;
+  const m = b.length;
+  if (n === 0) return m;
+  if (m === 0) return n;
+  let anterior = Array.from({ length: m + 1 }, (_, i) => i);
+  for (let i = 1; i <= n; i++) {
+    const actual = [i];
+    for (let j = 1; j <= m; j++) {
+      const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+      actual[j] = Math.min(actual[j - 1] + 1, anterior[j] + 1, anterior[j - 1] + costo);
+    }
+    anterior = actual;
+  }
+  return anterior[m];
+}
+
+/**
+ * Busca un lugar conocido tolerando errores tipograficos del OCR ("Balrranquilla"
+ * por "Barranquilla"). Compara cada fragmento corto del texto contra el gazetteer
+ * con una distancia de edicion acotada y devuelve el nombre canonico del mejor.
+ *
+ * Solo se acepta cuando el fragmento se parece mucho a un lugar: la distancia
+ * permitida crece con la longitud para no convertir cualquier palabra en la
+ * ciudad del candidato.
+ */
+export function findKnownPlaceFuzzy(text: string): string | null {
+  const normalized = normalizeKey(text).replace(/[^a-z ]+/g, ' ');
+  const fragmentos = normalized.split(/\s+/).filter((w) => w.length >= 4);
+
+  let mejor: { name: string; distancia: number; longitud: number } | null = null;
+
+  for (const fragmento of fragmentos) {
+    for (const [key, canonical] of NORMALIZED_INDEX) {
+      if (key.length < 4) continue;
+      const distancia = distanciaEdicion(fragmento, key);
+      const maximo = Math.max(1, Math.floor(key.length / 8));
+      if (distancia > maximo) continue;
+      if (!mejor || distancia < mejor.distancia || (distancia === mejor.distancia && key.length > mejor.longitud)) {
+        mejor = { name: canonical, distancia, longitud: key.length };
+      }
+    }
+  }
+
+  return mejor ? mejor.name : null;
+}

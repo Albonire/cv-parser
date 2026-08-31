@@ -66,6 +66,18 @@ export interface OcrExecutionResult {
   layout: DocumentLayout;
 }
 
+/**
+ * Un resultado de OCR se considera legible cuando tiene texto suficiente con
+ * confianza razonable. Menguando el umbral segun la cantidad de texto.
+ */
+function esLegible(texto: string, confianza: number): boolean {
+  const longitud = texto.trim().length;
+  if (longitud < 40) return false;
+  // Con mucho texto, hasta una confianza media es un buen indicio; con poco,
+  // se exige mas seguridad antes de dar por buena la lectura.
+  return confianza >= (longitud >= 300 ? 0.55 : 0.7);
+}
+
 interface CajaTesseract {
   x0: number;
   y0: number;
@@ -112,6 +124,68 @@ function extraerPalabras(blocks: unknown): PalabraTesseract[] {
   return palabras;
 }
 
+/** Reconoce un elemento de imagen con el preprocesado que mejor lo lea. */
+async function reconocerElemento(
+  worker: Worker,
+  item: File | Blob | HTMLCanvasElement
+): Promise<{ texto: string; confianza: number; cajas: unknown }> {
+  // En Node (pruebas) no hay Canvas: se manda el archivo tal cual.
+  if (typeof window === 'undefined' || !(item instanceof File || item instanceof Blob)) {
+    const { data } = await worker.recognize(item as HTMLCanvasElement, {}, { blocks: true, text: true });
+    return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
+  }
+
+  // Fotografias de camara (WhatsApp, celular) leen mejor en escala de grises;
+  // la binarizacion Sauvola, pensada para escaneos planos, les borra el texto.
+  let gris: Blob | null = null;
+  let binarizada: Blob | null = null;
+  try {
+    gris = await preprocessImage(item, { binarizar: false });
+  } catch (error) {
+    console.warn('Preprocesamiento en escala de grises omitido:', error);
+  }
+  try {
+    binarizada = await preprocessImage(item, { binarizar: true });
+  } catch (error) {
+    console.warn('Preprocesamiento binarizado omitido:', error);
+  }
+
+  const primera = gris ?? binarizada ?? item;
+  const resGris = await worker.recognize(primera, {}, { blocks: true, text: true });
+
+  // La lectura en grises es legible: usar la primera y no gastar otro OCR.
+  if (esLegible(resGris.data.text ?? '', (resGris.data.confidence ?? 0) / 100)) {
+    return {
+      texto: resGris.data.text ?? '',
+      confianza: resGris.data.confidence ?? 0,
+      cajas: resGris.data.blocks,
+    };
+  }
+
+  // En grises no se leyo bien: probar la binarizada y quedarse con la mejor.
+  if (binarizada && binarizada !== primera) {
+    const resBin = await worker.recognize(binarizada, {}, { blocks: true, text: true });
+    const confGris = esLegible(resGris.data.text ?? '', 0.4)
+      ? (resGris.data.confidence ?? 0) / 100
+      : 0;
+    const binLegible = esLegible(resBin.data.text ?? '', (resBin.data.confidence ?? 0) / 100);
+    const mejorBin = binLegible || (resBin.data.confidence ?? 0) > confGris * 100;
+    if (mejorBin) {
+      return {
+        texto: resBin.data.text ?? '',
+        confianza: resBin.data.confidence ?? 0,
+        cajas: resBin.data.blocks,
+      };
+    }
+  }
+
+  return {
+    texto: resGris.data.text ?? '',
+    confianza: resGris.data.confidence ?? 0,
+    cajas: resGris.data.blocks,
+  };
+}
+
 /** Ejecuta OCR sobre uno o varios archivos, blobs o canvas. */
 export async function performOcr(
   input: File | Blob | HTMLCanvasElement | (File | Blob | HTMLCanvasElement)[],
@@ -132,27 +206,17 @@ export async function performOcr(
       onProgress(base, `Reconociendo texto en pagina ${i + 1} de ${items.length}...`);
     }
 
-    let imagen: File | Blob | HTMLCanvasElement = item;
-    if (typeof window !== 'undefined' && (item instanceof File || item instanceof Blob)) {
-      try {
-        imagen = await preprocessImage(item);
-      } catch (error) {
-        console.warn('Preprocesamiento de imagen omitido:', error);
-        imagen = item;
-      }
-    }
+    const { texto, confianza, cajas } = await reconocerElemento(worker, item);
 
-    const { data } = await worker.recognize(imagen, {}, { blocks: true, text: true });
-
-    const palabras = extraerPalabras(data.blocks);
+    const palabras = extraerPalabras(cajas);
     const words = tesseractWordsToWords(palabras);
 
     const ancho = Math.max(1, ...words.map((w) => w.x + w.width));
     const alto = Math.max(1, ...words.map((w) => w.y + w.height));
 
     paginas.push({ words, width: ancho, height: alto });
-    textosRespaldo.push(data.text ?? '');
-    sumaConfianza += data.confidence ?? 0;
+    textosRespaldo.push(texto);
+    sumaConfianza += confianza;
   }
 
   const layout = buildLayout(paginas);

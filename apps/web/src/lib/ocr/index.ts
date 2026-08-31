@@ -199,3 +199,4 @@ export * from './parser-cv';
 export * from './parser-contract';
 export * from './parser-id';
 export * from './parser-health';
+export * from './extraer-zip';

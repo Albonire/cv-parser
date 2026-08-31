@@ -9,6 +9,7 @@ import { HealthFormData } from '../../types/health';
 import { EmployerConfig } from '../../types/employer';
 import { VacancyFormData, VacancyRequirement, CandidateRanking } from '../../types/vacancy';
 import { AuditLogItem } from '../../types/audit';
+import { EmployeeDocumentRecord } from '../../types/employee-document';
 
 export interface SyncQueueItem {
   id?: number;
@@ -40,6 +41,7 @@ export class TalentDatabase extends Dexie {
   vacancies!: Table<VacancyFormData, string>;
   vacancyRequirements!: Table<VacancyRequirement, number>;
   candidateRankings!: Table<CandidateRanking, number>;
+  employeeDocuments!: Table<EmployeeDocumentRecord, string>;
   auditLog!: Table<AuditLogItem, number>;
   syncQueue!: Table<SyncQueueItem, number>;
 
@@ -69,6 +71,24 @@ export class TalentDatabase extends Dexie {
       vacancies: 'id, status, title, createdAt',
       vacancyRequirements: '++id, vacancyId',
       candidateRankings: '++id, vacancyId, candidateId',
+      auditLog: '++id, tableName, action, createdAt',
+      syncQueue: '++id, action, tableName, recordId, timestamp, synced',
+    });
+
+    // v5: expediente documental por empleado.
+    this.version(5).stores({
+      candidates: 'id, documentNumber, status, firstNames, lastNames, email, phone, createdAt',
+      employees: 'id, employeeCode, status, candidateId, hireDate, memoCount',
+      contracts: 'id, employeeId, workerDocumentNumber, status, startDate, endDate',
+      memoranda: 'id, employeeId, memoType, memoDate, status',
+      alerts: 'id, employeeId, alertType, severity, status, dueDate',
+      idCards: 'id, documentNumber',
+      healthAffiliations: 'id, documentNumber, epsName',
+      employers: 'id',
+      vacancies: 'id, status, title, createdAt',
+      vacancyRequirements: '++id, vacancyId',
+      candidateRankings: '++id, vacancyId, candidateId',
+      employeeDocuments: 'id, employeeId, workerDocumentNumber, category, processedAt, createdAt',
       auditLog: '++id, tableName, action, createdAt',
       syncQueue: '++id, action, tableName, recordId, timestamp, synced',
     });

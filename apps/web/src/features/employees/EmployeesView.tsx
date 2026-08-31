@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { EmployeeItem, TerminationReason } from '../../types/employee';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
-import { Alert02Icon, UserRemove01Icon, Search01Icon, Cancel01Icon } from 'hugeicons-react';
+import { Alert02Icon, UserRemove01Icon, Search01Icon, Cancel01Icon, ArchiveIcon } from 'hugeicons-react';
 
 interface EmployeesViewProps {
   employees: EmployeeItem[];
   onReload: () => void;
   onNavigateToMemo?: (employeeId: string) => void;
+  onNavigateToExpediente?: (employeeId: string) => void;
 }
 
 export const EmployeesView: React.FC<EmployeesViewProps> = ({
   employees,
   onReload,
   onNavigateToMemo,
+  onNavigateToExpediente,
 }) => {
   const [activeTab, setActiveTab] = useState<'activo' | 'inactivo'>('activo');
   const [searchTerm, setSearchTerm] = useState('');
@@ -159,6 +161,16 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                       </td>
                     )}
                     <td className="px-4 py-3 text-right space-x-2">
+                      {onNavigateToExpediente && (
+                        <button
+                          onClick={() => onNavigateToExpediente(emp.id)}
+                          className="inline-flex items-center rounded-lg border border-fog px-2 py-1 text-[11px] font-semibold text-steel transition-colors hover:border-signal-blue hover:text-signal-blue"
+                          title="Ver expediente documental del empleado"
+                        >
+                          <ArchiveIcon className="h-3.5 w-3.5 mr-1" />
+                          Expediente
+                        </button>
+                      )}
                       {onNavigateToMemo && (
                         <button
                           onClick={() => onNavigateToMemo(emp.id)}

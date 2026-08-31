@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ReaderUploader } from './ReaderUploader';
 import { EditableCvForm } from './EditableCvForm';
 import { EditableContractForm } from './EditableContractForm';
 import { EditableIdForm } from './EditableIdForm';
 import { EditableHealthForm } from './EditableHealthForm';
 import { processDocument } from '../../lib/ocr';
+import { extraerArchivosDeZip, esZip } from '../../lib/ocr/extraer-zip';
 import { ExtractedDocumentData, BatchItem } from '../../types/reader';
 import { CandidateFormData } from '../../types/candidate';
 import { ContractFormData } from '../../types/contract';
@@ -12,7 +13,10 @@ import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
-import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon } from 'hugeicons-react';
+import { construirExpediente, guardarDocumentoExpediente } from '../../lib/offline/expediente';
+import { clasificarHistorial } from '../../lib/ocr/document-classifier';
+import { agruparPorEmpleado, sintetizarResultadoConsolidado, GrupoLote } from '../../lib/ocr/agrupar-lote';
+import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, ArchiveIcon } from 'hugeicons-react';
 
 interface ReaderViewProps {
   onCandidateSaved?: (candidate: CandidateFormData) => void;
@@ -32,20 +36,69 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [currentBatchIndex, setCurrentBatchIndex] = useState<number>(0);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showRawText, setShowRawText] = useState(false);
+  const [currentFile, setCurrentFile] = useState<File | null>(null);
+
+  // Consolida el lote en grupos por empleado (cedula/nombre) para ver las fotos
+  // de un mismo empleado en conjunto, en vez de foto por foto.
+  const gruposLote = useMemo(
+    () =>
+      agruparPorEmpleado(
+        batchQueue.map((item) => item.result).filter((r): r is ExtractedDocumentData => Boolean(r))
+      ),
+    [batchQueue]
+  );
+
+  /** Abre el formulario del empleado con los datos consolidados de su grupo. */
+  const handleLlenarFormulario = (grupo: GrupoLote) => {
+    setCurrentResult(sintetizarResultadoConsolidado(grupo));
+    setCurrentFile(null);
+    setShowRawText(false);
+  };
 
   const handleFilesSelected = async (files: File[]) => {
     if (files.length === 0) return;
 
-    if (files.length === 1) {
+    // Descomprime cualquier ZIP presente y combina con los archivos sueltos.
+    let trabajables: File[] = files.filter((f) => !esZip(f));
+    const zips = files.filter(esZip);
+
+    if (zips.length > 0) {
+      setIsProcessing(true);
+      setProgressMessage('Descomprimiendo ZIP y extrayendo fotos...');
+      const extraidos: File[] = [];
+      for (const zip of zips) {
+        try {
+          const archivos = await extraerArchivosDeZip(zip);
+          extraidos.push(...archivos);
+        } catch (err) {
+          console.error(err);
+          setNotification({
+            type: 'error',
+            message: `No se pudo leer el ZIP "${zip.name}". Confirme que es un .zip valido.`,
+          });
+        }
+      }
+      trabajables = [...extraidos, ...trabajables];
+      setProgressMessage('');
+    }
+
+    if (trabajables.length === 0) {
+      setIsProcessing(false);
+      return;
+    }
+
+    if (trabajables.length === 1) {
       // Archivo unico directo
       setIsProcessing(true);
       setProgressPercent(0);
       try {
-        const result = await processDocument(files[0], (p, msg) => {
+        const result = await processDocument(trabajables[0], (p, msg) => {
           setProgressPercent(p);
           setProgressMessage(msg);
         });
         setCurrentResult(result);
+        setCurrentFile(trabajables[0]);
+        setShowRawText(true);
         setBatchQueue([]);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Error desconocido al procesar el documento';
@@ -58,7 +111,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       }
     } else {
       // Carga masiva por lotes (M12)
-      const items: BatchItem[] = files.map((f, i) => ({
+      const items: BatchItem[] = trabajables.map((f, i) => ({
         id: `batch-${Date.now()}-${i}`,
         file: f,
         status: 'pending',
@@ -78,6 +131,22 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const processBatchQueue = async (items: BatchItem[], index: number) => {
     if (index >= items.length) {
       setIsProcessing(false);
+
+      // Al terminar, mostrar automaticamente el formulario consolidado (hoja corrida).
+      const resultados = items
+        .filter((it) => it.result)
+        .map((it) => it.result as ExtractedDocumentData);
+
+      if (resultados.length > 0) {
+        const grupos = agruparPorEmpleado(resultados);
+        const grupo = [...grupos].sort((a, b) => b.items.length - a.items.length)[0];
+        if (grupo && grupo.items.length > 0) {
+          setCurrentBatchIndex(items.length - 1);
+          setCurrentResult(sintetizarResultadoConsolidado(grupo));
+          setShowRawText(true);
+        }
+      }
+
       return;
     }
 
@@ -95,6 +164,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         setProgressMessage(`[${index + 1}/${items.length}] ${msg}`);
       });
 
+      items[index] = { ...items[index], status: 'done', result, progress: 100 };
       marcar({ status: 'done', result, progress: 100 });
       if (index === 0) setCurrentResult(result);
     } catch (err: unknown) {
@@ -105,6 +175,21 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         await processBatchQueue(items, index + 1);
       } else {
         setIsProcessing(false);
+
+        // Al terminar, mostrar automaticamente el formulario consolidado (hoja corrida).
+        const resultados = items
+          .filter((it) => it.result)
+          .map((it) => it.result as ExtractedDocumentData);
+
+        if (resultados.length > 0) {
+          const grupos = agruparPorEmpleado(resultados);
+          const grupo = [...grupos].sort((a, b) => b.items.length - a.items.length)[0];
+          if (grupo && grupo.items.length > 0) {
+            setCurrentBatchIndex(items.length - 1);
+            setCurrentResult(sintetizarResultadoConsolidado(grupo));
+            setShowRawText(true);
+          }
+        }
       }
     }
   };
@@ -207,6 +292,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   };
 
+  /**
+   * Guarda el documento procesado en el expediente del empleado. Se vincula al
+   * empleado por su numero de documento (cedula); si el empleado no existe aun,
+   * la ficha queda con los datos de identidad para vincularla despues.
+   */
+  const handleSaveExpediente = async (result: ExtractedDocumentData) => {
+    try {
+      const base = await construirExpediente(
+        result,
+        clasificarHistorial(result.extractedText),
+        currentFile ?? undefined
+      );
+      const doc = await guardarDocumentoExpediente(base);
+
+      const vinculacion =
+        doc.employeeId || doc.matchedEmployeeId
+          ? ' y vinculado al empleado por su numero de documento'
+          : '. El empleado aun no esta registrado: asocie la ficha al empleado desde Empleados';
+      setNotification({
+        type: 'success',
+        message: `Documento guardado en el expediente${vinculacion}.`,
+      });
+
+      handleNextOrClear();
+    } catch (err) {
+      console.error(err);
+      setNotification({ type: 'error', message: 'Error al guardar el documento en el expediente.' });
+    }
+  };
+
   const handleNextOrClear = () => {
     if (batchQueue.length > 0 && currentBatchIndex + 1 < batchQueue.length) {
       const nextIdx = currentBatchIndex + 1;
@@ -277,6 +392,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   if (item.result) {
                     setCurrentBatchIndex(idx);
                     setCurrentResult(item.result);
+                    setCurrentFile(item.file);
+                    setShowRawText(false);
                   }
                 }}
                 className={`p-2 rounded border text-left text-xs transition-all ${
@@ -294,6 +411,77 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Vista general por empleado: consolida las fotos del lote que son del
+          mismo empleado (agrupadas por cedula/nombre) y permite llenar el
+          formulario con los datos fusionados de todas. */}
+      {batchQueue.length > 1 && gruposLote.length > 0 && !currentResult && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-ink flex items-center">
+              Vista general por empleado ({gruposLote.length} grupo{gruposLote.length > 1 ? 's' : ''})
+            </h3>
+            <span className="text-xs text-steel">
+              {batchQueue.length} fotos · agrupadas por identificacion del empleado
+            </span>
+          </div>
+
+          {gruposLote.map((grupo) => (
+            <div key={grupo.key} className="bg-paper rounded-lg border border-fog p-4 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-ink">
+                    {grupo.nombre || (grupo.cedula ? 'Empleado' : 'Sin identificar')}
+                  </span>
+                  {grupo.cedula && (
+                    <span className="font-mono text-[11px] text-steel">CC {grupo.cedula}</span>
+                  )}
+                  <span className="text-xs text-steel">
+                    · {grupo.items.length} documento{grupo.items.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-mist text-xs text-ink">
+                    {etiquetaTipo(grupo.tipoPredominante)}
+                  </span>
+                  <button
+                    onClick={() => handleLlenarFormulario(grupo)}
+                    className="px-3 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold transition-colors shadow-subtle"
+                  >
+                    Llenar formulario
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {grupo.items.map((it) => (
+                  <span
+                    key={it.fileName}
+                    className="inline-flex items-center px-2 py-0.5 rounded bg-mist text-[11px] text-steel"
+                  >
+                    {it.fileName}
+                  </span>
+                ))}
+              </div>
+
+              <details className="group">
+                <summary className="cursor-pointer text-xs font-semibold text-signal-blue hover:underline">
+                  Ver texto consolidado de las {grupo.items.length} fotos
+                </summary>
+                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-mist p-3 text-[11px] font-mono text-ink">
+                  {grupo.textoConsolidado || 'Sin texto reconocido.'}
+                </pre>
+              </details>
+            </div>
+          ))}
+
+          <p className="text-[11px] text-steel">
+            Los documentos se agrupan por el numero de documento/nombre detectado en cada
+            foto. Use <strong>Llenar formulario</strong> para revisar y guardar al empleado con
+            los datos de todas sus fotos en un solo formulario; o siga revisando foto por foto.
+          </p>
         </div>
       )}
 
@@ -439,30 +627,78 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {!currentResult.candidateData &&
             !currentResult.contractData &&
             !currentResult.idCardData &&
-            !currentResult.healthData && (
-              <div className="bg-paper p-6 rounded-lg border border-fog space-y-4">
-                <h3 className="text-base font-bold text-ink">
-                  No se pudo estructurar el documento
-                </h3>
-                <p className="text-xs text-steel">
-                  Tipo detectado: <strong>{currentResult.detectedType.toUpperCase()}</strong>. Revise
-                  el texto reconocido para decidir si conviene volver a escanear el documento.
-                </p>
-                <pre className="p-4 bg-mist rounded-lg text-xs font-mono text-ink max-h-96 overflow-y-auto whitespace-pre-wrap">
-                  {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
-                </pre>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setCurrentResult(null)}
-                    className="px-4 py-2 bg-ink hover:bg-ink text-white text-sm font-semibold rounded-lg"
-                  >
-                    Volver al lector
-                  </button>
+            !currentResult.healthData && (() => {
+              const categoria = clasificarHistorial(currentResult.extractedText);
+              const noVinculado = !currentResult.contractData && !currentResult.candidateData;
+              return (
+                <div className="bg-paper p-6 rounded-lg border border-fog space-y-4">
+                  <h3 className="text-base font-bold text-ink">
+                    {categoria === 'desconocido'
+                      ? 'No se pudo estructurar el documento'
+                      : 'Documento reconocido'}
+                  </h3>
+                  <p className="text-xs text-steel">
+                    Tipo detectado: <strong>{currentResult.detectedType.toUpperCase()}</strong>
+                    {categoria !== 'desconocido' && (
+                      <>
+                        {' '}· Categoria: <strong>{etiquetaCategoria(categoria)}</strong>
+                      </>
+                    )}. Puede guardarlo en el expediente del empleado o revisar el texto.
+                  </p>
+                  <pre className="p-4 bg-mist rounded-lg text-xs font-mono text-ink max-h-96 overflow-y-auto whitespace-pre-wrap">
+                    {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
+                  </pre>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setCurrentResult(null)}
+                      className="px-4 py-2 bg-mist hover:bg-fog text-ink text-sm font-semibold rounded-lg"
+                    >
+                      Volver al lector
+                    </button>
+                    <button
+                      onClick={() => handleSaveExpediente(currentResult)}
+                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle"
+                    >
+                      <ArchiveIcon className="h-4 w-4 mr-2" />
+                      Guardar en expediente
+                    </button>
+                  </div>
+                  {noVinculado && (
+                    <p className="text-[11px] text-steel">
+                      El documento se vinculara al empleado por su numero de documento cuando
+                      este registrado en Empleados.
+                    </p>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
         </div>
       )}
     </div>
   );
 };
+
+function etiquetaCategoria(categoria: string): string {
+  const mapa: Record<string, string> = {
+    contrato: 'Contrato laboral',
+    memorando: 'Memorando',
+    llamado_atencion: 'Llamado de atencion',
+    renuncia: 'Renuncia',
+    funciones: 'Funciones de cargo',
+    salud: 'Seguridad social / EPS',
+    cedula: 'Cedula de ciudadania',
+    hoja_de_vida: 'Hoja de vida',
+  };
+  return mapa[categoria] ?? categoria;
+}
+
+function etiquetaTipo(tipo: string): string {
+  const mapa: Record<string, string> = {
+    cv: 'Hoja de vida',
+    contract: 'Contrato',
+    id_card: 'Cedula',
+    health: 'Seguridad social / EPS',
+    unknown: 'Documento',
+  };
+  return mapa[tipo] ?? tipo;
+}

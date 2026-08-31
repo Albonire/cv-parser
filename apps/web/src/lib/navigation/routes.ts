@@ -14,6 +14,7 @@ export type SectionId =
   | 'reader'
   | 'candidates'
   | 'employees'
+  | 'expediente'
   | 'contracts'
   | 'vacancies'
   | 'memoranda'
@@ -54,6 +55,14 @@ export const SECTIONS: SectionDefinition[] = [
     label: 'Empleados',
     title: 'Empleados',
     description: 'Personal activo e inactivo, con fechas de ingreso, salida y razón de retiro.',
+  },
+  {
+    id: 'expediente',
+    path: 'expediente',
+    label: 'Expediente',
+    title: 'Expediente documental',
+    description:
+      'Historial de cada empleado en Rosimar: contratos, memorandos, llamados de atención, seguridad social, funciones y renuncias leídos por el sistema.',
   },
   {
     id: 'contracts',

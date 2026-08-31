@@ -57,7 +57,7 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.gif,.tif,.tiff"
+          accept=".pdf,.docx,.jpg,.jpeg,.png,.webp,.bmp,.gif,.tif,.tiff,.zip"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -95,7 +95,8 @@ export const ReaderUploader: React.FC<ReaderUploaderProps> = ({
               O haz clic para seleccionar archivos desde tu equipo
             </p>
             <p className="text-xs text-steel mt-2">
-              Formatos soportados: <strong>PDF (digital y escaneado), Word (.docx), JPG, PNG, WEBP</strong>
+              Formatos soportados: <strong>PDF, Word (.docx), JPG, PNG, WEBP</strong> · También puedes
+              subir un <strong>ZIP</strong> con las fotos del empleado y se extraen automáticamente.
             </p>
             <div className="mt-4 flex items-center space-x-3 text-xs text-steel bg-mist/70 px-3 py-1.5 rounded-lg">
               <span className="flex items-center">

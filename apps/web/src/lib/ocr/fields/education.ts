@@ -16,6 +16,15 @@ const NIVELES: { nivel: string; patron: RegExp }[] = [
 const ES_INSTITUCION =
   /\b(?:universidad|university|fundaci[oó]n\s+universitaria|polit[eé]cnico|colegio|instituci[oó]n\s+educativa|instituto|institute|sena|escuela|school|college|academia|academy|corporaci[oó]n\s+universitaria|unidades?\s+tecnol[oó]gicas?|uts|cun|uniminuto|esap)\b/i;
 
+/**
+ * Etiquetas de datos personales y de contacto. Un renglon como "Estado Civil:
+ * Soltera" o "Numero de Cedula: 1.140.891" suena a educacion porque comparte
+ * palabras con titulos ("Civil" tambien es ingenieria), pero en realidad es
+ * informacion personal: jamás puede convertirse en una entrada de formacion.
+ */
+const LABEL_PERSONAL =
+  /^(?:nombres?|apellidos?|nombre\s+completo|cedula|numero\s+de\s+cedula|documento|identificacion|estado\s+civil|sexo|genero|fecha\s+de\s+nacimiento|lugar\s+de\s+nacimiento|fecha\s+de\s+nacimiento|direcci[oó]n|domicilio|correo|e[- ]?mail|email|tel[eé]fono|tel[eé]fonos|celular|cel|m[oó]vil|whatsapp|ciudad|residencia|nacionalidad|estado|edad|salario|disponibilidad|licencia|libreta|n[oº°]\.?\s*cedula|cc|c\.?\s?c\.?)\b/i;
+
 const PALABRAS_TITULO =
   /\b(?:ingenier[ií]a|ingeniero|licenciatura|licenciad[oa]|t[eé]cnic[oa]|tecn[oó]log[oa]|bachiller|administraci[oó]n|contadur[ií]a|contador|psicolog[ií]a|psic[oó]log[oa]|derecho|abogad[oa]|medicina|enfermer[ií]a|arquitectura|comunicaci[oó]n|econom[ií]a|dise[nñ]o|dise[nñ]ador|mercadeo|publicidad|trabajo\s+social|nutrici[oó]n|veterinaria|zootecnia|agronom[ií]a|electr[oó]nica|sistemas|industrial|mec[aá]nica|el[eé]ctrica|civil|qu[ií]mica|ambiental|gesti[oó]n|log[ií]stica|seguridad|salud|especializaci[oó]n|especialista|maestr[ií]a|m[aá]ster|mba|doctorado|bachelor|master|degree)\b/i;
 
@@ -98,6 +107,12 @@ function desdeRenglones(lineas: LayoutLine[]): EducationItem[] {
   for (let i = 0; i < textos.length; i++) {
     const texto = textos[i];
     if (texto.length < 5 || ES_TECNOLOGIA.test(texto)) continue;
+
+    // "Estado Civil: Soltera", "Numero de Cedula: ...", "Telefonos: ..." son
+    // datos personales, no formacion. Se descartan antes de que el heurisco de
+    // titulos se apoye en una palabra compartida como "civil".
+    const etiquetaPrevia = texto.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][^:]{0,30}?)\s*:/);
+    if (etiquetaPrevia && LABEL_PERSONAL.test(etiquetaPrevia[1])) continue;
 
     const conPrefijo = texto.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{4,20})\s*:\s*(.+)$/);
     const nivelPrefijo = conPrefijo ? nivelDesdePrefijo(conPrefijo[1]) : null;

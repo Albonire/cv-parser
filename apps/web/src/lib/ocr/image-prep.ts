@@ -333,3 +333,100 @@ async function enderezar(canvas: HTMLCanvasElement, gris: Uint8ClampedArray): Pr
 
   return destino;
 }
+
+/**
+ * Tamaño de imagen consolidada para el expediente: se busca que la foto quede
+ * con resolucion util de lectura (minimo de 1600 px en el lado corto) sin
+ * superar el tope de pixeles, para no inflar el IndexedDB.
+ */
+const ANCHO_LADO_CORTO = 1600;
+const MAX_PIXELES_GUARDADO = 5_000_000;
+/** Calidad JPEG de la imagen guardada: compensa un poco el tamanio tras el upscale. */
+const CALIDAD_JPEG_GUARDADO = 0.88;
+
+/**
+ * Realza una foto para guardarla en el expediente: sube la resolucion con
+ * interpolacion de alta calidad, ecualiza el contraste sin llegar a binarizar y
+ * aplica una nitidez suave. Pensado sobre todo para la cedula: el dato que se
+ * guarda es la IMAGEN legible, no su OCR.
+ */
+export async function realzarImagen(imageFile: File | Blob): Promise<Blob> {
+  const bitmap = await cargarImagen(imageFile);
+
+  let ladoCorto = Math.min(bitmap.width, bitmap.height);
+  let escala = ladoCorto >= ANCHO_LADO_CORTO ? 1 : ANCHO_LADO_CORTO / ladoCorto;
+  if (bitmap.width * bitmap.height * escala * escala > MAX_PIXELES_GUARDADO) {
+    escala = Math.sqrt(MAX_PIXELES_GUARDADO / (bitmap.width * bitmap.height));
+  }
+  escala = Math.max(0.25, escala);
+
+  const w = Math.round(bitmap.width * escala);
+  const h = Math.round(bitmap.height * escala);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return imageFile;
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0, w, h);
+
+  let imageData = ctx.getImageData(0, 0, w, h);
+  imageData = ecualizarContraste(imageData);
+  imageData = nitidezSuave(imageData);
+
+  ctx.putImageData(imageData, 0, 0);
+
+  const blob = await new Promise<Blob | null>((res) =>
+    canvas.toBlob((b) => res(b), 'image/jpeg', CALIDAD_JPEG_GUARDADO)
+  );
+  return blob ?? imageFile;
+}
+
+/** Extiende el histograma de luminancia para recuperar contraste en fotos planas. */
+function ecualizarContraste(imageData: ImageData): ImageData {
+  const { data, width, height } = imageData;
+  const gris = new Float32Array(width * height);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    gris[p] = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+  }
+  const orden = Float32Array.from(gris).sort();
+  const pMin = orden[Math.floor(orden.length * 0.02)];
+  const pMax = orden[Math.min(orden.length - 1, Math.floor(orden.length * 0.98))];
+  const rango = Math.max(1, pMax - pMin);
+  const factor = 255 / rango;
+
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    for (let c = 0; c < 3; c++) {
+      const v = Math.round((data[i + c] - pMin) * factor);
+      data[i + c] = Math.max(0, Math.min(255, v));
+    }
+  }
+  return imageData;
+}
+
+/** Nitidez ligera (mascara de desenfoque con vecindad 3x3) para definir bordes. */
+function nitidezSuave(imageData: ImageData): ImageData {
+  const { data, width, height } = imageData;
+  const orig = new Uint8ClampedArray(data);
+  const peso = 0.35;
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = (y * width + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        const o = 4 * (y * width + x) + c;
+        const media =
+          (orig[o - 4 - width * 4] + orig[o - width * 4] + orig[o + 4 - width * 4] +
+           orig[o - 4] + orig[o + 4] +
+           orig[o - 4 + width * 4] + orig[o + width * 4] + orig[o + 4 + width * 4]) / 8;
+        const v = orig[o] + peso * (orig[o] - media);
+        data[i + c] = Math.max(0, Math.min(255, Math.round(v)));
+      }
+    }
+  }
+  return imageData;
+}

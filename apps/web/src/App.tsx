@@ -5,6 +5,7 @@ import { useRoute } from './lib/navigation/useRoute';
 import { ReaderView } from './features/reader/ReaderView';
 import { CandidatesView } from './features/candidates/CandidatesView';
 import { EmployeesView } from './features/employees/EmployeesView';
+import { ExpedienteView } from './features/expediente/ExpedienteView';
 import { ContractsView } from './features/contracts/ContractsView';
 import { VacanciesView } from './features/vacancies/VacanciesView';
 import { MemorandaView } from './features/memoranda/MemorandaView';
@@ -15,6 +16,7 @@ import { EmployerSettingsView } from './features/settings/EmployerSettingsView';
 import { db } from './lib/offline/db';
 import { CandidateFormData } from './types/candidate';
 import { EmployeeItem } from './types/employee';
+import { EmployeeDocumentRecord } from './types/employee-document';
 import { ContractFormData } from './types/contract';
 import { MemorandumItem } from './types/memorandum';
 import { AlertItem } from './types/alert';
@@ -38,6 +40,7 @@ export const App: React.FC = () => {
   // Estados de datos
   const [candidates, setCandidates] = useState<CandidateFormData[]>([]);
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
+  const [employeeDocuments, setEmployeeDocuments] = useState<EmployeeDocumentRecord[]>([]);
   const [contracts, setContracts] = useState<ContractFormData[]>([]);
   const [memoranda, setMemoranda] = useState<MemorandumItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -46,6 +49,7 @@ export const App: React.FC = () => {
   // El empleado preseleccionado en memorandos llega por la URL
   // (#/memorandos?empleado=emp-1), de modo que el enlace se puede compartir.
   const memoEmployeeFilter = route.params.get('empleado') ?? undefined;
+  const expedienteEmployeeFilter = route.params.get('empleado') ?? undefined;
 
   // Cargar datos desde IndexedDB
   const loadData = useCallback(async () => {
@@ -55,6 +59,7 @@ export const App: React.FC = () => {
       const con = await db.contracts.toArray();
       const m = await db.memoranda.toArray();
       const v = await db.vacancies.toArray();
+      const exp = await db.employeeDocuments.toArray();
       const s = getSessionUser();
       await generateSystemAlerts();
       const a = await db.alerts.toArray();
@@ -63,6 +68,7 @@ export const App: React.FC = () => {
 
       setCandidates(c);
       setEmployees(e);
+      setEmployeeDocuments(exp);
       setContracts(con);
       setMemoranda(m);
       setAlerts(a);
@@ -90,6 +96,7 @@ export const App: React.FC = () => {
   }, [loadData]);
 
   const handleNavigateToMemo = (empId: string) => navegarA('memoranda', { empleado: empId });
+  const handleNavigateToExpediente = (empId: string) => navegarA('expediente', { empleado: empId });
 
   const pendingAlertCount = alerts.filter((a) => a.status !== 'resuelta').length;
 
@@ -130,6 +137,16 @@ export const App: React.FC = () => {
             employees={employees}
             onReload={loadData}
             onNavigateToMemo={handleNavigateToMemo}
+            onNavigateToExpediente={handleNavigateToExpediente}
+          />
+        )}
+
+        {activeSection === 'expediente' && (
+          <ExpedienteView
+            documents={employeeDocuments}
+            employees={employees}
+            onReload={loadData}
+            preselectedEmployeeId={expedienteEmployeeFilter}
           />
         )}
 

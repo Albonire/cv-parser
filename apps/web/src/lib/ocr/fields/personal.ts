@@ -1,6 +1,6 @@
 import { LayoutLine } from '../layout';
 import { DocumentType } from '../../../types/candidate';
-import { findKnownPlace } from '../../contexto/lugares';
+import { findKnownPlace, findKnownPlaceFuzzy } from '../../contexto/lugares';
 import { contieneCargo } from '../../contexto/diccionario';
 import { findLabeledValue, normalize, splitLabeledPairs, stripBullets, wordCount } from '../text-utils';
 import { FECHA_SUELTA } from './dates';
@@ -15,8 +15,9 @@ const ETIQUETAS = {
     'cedula de extranjeria', 'ce', 'tarjeta de identidad', 'ti', 'pasaporte',
   ],
   telefono: [
-    'telefono', 'telefono fijo', 'telefono celular', 'celular', 'cel', 'movil',
-    'whatsapp', 'contacto', 'tel', 'phone', 'mobile', 'cell', 'numero de contacto',
+    'telefono', 'telefonos', 'telefono fijo', 'telefono celular', 'celular',
+    'cel', 'movil', 'whatsapp', 'contacto', 'tel', 'phone', 'mobile', 'cell',
+    'numero de contacto',
   ],
   correo: ['email', 'e mail', 'correo', 'correo electronico', 'mail'],
   ciudad: [
@@ -135,6 +136,12 @@ function extraerNombre(
   const nombres = findLabeledValue(todosTextos, [...ETIQUETAS.nombres]);
   const apellidos = findLabeledValue(todosTextos, [...ETIQUETAS.apellidos]);
 
+  // "Nombres y Apellidos: Francia Elena Ortega Romero" resuelve la misma etiqueta
+  // para nombres y apellidos (el renglon termina en "apellidos"), por lo que se
+  // tratan como un solo campo completo y se reparten por la convencion colombiana.
+  if (nombres && apellidos && nombres === apellidos) {
+    return { ...repartirNombre(nombres), lineaNombre: null };
+  }
   if (nombres && apellidos) {
     return { firstNames: nombres.trim(), lastNames: apellidos.trim(), lineaNombre: null };
   }
@@ -221,6 +228,19 @@ function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
  * todo el documento hacia que el parser tomara el celular de una referencia
  * personal como si fuera el del candidato.
  */
+/**
+ * Etiquetas de documento nacional de identidad: un renglon que las traiga puede
+ * contener el numero de cedula, que no debe confundirse con el telefono.
+ */
+const LABEL_DOCUMENTO = /(?:cedula|documento|identificacion|c\.?\s?c\.?)\b/i;
+
+/**
+ * Prefiere el telefono del encabezado o de la seccion de contacto. Buscarlo en
+ * todo el documento hacia que el parser tomara el celular de una referencia
+ * personal como si fuera el del candidato. Tampoco debe tomarse el numero de
+ * cedula como telefono: solo los fragmentos del encabezado que no declararon
+ * ser un documento aportan candidatos.
+ */
 function extraerTelefono(encabezado: LayoutLine[], todas: LayoutLine[], documento: string): string {
   const porEtiqueta = findLabeledValue(textos(encabezado), [...ETIQUETAS.telefono]);
   if (porEtiqueta) {
@@ -229,6 +249,7 @@ function extraerTelefono(encabezado: LayoutLine[], todas: LayoutLine[], document
   }
 
   for (const linea of encabezado) {
+    if (LABEL_DOCUMENTO.test(linea.text)) continue;
     for (const fragmento of linea.text.split(/[|•·]/)) {
       const encontrado = buscarTelefono(fragmento, documento);
       if (encontrado) return encontrado;
@@ -244,29 +265,48 @@ function extraerTelefono(encabezado: LayoutLine[], todas: LayoutLine[], document
   return '';
 }
 
+/** Numero de documento de 6 a 15 digitos, con separadores de punto o un espacio entre grupos. */
+const PATRON_NUMERO_DOCUMENTO =
+  /\b[\d][\d.,]*(?:[\s][\d]{3})?\b/;
+
+/** Quita puntos, espacios y comas, dejando solo los digitos del numero de documento. */
+function digitosDocumento(entrada: string): string {
+  return entrada.replace(/[\s.,]/g, '');
+}
+
 function extraerDocumento(todas: LayoutLine[]): { documentType: DocumentType; documentNumber: string } {
   const lineas = textos(todas);
 
   for (const linea of lineas) {
     for (const par of splitLabeledPairs(linea)) {
       const etiqueta = normalize(par.label);
-      if (!ETIQUETAS.documento.some((e) => etiqueta === e || etiqueta.includes(e))) continue;
+      // Las etiquetas de 2 caracteres ("ce", "cc", "ti") no deben casar por
+      // subcadena: "celular" contiene "ce" y se tomaria como etiqueta de cedula.
+      const esDocumento = ETIQUETAS.documento.some(
+        (e) => etiqueta === e || (e.length >= 3 && etiqueta.includes(e))
+      );
+      if (!esDocumento) continue;
 
-      const numero = par.value.match(/\b[\d][\d.,]{5,14}\b/);
+      const numero = par.value.match(PATRON_NUMERO_DOCUMENTO);
       if (!numero) continue;
+      const digitos = digitosDocumento(numero[0]);
+      if (digitos.length < 6 || digitos.length > 15) continue;
 
       const tipo = TIPOS_DOCUMENTO.find((t) => t.patron.test(par.label))?.tipo ?? 'CC';
-      return { documentType: tipo, documentNumber: numero[0].replace(/[.,]/g, '') };
+      return { documentType: tipo, documentNumber: digitos };
     }
   }
 
   // Sin etiqueta con dos puntos: "CC 1095678123", "C.C. 1.098.765.432 de Bucaramanga"
   const patronSuelto =
-    /\b(c[eé]dula(?:\s+de\s+(?:ciudadan[ií]a|extranjer[ií]a))?|c\.?\s?c\.?|c\.?\s?e\.?|t\.?\s?i\.?|tarjeta\s+de\s+identidad|pasaporte|ppt|pep)\b\s*(?:n[oº°]\.?|nro\.?|num\.?)?\s*[:#.]?\s*([\d][\d.,]{5,14})\b/i;
+    /\b(c[eé]dula(?:\s+de\s+(?:ciudadan[ií]a|extranjer[ií]a))?|c\.?\s?c\.?|c\.?\s?e\.?|t\.?\s?i\.?|tarjeta\s+de\s+identidad|pasaporte|ppt|pep)\b\s*(?:n[oº°]\.?|nro\.?|num\.?)?\s*[:#.]?\s*([\d][\d.,\s]{5,17})\b/i;
   const suelto = lineas.join('\n').match(patronSuelto);
   if (suelto) {
-    const tipo = TIPOS_DOCUMENTO.find((t) => t.patron.test(suelto[1]))?.tipo ?? 'CC';
-    return { documentType: tipo, documentNumber: suelto[2].replace(/[.,]/g, '') };
+    const digitos = digitosDocumento(suelto[2]);
+    if (digitos.length >= 6 && digitos.length <= 15) {
+      const tipo = TIPOS_DOCUMENTO.find((t) => t.patron.test(suelto[1]))?.tipo ?? 'CC';
+      return { documentType: tipo, documentNumber: digitos };
+    }
   }
 
   return { documentType: 'CC', documentNumber: '' };
@@ -334,6 +374,18 @@ function extraerCiudad(encabezado: LayoutLine[], todas: LayoutLine[]): string {
       const match = fragmento.match(patron);
       if (match && esCiudadPlausible(match[0].trim())) return match[0].trim();
     }
+  }
+
+  // Respaldo: el lugar conocido que aparece junto a un indicio de residencia
+  // ("Direccion en X", "X residente", "vive en X"). En las fotos de celular las
+  // etiquetas se pegan ("Direccion en Balrranquilla") y no siempre sobreviven
+  // como renglon independiente, asi que se busca dentro del renglon completo
+  // tolerando los errores tipograficos del OCR.
+  for (const linea of encabezado) {
+    const texto = linea.text;
+    if (!/residen|direccion|domicilio|ciudad|vive|vivo|vivi|actualmente|radicad/i.test(texto)) continue;
+    const lugar = findKnownPlace(texto) ?? findKnownPlaceFuzzy(texto);
+    if (lugar) return lugar;
   }
 
   return '';

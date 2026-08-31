@@ -3,7 +3,8 @@ import { parseCvText } from './parser-cv';
 import { parseContractText } from './parser-contract';
 import { parseIdCardText } from './parser-id';
 import { parseHealthText } from './parser-health';
-import { classifyDocumentType } from './document-classifier';
+import { classifyDocumentType, clasificarHistorial } from './document-classifier';
+import { buscarCedulaEnTexto } from '../offline/expediente';
 import { extractSkillsFromText } from './skills-taxonomy';
 import { buildLayout, Word } from './layout';
 
@@ -125,6 +126,82 @@ describe('Document Classifier', () => {
   it('debe clasificar hojas de vida / CV', () => {
     const cvText = 'Juan Perez\nIngeniero de Sistemas\nExperiencia Laboral en desarrollo de software y bases de datos.';
     expect(classifyDocumentType(cvText)).toBe('cv');
+  });
+});
+
+describe('Clasificador historico (expediente por empleado)', () => {
+  /**
+   * Texto OCR real de fotos de WhatsApp de empleados antiguos de Rosimar
+   * (carpeta ALIBIS CALLEJAS). Verifican que documentos que NO son hoja de
+   * vida no se fuerzan a un CV vacio y se asignan a su categoria de historial.
+   */
+
+  it('contrato degradado (palabras pegadas) -> contract / contrato', () => {
+    const texto =
+      'AA MPILEADOR y ELA) ... INFERIOR ... TÉRMINOACONTRATO 1 A | INFERIORFIJOINDIVIDUAL ErinFIOINQUINCENAL$2.059.089 NIT€D1.1097€DSTACENA GALAPA';
+    expect(clasificarHistorial(texto)).toBe('contrato');
+    expect(classifyDocumentType(texto)).toBe('contract');
+  });
+
+  it('contrato degradado (foto real pegada por el usuario) -> contract', () => {
+    // Texto OCR real, muy degradado, que el usuario vio como "hoja de vida vacia".
+    const texto =
+      'AA / -MPILEADOR / y ELA) ula al piedede las Me,s, J se INFERIOR PION rs-CS LsmegEpaAma oeEASUSTANTNANIC(YO) enemiesOIveueAi1TERRI EEAGIAUYrT E PG TÉRMINOACONTRATO 1 A | INFERIORFIJOINDIVIDUAL ErinFIOINQUINCENAL$2.059.089TRACIONAOSsd~ALMSCALLEJASOSOCMANL.COM CALLESHE:325VILLA OLIMPICA ALTCALLEJAS NIT€D1.1097 AÑO GALAPA';
+    expect(classifyDocumentType(texto)).toBe('contract');
+    expect(clasificarHistorial(texto)).toBe('contrato');
+  });
+
+  it('contrato OCR limpio -> contract / contrato', () => {
+    const texto =
+      'CONTRATO INDIVIDUAL DE TRABAJO A TÉRMINO FIJO INFERIOR A UN AÑO ... EMPLEADOR ... CC No. 32.891.622';
+    expect(clasificarHistorial(texto)).toBe('contrato');
+    expect(classifyDocumentType(texto)).toBe('contract');
+  });
+
+  it('memorando -> unknown / memorando (no CV) ni formulario', () => {
+    const texto =
+      'MEMORANDO No. 026\nPARA: ALIBIS CALLEJAS NAVARRO\nDE: DISTRIBUCIONES ROSIMAR SAS\nASUNTO: NO HACER SOPORTE DE RECIBIDO DE MERCANCIA\nFECHA: 24/05/2021';
+    expect(clasificarHistorial(texto)).toBe('memorando');
+    expect(classifyDocumentType(texto)).toBe('unknown');
+  });
+
+  it('llamado de atencion -> unknown / llamado_atencion', () => {
+    const texto =
+      'LLAMADO DE ATENCIÓN No. 033\nPARA: ALIBIS CALLEJAS\nDE: DISTRIBUCIONES ROSIMAR SAS\nASUNTO: NO COLOCAR FECHA A CONSIGNACIONES';
+    expect(clasificarHistorial(texto)).toBe('llamado_atencion');
+    expect(classifyDocumentType(texto)).toBe('unknown');
+  });
+
+  it('consulta de Seguridad Social -> health / salud', () => {
+    const texto =
+      'Resultados de la consulta de Seguridad Social\nInformación Básica del Afiliado\nNÚMERO DE IDENTIFICACION 32891622\nNOMBRES ALIBIS\nAPELLIDOS CALLEJAS NAVARRO\nMUNICIPIO BARRANQUILLA';
+    expect(clasificarHistorial(texto)).toBe('salud');
+    expect(classifyDocumentType(texto)).toBe('health');
+  });
+
+  it('funciones de cargo -> unknown / funciones', () => {
+    const texto =
+      'DISTRIBUCIONES ROSIMAR SAS\nFUNCIONES\nADMINISTRADORA PUNTO DE VENTA\nRealizar apertura y cierre del almacén\nCuadre diario de caja';
+    expect(clasificarHistorial(texto)).toBe('funciones');
+    expect(classifyDocumentType(texto)).toBe('unknown');
+  });
+
+  it('renuncia -> unknown / renuncia', () => {
+    const texto = 'CARTA DE RENUNCIA\nPor medio de la presente presento mi renuncia al cargo de Auxiliar.';
+    expect(clasificarHistorial(texto)).toBe('renuncia');
+    expect(classifyDocumentType(texto)).toBe('unknown');
+  });
+
+  it('localiza la cedula dentro del texto OCR del documento', () => {
+    const texto = 'CC No. 32.891.622 CALLE 84 # 56 - 36 VILLA OLIMPICA GALAPA';
+    expect(buscarCedulaEnTexto(texto)).toBe('32891622');
+  });
+
+  it('no toma un telefono largo como cedula', () => {
+    const texto = 'Telefonos: 3138587655 WhatsApp 3001234567';
+    const cedula = buscarCedulaEnTexto(texto);
+    // No debe devolver ningun numero de telefono como cedula de documento.
+    expect(cedula).toBeUndefined();
   });
 });
 
