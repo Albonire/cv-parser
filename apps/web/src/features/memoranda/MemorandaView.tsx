@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { MemorandumItem, MemorandumType } from '../../types/memorandum';
+import { MemorandumItem, MemorandumType, MemorandumStatus } from '../../types/memorandum';
 import { EmployeeItem } from '../../types/employee';
 import { db } from '../../lib/offline/db';
+import { queueMutation } from '../../lib/offline/sync';
+import { writeAudit } from '../../lib/audit';
 import { AlertItem } from '../../types/alert';
 import { PlusSignIcon, Shield02Icon } from 'hugeicons-react';
 
@@ -11,6 +13,12 @@ interface MemorandaViewProps {
   onReload: () => void;
   preselectedEmployeeId?: string;
 }
+
+const STATUS_LABELS: Record<MemorandumStatus, string> = {
+  registrado: 'Registrado',
+  en_revision_contrato: 'En revision de contrato',
+  archivado: 'Archivado',
+};
 
 export const MemorandaView: React.FC<MemorandaViewProps> = ({
   memoranda,
@@ -51,6 +59,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
         createdAt: new Date().toISOString(),
       };
       await db.memoranda.put(newMemo);
+      await queueMutation('create', 'memoranda', newMemo.id, newMemo as unknown as Record<string, unknown>);
 
       // 2. Incrementar el contador de memorandos en el empleado (RN-2)
       const newCount = (employee.memoCount || 0) + 1;
@@ -60,6 +69,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
         updatedAt: new Date().toISOString(),
       };
       await db.employees.put(updatedEmployee);
+      await queueMutation('update', 'employees', employee.id, updatedEmployee as unknown as Record<string, unknown>);
 
       // 3. Si llega a 3 o mas memorandos, generar alerta informativa de revision de contrato (RN-2)
       if (newCount >= 3) {
@@ -81,6 +91,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
       setShowModal(false);
       setSubject('');
       setDescription('');
+      await writeAudit('create', 'memoranda', newMemo.id, `tipo: ${memoType}`);
       onReload();
     } catch (err) {
       console.error(err);
@@ -100,6 +111,61 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
         return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-mist text-ink">Otro</span>;
     }
   };
+
+  const handleStartReview = async (memorandum: MemorandumItem) => {
+    await db.memoranda.update(memorandum.id, {
+      status: 'en_revision_contrato',
+    });
+    await writeAudit('review', 'memoranda', memorandum.id, 'inicia revision de contrato (RN-2)');
+    onReload();
+  };
+
+  const handleArchiveMemo = async (memorandum: MemorandumItem) => {
+    await db.memoranda.update(memorandum.id, {
+      status: 'archivado',
+    });
+    await writeAudit('update', 'memoranda', memorandum.id, 'archivado');
+    onReload();
+  };
+
+  const handleCancelContract = async (memorandum: MemorandumItem) => {
+    if (!confirm('Esta accion termina el contrato del empleado con razon "despido_justificado". El sistema nunca cancela contratos de forma automatica: confirma la decision manual.')) return;
+
+    const employee = employees.find((emp) => emp.id === memorandum.employeeId);
+    if (employee) {
+      const updatedEmployee: EmployeeItem = {
+        ...employee,
+        status: 'inactivo',
+        terminationDate: new Date().toISOString().split('T')[0],
+        terminationReason: 'despido_justificado',
+        updatedAt: new Date().toISOString(),
+      };
+      await db.employees.put(updatedEmployee);
+      await queueMutation('update', 'employees', employee.id, updatedEmployee as unknown as Record<string, unknown>);
+
+      if (employee.activeContract?.id) {
+        await db.contracts.update(employee.activeContract.id, {
+          status: 'terminado',
+          endDate: new Date().toISOString().split('T')[0],
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    }
+
+    await db.memoranda.update(memorandum.id, { status: 'archivado' });
+    await writeAudit('review', 'memoranda', memorandum.id, 'cancela contrato (despido_justificado, RN-2)');
+    onReload();
+  };
+
+  const memoStatusBadge = (status: MemorandumStatus) => (
+    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+      status === 'registrado' ? 'bg-mist text-ink'
+        : status === 'en_revision_contrato' ? 'bg-warning-surface text-warning'
+          : 'bg-paper border border-fog text-steel'
+    }`}>
+      {STATUS_LABELS[status]}
+    </span>
+  );
 
   return (
     <div className="space-y-6">
@@ -137,6 +203,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
                 <th className="px-4 py-3">Asunto</th>
                 <th className="px-4 py-3">Responsable</th>
                 <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-mist bg-paper">
@@ -150,16 +217,34 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
                     <div className="text-[11px] text-steel line-clamp-1">{m.description}</div>
                   </td>
                   <td className="px-4 py-3 text-steel">{m.responsiblePerson}</td>
+                  <td className="px-4 py-3">{memoStatusBadge(m.status)}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-mist text-ink capitalize">
-                      {m.status.replace(/_/g, ' ')}
-                    </span>
+                    {m.status === 'registrado' && (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleStartReview(m)} className="text-signal-blue text-[11px] font-semibold hover:underline">
+                          Revisar contrato
+                        </button>
+                        <button onClick={() => handleArchiveMemo(m)} className="text-steel text-[11px] font-semibold hover:underline">
+                          Archivar
+                        </button>
+                      </div>
+                    )}
+                    {m.status === 'en_revision_contrato' && (
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleCancelContract(m)} className="text-alert text-[11px] font-semibold hover:underline">
+                          Cancelar contrato
+                        </button>
+                        <button onClick={() => handleArchiveMemo(m)} className="text-steel text-[11px] font-semibold hover:underline">
+                          Archivar
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
               {memoranda.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-steel italic">
+                  <td colSpan={7} className="px-4 py-8 text-center text-steel italic">
                     No se han registrado memorandos. Haz clic en "Registrar Nuevo Memorando".
                   </td>
                 </tr>

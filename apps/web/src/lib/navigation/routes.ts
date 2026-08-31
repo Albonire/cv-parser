@@ -15,10 +15,12 @@ export type SectionId =
   | 'candidates'
   | 'employees'
   | 'contracts'
+  | 'vacancies'
   | 'memoranda'
   | 'alerts'
   | 'dashboard'
-  | 'reports';
+  | 'reports'
+  | 'settings';
 
 export interface SectionDefinition {
   id: SectionId;
@@ -61,6 +63,13 @@ export const SECTIONS: SectionDefinition[] = [
     description: 'Contratos vigentes e históricos, con sus prórrogas y estados.',
   },
   {
+    id: 'vacancies',
+    path: 'vacantes',
+    label: 'Vacantes',
+    title: 'Vacantes y matching',
+    description: 'Vacantes abiertas con scoring ponderado contra el banco de candidatos.',
+  },
+  {
     id: 'memoranda',
     path: 'memorandos',
     label: 'Memorandos',
@@ -87,6 +96,13 @@ export const SECTIONS: SectionDefinition[] = [
     label: 'Reportes',
     title: 'Reportes',
     description: 'Informes exportables a PDF y Excel.',
+  },
+  {
+    id: 'settings',
+    path: 'configuracion',
+    label: 'Configuracion',
+    title: 'Configuracion del empleador',
+    description: 'Datos del empleador (Rosimar S.A.S.) y parametros de reglas de negocio.',
   },
 ];
 

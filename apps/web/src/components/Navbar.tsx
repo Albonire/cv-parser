@@ -1,5 +1,6 @@
 import React from 'react';
 import { hrefDe, SectionId, SECTIONS } from '../lib/navigation/routes';
+import { ROLE_LABELS, UserRole } from '../types/session';
 
 /*
  * La fila de secciones es puramente tipográfica: el estado activo se indica con
@@ -16,14 +17,28 @@ interface NavbarProps {
   alertCount: number;
   isOnline: boolean;
   syncQueueCount?: number;
+  sessionRole: UserRole;
+  onRoleChange: (role: UserRole) => void;
 }
+
+// Secciones visibles sólo para ciertos roles.
+const ROLE_GATED: Partial<Record<SectionId, UserRole[]>> = {
+  settings: ['admin'],
+};
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeSection,
   alertCount,
   isOnline,
   syncQueueCount = 0,
+  sessionRole,
+  onRoleChange,
 }) => {
+  const visibleSections = SECTIONS.filter((s) => {
+    const gate = ROLE_GATED[s.id];
+    return !gate || gate.includes(sessionRole);
+  });
+
   return (
     <header className="sticky top-0 z-50 border-b border-mist bg-paper">
       <div className="mx-auto max-w-[1280px] px-6">
@@ -39,15 +54,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="hidden text-micro text-steel md:inline">Talento humano</span>
           </a>
 
-          <p className="text-micro text-steel">
-            {isOnline ? 'En línea' : 'Sin conexión'}
-            {syncQueueCount > 0 && ` · ${syncQueueCount} por sincronizar`}
-          </p>
+          <div className="flex items-center gap-4">
+            <select
+              value={sessionRole}
+              onChange={(e) => onRoleChange(e.target.value as UserRole)}
+              aria-label="Rol de usuario"
+              className="text-micro text-steel bg-paper border border-fog rounded px-2 py-1 focus:outline-none"
+            >
+              {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            <p className="text-micro text-steel">
+              {isOnline ? 'En línea' : 'Sin conexión'}
+              {syncQueueCount > 0 && ` · ${syncQueueCount} por sincronizar`}
+            </p>
+          </div>
         </div>
 
         {/* Navegación: enlaces reales, con URL propia y estado sólo tipográfico */}
         <nav aria-label="Secciones" className="-mb-px flex gap-5 overflow-x-auto">
-          {SECTIONS.map((seccion) => {
+          {visibleSections.map((seccion) => {
             const activa = seccion.id === activeSection;
 
             return (

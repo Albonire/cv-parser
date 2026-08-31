@@ -6,6 +6,9 @@ import { MemorandumItem } from '../../types/memorandum';
 import { AlertItem } from '../../types/alert';
 import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
+import { EmployerConfig } from '../../types/employer';
+import { VacancyFormData, VacancyRequirement, CandidateRanking } from '../../types/vacancy';
+import { AuditLogItem } from '../../types/audit';
 
 export interface SyncQueueItem {
   id?: number;
@@ -33,6 +36,11 @@ export class TalentDatabase extends Dexie {
   alerts!: Table<AlertItem, string>;
   idCards!: Table<IdCardFormData, string>;
   healthAffiliations!: Table<HealthFormData, string>;
+  employers!: Table<EmployerConfig, string>;
+  vacancies!: Table<VacancyFormData, string>;
+  vacancyRequirements!: Table<VacancyRequirement, number>;
+  candidateRankings!: Table<CandidateRanking, number>;
+  auditLog!: Table<AuditLogItem, number>;
   syncQueue!: Table<SyncQueueItem, number>;
 
   constructor() {
@@ -46,6 +54,22 @@ export class TalentDatabase extends Dexie {
       alerts: 'id, employeeId, alertType, severity, status, dueDate',
       idCards: 'id, documentNumber',
       healthAffiliations: 'id, documentNumber, epsName',
+      syncQueue: '++id, action, tableName, recordId, timestamp, synced',
+    });
+
+    this.version(4).stores({
+      candidates: 'id, documentNumber, status, firstNames, lastNames, email, phone, createdAt',
+      employees: 'id, employeeCode, status, candidateId, hireDate, memoCount',
+      contracts: 'id, employeeId, workerDocumentNumber, status, startDate, endDate',
+      memoranda: 'id, employeeId, memoType, memoDate, status',
+      alerts: 'id, employeeId, alertType, severity, status, dueDate',
+      idCards: 'id, documentNumber',
+      healthAffiliations: 'id, documentNumber, epsName',
+      employers: 'id',
+      vacancies: 'id, status, title, createdAt',
+      vacancyRequirements: '++id, vacancyId',
+      candidateRankings: '++id, vacancyId, candidateId',
+      auditLog: '++id, tableName, action, createdAt',
       syncQueue: '++id, action, tableName, recordId, timestamp, synced',
     });
   }

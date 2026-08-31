@@ -1,12 +1,16 @@
 import { db } from './db';
 import { queueMutation } from './sync';
 import { AlertItem, AlertType } from '../../types/alert';
-
-const NOTICE_DAYS = 30; // RN-3: preaviso
-const PROBATION_DAYS = 60; // RN-4: periodo prueba 2 meses (aprox 60 dias)
+import { DEFAULT_EMPLOYER, EMPLOYER_ID_DEFAULT } from '../../types/employer';
 
 export async function generateSystemAlerts() {
   const now = new Date();
+
+  // Cargar limites configurables del empleador (RN-2 / RN-3 / RN-4)
+  const employer = (await db.employers.get(EMPLOYER_ID_DEFAULT)) ?? DEFAULT_EMPLOYER;
+  const memoThreshold = employer.memoWarningThreshold;
+  const noticeDays = employer.noticeDaysDefault;
+  const probationDays = Math.round(employer.trialPeriodMonthsDefault * 30);
   
   const employees = await db.employees.toArray();
   const contracts = await db.contracts.toArray();
@@ -35,8 +39,8 @@ export async function generateSystemAlerts() {
     if (emp.status !== 'activo') continue;
     const name = `${emp.candidateData.firstNames} ${emp.candidateData.lastNames}`;
 
-    // RN-2: 3 Memorandos = Alerta Critica
-    if (emp.memoCount >= 3) {
+    // RN-2: Limite de memorandos = Alerta Critica
+    if (emp.memoCount >= memoThreshold) {
       if (!getExistingAlert('limite_memorandos', emp.id)) {
         await createAlert({
           alertType: 'limite_memorandos',
@@ -55,7 +59,7 @@ export async function generateSystemAlerts() {
       const diffTime = Math.abs(now.getTime() - hireDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      const daysLeft = PROBATION_DAYS - diffDays;
+      const daysLeft = probationDays - diffDays;
       if (daysLeft > 0 && daysLeft <= 15) {
         if (!getExistingAlert('fin_periodo_prueba', emp.id)) {
           await createAlert({
@@ -90,7 +94,7 @@ export async function generateSystemAlerts() {
                 description: `El contrato de ${name} se venció el ${contract.endDate}.`,
              });
           }
-        } else if (diffDays <= NOTICE_DAYS) {
+        } else if (diffDays <= noticeDays) {
           if (!getExistingAlert('vencimiento_contrato', emp.id, contract.id)) {
              await createAlert({
                 alertType: 'vencimiento_contrato',

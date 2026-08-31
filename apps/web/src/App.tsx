@@ -6,16 +6,21 @@ import { ReaderView } from './features/reader/ReaderView';
 import { CandidatesView } from './features/candidates/CandidatesView';
 import { EmployeesView } from './features/employees/EmployeesView';
 import { ContractsView } from './features/contracts/ContractsView';
+import { VacanciesView } from './features/vacancies/VacanciesView';
 import { MemorandaView } from './features/memoranda/MemorandaView';
 import { AlertsView } from './features/alerts/AlertsView';
 import { DashboardView } from './features/dashboard/DashboardView';
 import { ReportsView } from './features/reports/ReportsView';
+import { EmployerSettingsView } from './features/settings/EmployerSettingsView';
 import { db } from './lib/offline/db';
 import { CandidateFormData } from './types/candidate';
 import { EmployeeItem } from './types/employee';
 import { ContractFormData } from './types/contract';
 import { MemorandumItem } from './types/memorandum';
 import { AlertItem } from './types/alert';
+import { VacancyFormData } from './types/vacancy';
+import { SessionUser } from './types/session';
+import { getSessionUser, setSessionUser } from './lib/employer';
 
 import { initOfflineSync } from './lib/offline/sync';
 import { generateSystemAlerts } from './lib/offline/alerts';
@@ -28,6 +33,7 @@ export const App: React.FC = () => {
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueueCount, setSyncQueueCount] = useState(0);
+  const [session, setSession] = useState<SessionUser>(() => getSessionUser());
 
   // Estados de datos
   const [candidates, setCandidates] = useState<CandidateFormData[]>([]);
@@ -35,6 +41,7 @@ export const App: React.FC = () => {
   const [contracts, setContracts] = useState<ContractFormData[]>([]);
   const [memoranda, setMemoranda] = useState<MemorandumItem[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [vacancies, setVacancies] = useState<VacancyFormData[]>([]);
 
   // El empleado preseleccionado en memorandos llega por la URL
   // (#/memorandos?empleado=emp-1), de modo que el enlace se puede compartir.
@@ -47,6 +54,8 @@ export const App: React.FC = () => {
       const e = await db.employees.toArray();
       const con = await db.contracts.toArray();
       const m = await db.memoranda.toArray();
+      const v = await db.vacancies.toArray();
+      const s = getSessionUser();
       await generateSystemAlerts();
       const a = await db.alerts.toArray();
       const pendingSyncs = await db.syncQueue.where('synced').equals(0).count();
@@ -57,6 +66,8 @@ export const App: React.FC = () => {
       setContracts(con);
       setMemoranda(m);
       setAlerts(a);
+      setVacancies(v);
+      setSession(s);
     } catch (err) {
       console.error('Error cargando datos de IndexedDB:', err);
     }
@@ -89,6 +100,12 @@ export const App: React.FC = () => {
         alertCount={pendingAlertCount}
         isOnline={isOnline}
         syncQueueCount={syncQueueCount}
+        sessionRole={session.role}
+        onRoleChange={(role) => {
+          const updated = { ...session, role };
+          setSessionUser(updated);
+          setSession(updated);
+        }}
       />
 
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-24">
@@ -117,7 +134,15 @@ export const App: React.FC = () => {
         )}
 
         {activeSection === 'contracts' && (
-          <ContractsView contracts={contracts} onReload={loadData} />
+          <ContractsView contracts={contracts} employees={employees} onReload={loadData} />
+        )}
+
+        {activeSection === 'vacancies' && (
+          <VacanciesView
+            vacancies={vacancies}
+            candidates={candidates}
+            onReload={loadData}
+          />
         )}
 
         {activeSection === 'memoranda' && (
@@ -148,6 +173,10 @@ export const App: React.FC = () => {
             employees={employees}
             contracts={contracts}
           />
+        )}
+
+        {activeSection === 'settings' && (
+          <EmployerSettingsView />
         )}
       </main>
 
