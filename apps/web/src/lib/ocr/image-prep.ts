@@ -2,7 +2,8 @@
  * Preprocesamiento de imagenes en Canvas para mejorar la precision del OCR.
  *
  * Aplica, en este orden: reescalado a una resolucion util para Tesseract,
- * escala de grises, binarizacion de Otsu y correccion de inclinacion.
+ * escala de grises, binarizacion con umbral LOCAL (Sauvola) y correccion de
+ * inclinacion.
  * Todo con Canvas puro: sin dependencias nuevas y sin costo.
  */
 
@@ -13,6 +14,22 @@ const MAX_PIXELES = 6_000_000;
 /** Rango de busqueda de inclinacion, en grados. */
 const MAX_INCLINACION = 5;
 const PASO_INCLINACION = 0.5;
+/**
+ * Lado de la ventana del umbral local, como fraccion del ancho de la imagen.
+ * Debe ser holgadamente mayor que un caracter y menor que un bloque de texto.
+ */
+const FRACCION_VENTANA = 1 / 50;
+const VENTANA_MINIMA = 15;
+/** Sensibilidad de Sauvola. Mas alto adelgaza el trazo; mas bajo ensucia el fondo. */
+const K_SAUVOLA = 0.22;
+/** Dinamica de la desviacion tipica en la formula de Sauvola. */
+const R_SAUVOLA = 128;
+/**
+ * Media local por debajo de la cual la vecindad se considera invertida: fondo
+ * oscuro con letra clara, como la barra lateral de color o la cabecera a sangre
+ * que traen muchas plantillas de hoja de vida.
+ */
+const MEDIA_REGION_OSCURA = 110;
 
 export interface OpcionesPreproceso {
   binarizar?: boolean;
@@ -45,8 +62,7 @@ export async function preprocessImage(
   const gris = aEscalaDeGrises(imageData);
 
   if (binarizar) {
-    const umbral = umbralOtsu(gris);
-    binarizarEnSitio(imageData, gris, umbral);
+    binarizarLocal(imageData, gris, canvas.width, canvas.height);
   } else {
     escribirGris(imageData, gris);
   }
@@ -109,8 +125,14 @@ function escribirGris(imageData: ImageData, gris: Uint8ClampedArray): void {
 
 /**
  * Umbral de Otsu: separa texto y fondo maximizando la varianza entre clases.
- * Es lo que el codigo anterior prometia en su comentario pero no hacia: solo
- * aplicaba un realce de contraste fijo, insuficiente para fotos con sombra.
+ *
+ * Se conserva como referencia y como respaldo para imagenes muy pequenas, pero
+ * ya NO es lo que se aplica a la pagina completa. Otsu elige UN solo umbral
+ * para toda la imagen, asi que en un escaneo con vinieta o con la sombra del
+ * pliegue inunda de negro los bordes y borra los bloques de fondo gris. Medido
+ * sobre el banco de escaneos: con Otsu global, cuatro documentos del perfil
+ * duro devolvian entre 0 y 101 caracteres; con el umbral local de abajo, los
+ * mismos devuelven entre 451 y 2.528.
  */
 export function umbralOtsu(gris: Uint8ClampedArray): number {
   const histograma = new Array<number>(256).fill(0);
@@ -152,6 +174,91 @@ function binarizarEnSitio(imageData: ImageData, gris: Uint8ClampedArray, umbral:
     const valor = gris[p] > umbral ? 255 : 0;
     data[i] = data[i + 1] = data[i + 2] = valor;
     data[i + 3] = 255;
+  }
+}
+
+/**
+ * Umbral local de Sauvola calculado con imagenes integrales.
+ *
+ * Cada pixel se compara contra la media y la desviacion tipica de su vecindad
+ * en vez de contra un umbral unico de toda la pagina, que es lo que permite
+ * leer una hoja con sombra lateral o iluminacion desigual. Las sumas
+ * acumuladas hacen que el coste no dependa del tamano de la ventana: dos
+ * recorridos de la imagen y nada mas.
+ *
+ * Si la imagen es demasiado pequena para una ventana util, se cae a Otsu.
+ */
+export function binarizarLocal(
+  imageData: ImageData,
+  gris: Uint8ClampedArray,
+  width: number,
+  height: number
+): void {
+  const ventana = Math.max(VENTANA_MINIMA, Math.round(width * FRACCION_VENTANA) | 1);
+
+  if (width < ventana * 2 || height < ventana * 2) {
+    binarizarEnSitio(imageData, gris, umbralOtsu(gris));
+    return;
+  }
+
+  const radio = Math.floor(ventana / 2);
+  const ancho = width + 1;
+  const suma = new Float64Array(ancho * (height + 1));
+  const sumaCuadrados = new Float64Array(ancho * (height + 1));
+
+  for (let y = 1; y <= height; y++) {
+    for (let x = 1; x <= width; x++) {
+      const valor = gris[(y - 1) * width + (x - 1)];
+      const i = y * ancho + x;
+      suma[i] = valor + suma[i - 1] + suma[i - ancho] - suma[i - ancho - 1];
+      sumaCuadrados[i] =
+        valor * valor + sumaCuadrados[i - 1] + sumaCuadrados[i - ancho] - sumaCuadrados[i - ancho - 1];
+    }
+  }
+
+  const { data } = imageData;
+
+  for (let y = 0; y < height; y++) {
+    const y0 = Math.max(0, y - radio);
+    const y1 = Math.min(height - 1, y + radio);
+
+    for (let x = 0; x < width; x++) {
+      const x0 = Math.max(0, x - radio);
+      const x1 = Math.min(width - 1, x + radio);
+
+      const abajo = (y1 + 1) * ancho;
+      const arriba = y0 * ancho;
+      const derecha = x1 + 1;
+      const izquierda = x0;
+      const n = (y1 - y0 + 1) * (x1 - x0 + 1);
+
+      const total =
+        suma[abajo + derecha] - suma[arriba + derecha] - suma[abajo + izquierda] + suma[arriba + izquierda];
+      const total2 =
+        sumaCuadrados[abajo + derecha] -
+        sumaCuadrados[arriba + derecha] -
+        sumaCuadrados[abajo + izquierda] +
+        sumaCuadrados[arriba + izquierda];
+
+      const media = total / n;
+      const desviacion = Math.sqrt(Math.max(0, total2 / n - media * media));
+      const p = y * width + x;
+
+      // En una vecindad oscura se invierte antes de umbralizar. Sauvola supone
+      // tinta oscura sobre papel claro: aplicado tal cual a una barra lateral
+      // de color, deja el fondo en blanco y se lleva por delante la letra
+      // clara. Invertir es una transformacion afin, asi que la media se
+      // refleja y la desviacion no cambia.
+      const invertir = media < MEDIA_REGION_OSCURA;
+      const valorPixel = invertir ? 255 - gris[p] : gris[p];
+      const mediaUtil = invertir ? 255 - media : media;
+      const umbral = mediaUtil * (1 + K_SAUVOLA * (desviacion / R_SAUVOLA - 1));
+
+      const i = p * 4;
+      const valor = valorPixel > umbral ? 255 : 0;
+      data[i] = data[i + 1] = data[i + 2] = valor;
+      data[i + 3] = 255;
+    }
   }
 }
 

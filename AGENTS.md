@@ -100,6 +100,7 @@ npm run build
 - `docs/REQUERIMIENTOS.md`: Especificacion de modulos (M1 a M13), formularios y reglas de negocio.
 - `docs/ARQUITECTURA.md`: Arquitectura tecnica, modelo de base de datos y hosting.
 - `docs/DESIGN_SYSTEM.md`: Sistema de diseno, tokens, componentes y reglas de interfaz.
+- `docs/MEDICION_LECTOR.md`: Precision medida del lector sobre escaneos, como reproducir el banco y que falta.
 - `SPECS.md`: Resumen tecnico operativo para implementacion.
 - `AGENTS.md`: Esta guia de desarrollo para agentes IA.
 - `apps/web/`: Aplicacion web PWA en React + Vite.

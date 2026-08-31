@@ -1,3 +1,5 @@
+// Debe ir antes que pdf.js: instala el respaldo que su codigo da por sentado.
+import './compat-upsert';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { buildLayout, DocumentLayout, PageInput } from './layout';
