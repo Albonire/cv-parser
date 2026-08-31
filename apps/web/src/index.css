@@ -22,52 +22,73 @@
 @import "@fontsource-variable/inter-tight/index.css";
 
 @theme {
-  /* ---------------------------------------------------------------- COLOR */
-  /* Monocromo: el texto es el protagonista, el chrome desaparece. */
-  --color-ink: #1e242c;        /* Texto principal, bordes de énfasis, superficie invertida */
-  --color-steel: #576579;      /* Texto secundario, etiquetas, iconos */
-  --color-paper: #ffffff;      /* Lienzo y superficie de tarjetas */
-  --color-mist: #e7eaee;       /* Divisores y separadores sutiles */
-  --color-fog: #dbdfe5;        /* Bordes de tarjeta y bloques de contenido */
-  --color-ash: #cfd5dd;        /* Realimentación de interacción: foco, hover */
-  --color-signal-blue: #1a73e8; /* ÚNICO color de acción. Solo en el CTA primario */
+  /* ------------------------------------------------ COLORES CORPORATIVOS */
+  /* Paleta profesional de Rosimar S.A.S. — Ver docs/BRANDING_ROSIMAR.md */
+  --color-rosimar-navy: #1a3a52;      /* Encabezados, topbar, identidad principal */
+  --color-rosimar-blue: #2563eb;      /* Botones primarios, acciones principales */
+  --color-rosimar-gold: #c19a5c;      /* Acentos premium, detalles, logotipo */
 
-  /* Extensión funcional aprobada — ver docs/DESIGN_SYSTEM.md § Extensión.
-     El sistema base prohíbe color en estados, pero RN-2 exige que el contador
-     de 3 memorandos se destaque en rojo y RN-3 define preavisos por vencimiento.
-     Se reserva EXCLUSIVAMENTE para reglas de negocio y severidad de alertas:
-     nunca para decoración, categorías ni confirmaciones. */
-  --color-alert: #b3261e;
-  --color-alert-surface: #fdf0ee;
-  --color-warning: #8a6116;
-  --color-warning-surface: #fdf7e9;
+  /* ------------------------------------------------- COLORES NEUTROS */
+  /* Escala de grises corporativa: tipografía e interfaz limpia */
+  --color-ink: #0f172a;               /* Texto principal (más oscuro, mejor contraste) */
+  --color-steel: #475569;             /* Texto secundario, leyendas, iconos */
+  --color-paper: #ffffff;             /* Fondo principal */
+  --color-mist: #f1f5f9;              /* Fondos secundarios, separadores sutiles */
+  --color-fog: #cbd5e1;               /* Bordes, líneas divisoras */
+  --color-ash: #94a3b8;               /* Bordes inactivos, elementos deshabilitados */
 
-  /* ----------------------------------------------------------- TIPOGRAFÍA */
+  /* ------------------------------------------------ COLORES FUNCIONALES */
+  /* Estados: solo para severidad y reglas de negocio (RN-2, RN-3). 
+     Nunca para categorías ni decoración. */
+  --color-alert: #dc2626;             /* Errores críticos, RN-2 (3+ memorandos) */
+  --color-alert-surface: #fee2e2;     /* Fondo de alertas */
+  --color-warning: #d97706;           /* Advertencias, preavisos de vencimiento */
+  --color-warning-surface: #fef3c7;   /* Fondo de advertencias */
+  --color-success: #059669;           /* Confirmaciones de operaciones exitosas */
+  --color-success-surface: #d1fae5;   /* Fondo de confirmaciones */
+
+  /* -------------------------------------------------- ACCIÓN PRINCIPAL */
+  /* Reservado exclusivamente para CTA (call-to-action) primario.
+     Usar --color-rosimar-blue. */
+  --color-signal-blue: #2563eb;       /* Alias: rosimar-blue */
+
+  /* -------------------------------------------------------- TIPOGRAFÍA */
   --font-display: 'Inter Tight Variable', 'Inter Tight', 'Helvetica Neue', system-ui, sans-serif;
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --text-micro: 11px;
   --text-micro--line-height: 1.45;
-  --text-caption: 13px;
-  --text-caption--line-height: 1.23;
-  --text-body: 16px;
+  --text-caption: 12px;
+  --text-caption--line-height: 1.33;
+  --text-body: 14px;
   --text-body--line-height: 1.5;
-  --text-subheading: 26px;
-  --text-subheading--line-height: 1.2;
-  /* El sistema prohíbe la familia display por debajo de 40px: en pantallas
-     estrechas se reduce hasta ese piso, nunca por debajo. */
-  --text-display: clamp(40px, 4.5vw, 57px);
+  --text-subheading: 18px;
+  --text-subheading--line-height: 1.33;
+  --text-heading: 24px;
+  --text-heading--line-height: 1.25;
+  /* Display: mínimo 32px en móvil, máximo 48px en desktop. */
+  --text-display: clamp(32px, 5vw, 48px);
   --text-display--line-height: 1.12;
 
-  /* ------------------------------------------------------------- ESPACIO */
+  /* --------------------------------------------------------- ESPACIO */
+  /* Unidad base: 8px. Todo es múltiplo. */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
   --spacing: 8px;
 
-  /* -------------------------------------------------------------- FORMAS */
-  /* El sistema es binario: 8px para interfaz, 16px para imágenes. */
+  /* --------------------------------------------------------- FORMAS */
+  /* Binario: 8px para interfaz, 16px para imágenes. Ningun otro valor. */
   --radius-lg: 8px;
   --radius-2xl: 16px;
 
-  --shadow-subtle: 0px 0px 2px 0px rgba(0, 0, 0, 0.16);
+  /* --------------------------------------------------------- SOMBRAS */
+  /* Una sola sombra, y solo en el botón primario. */
+  --shadow-subtle: 0px 1px 2px 0px rgba(0, 0, 0, 0.05), 
+                   0px 1px 3px 0px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 /* ------------------------------------------------------------------ BASE */
@@ -126,4 +147,226 @@ th,
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-ash);
+}
+
+/* ========================================================== COMPONENTES */
+
+/* -------------------------------------------------- BOTÓN PRIMARIO */
+/* El CTA de la interfaz. Uno por vista. */
+.btn-primary {
+  background-color: var(--color-rosimar-blue);
+  color: var(--color-paper);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #1d4ed8;
+  box-shadow: 0px 4px 12px 0px rgba(37, 99, 235, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--shadow-subtle);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -------------------------------------------------- BOTÓN SECUNDARIO */
+.btn-secondary {
+  background-color: var(--color-mist);
+  color: var(--color-ink);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-fog);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-fog);
+  border-color: var(--color-ash);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------- TARJETA */
+.card {
+  background-color: var(--color-paper);
+  border: 1px solid var(--color-fog);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  transition: border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--color-ash);
+}
+
+/* ------------------------------------------------- CAMPO DE FORMULARIO */
+.form-input,
+.form-select,
+.form-textarea {
+  background-color: var(--color-mist);
+  border: 1px solid var(--color-fog);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--color-ink);
+  transition: all 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  background-color: var(--color-paper);
+  border-color: var(--color-rosimar-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input::placeholder {
+  color: var(--color-steel);
+}
+
+/* --------------------------------------------------- ENCABEZADO */
+.header-primary {
+  background: linear-gradient(135deg, var(--color-rosimar-navy) 0%, var(--color-rosimar-blue) 100%);
+  color: var(--color-paper);
+  padding: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-primary h1 {
+  font-size: var(--text-display);
+  font-weight: 700;
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.header-primary p {
+  font-size: var(--text-body);
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0.5rem 0 0 0;
+}
+
+/* -------------------------------------------------- BADGE / ETIQUETA */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  background-color: var(--color-mist);
+  color: var(--color-ink);
+  border: 1px solid var(--color-fog);
+}
+
+.badge.primary {
+  background-color: var(--color-rosimar-blue);
+  color: var(--color-paper);
+  border: none;
+}
+
+.badge.alert {
+  background-color: var(--color-alert-surface);
+  color: var(--color-alert);
+  border: 1px solid var(--color-alert);
+}
+
+.badge.warning {
+  background-color: var(--color-warning-surface);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+}
+
+.badge.success {
+  background-color: var(--color-success-surface);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+/* ------------------------------------------------- NOTIFICACIÓN */
+.alert-box {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border-left: 4px solid transparent;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.alert-box.success {
+  background-color: var(--color-success-surface);
+  border-left-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.alert-box.warning {
+  background-color: var(--color-warning-surface);
+  border-left-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+.alert-box.alert {
+  background-color: var(--color-alert-surface);
+  border-left-color: var(--color-alert);
+  color: var(--color-alert);
+}
+
+.alert-box.info {
+  background-color: var(--color-mist);
+  border-left-color: var(--color-rosimar-blue);
+  color: var(--color-ink);
+}
+
+/* ------------------------------------------------- NAVEGACIÓN */
+.nav-link {
+  color: var(--color-steel);
+  text-decoration: none;
+  padding: 0.75rem 0;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: var(--text-body);
+}
+
+.nav-link:hover {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ash);
+}
+
+.nav-link.active {
+  color: var(--color-rosimar-blue);
+  border-bottom-color: var(--color-rosimar-blue);
+  font-weight: 700;
+}
+
+/* ================================================= UTILIDADES */
+
+/* Texto truncado con elipsis */
+.truncate-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

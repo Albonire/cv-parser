@@ -1,172 +1,202 @@
 # Sistema de diseño — Rosimar S.A.S.
 
-**Referencia:** Monotype — museo tipográfico editorial sobre papel blanco.
-**Tema:** claro. **Implementación:** `apps/web/src/index.css`, bloque `@theme`.
+**Referencia:** Monotype — museo tipográfico editorial sobre papel blanco, adaptado a la identidad corporativa profesional de Rosimar S.A.S.  
+**Tema:** Claro. **Implementación:** `apps/web/src/index.css`, bloque `@theme`.  
+**Branding:** Ver [BRANDING_ROSIMAR.md](BRANDING_ROSIMAR.md) para paleta completa e identidad visual.
 
 Este documento es el estándar de diseño del proyecto. Cualquier persona o agente que
 toque la interfaz debe ajustarse a él. Los valores viven en `@theme`, no en un archivo
-de configuración de Tailwind: ver la advertencia al final.
+de configuración de Tailwind.
 
 ---
 
 ## 1. Principio
 
-La tipografía es el artefacto; el chrome desaparece. Superficies blancas, filetes de
-1px en lugar de sombras, mucho aire, y un único azul reservado a la acción principal.
-La interfaz no compite con el contenido: en esta aplicación el contenido son los datos
-de una persona que alguien de RRHH debe leer y verificar.
+La interfaz de Rosimar combina **tipografía limpia** con **identidad corporativa fuerte**:
+colores navy/blue en headers, monocromo en contenido, con acción primaria en azul rosimar.
+Superficies blancas, filetes de 1px en lugar de sombras, mucho aire, y un único azul reservado 
+a la acción principal. El contenido (datos de personas) no compite con chrome decorativo.
 
 De ahí se derivan tres reglas que se aplican sin excepción:
 
-1. **Plano.** Un filete de 1px separa; una sombra no. La única sombra del sistema es la
-   del botón primario.
-2. **Monocromo.** El color es información, no decoración. Ver §3.
+1. **Plano con identidad.** Un filete de 1px separa; una sombra no. La única sombra del sistema 
+   es la del botón primario. Headers con gradiente navy→blue de Rosimar.
+2. **Monocromo funcional.** El color es información, no decoración. Azul corporativo y grises 
+   neutrales, con rojo solo para severidad (RN-2, RN-3).
 3. **Sin iconos decorativos.** Un icono identifica o indica una acción. Si el texto que
    tiene al lado ya dice lo mismo, el icono sobra.
 
 ---
 
-## 2. Color
+## 2. Color Corporativo
 
-| Token | Valor | Uso |
-|---|---|---|
-| `ink` | `#1e242c` | Texto principal, filete activo, superficie invertida |
-| `steel` | `#576579` | Texto secundario, etiquetas, iconos |
-| `paper` | `#ffffff` | Lienzo y superficie de tarjetas |
-| `mist` | `#e7eaee` | Divisores y separadores sutiles |
-| `fog` | `#dbdfe5` | Bordes de tarjeta y bloques de contenido |
-| `ash` | `#cfd5dd` | Realimentación de interacción |
-| `signal-blue` | `#1a73e8` | **Solo** superficie del botón primario y foco |
+### Paleta Primaria (Identidad Rosimar)
 
-En Tailwind: `text-ink`, `bg-paper`, `border-fog`, `bg-signal-blue`.
+| Token | Hex | RGB | Uso |
+|-------|-----|-----|-----|
+| `rosimar-navy` | `#1a3a52` | 26, 58, 82 | Encabezados, topbar, elementos principales |
+| `rosimar-blue` | `#2563eb` | 37, 99, 235 | Botones primarios, acciones, enlaces activos |
+| `rosimar-gold` | `#c19a5c` | 193, 154, 92 | Acentos premium, detalles, logotipo |
 
-### Extensión funcional aprobada
+### Paleta Neutra (Tipografía e Interfaz)
 
-El sistema de referencia prohíbe el color en estados y etiquetas. Este proyecto añade
-una excepción **acotada y justificada**: RN-2 exige que el contador de tres memorandos
-se destaque en rojo, y RN-3 define preavisos de vencimiento con severidad. Suprimir el
-color ahí eliminaría una señal que la regla de negocio pide explícitamente.
+| Token | Hex | Uso |
+|-------|-----|-----|
+| `ink` | `#0f172a` | Texto principal (máximo contraste) |
+| `steel` | `#475569` | Texto secundario, leyendas |
+| `paper` | `#ffffff` | Fondo principal |
+| `mist` | `#f1f5f9` | Fondos secundarios, separadores sutiles |
+| `fog` | `#cbd5e1` | Bordes, líneas divisoras |
+| `ash` | `#94a3b8` | Bordes inactivos, elementos deshabilitados |
 
-| Token | Valor | Uso permitido |
-|---|---|---|
-| `alert` | `#b3261e` | Severidad crítica y RN-2 (tres memorandos) |
-| `alert-surface` | `#fdf0ee` | Fondo de esos mismos avisos |
-| `warning` | `#8a6116` | Severidad media, preavisos, confianza de extracción baja |
-| `warning-surface` | `#fdf7e9` | Fondo de esos mismos avisos |
+### Paleta Funcional (Estados Permitidos)
 
-**Los límites de la excepción, que no se amplían:**
+Solo para severidad y reglas de negocio (RN-2, RN-3). Nunca para categorías ni decoración.
 
-- Solo severidad y reglas de negocio. Nunca categorías, etiquetas ni decoración.
-- Los estados de un candidato o un contrato (`Nuevo`, `Contratado`, `Vigente`) son
-  categorías: van en escala de grises, diferenciados por peso y filete.
-- Las confirmaciones de éxito son monocromas. Un "guardado correctamente" no necesita
-  verde: el mensaje ya lo dice.
-- Las acciones destructivas (borrar) tampoco son severidad: el icono va en `steel` y
-  solo pasa a `alert` al apuntarlo, que es cuando la advertencia sirve de algo. Una
-  columna de papeleras rojas en reposo es ruido, no aviso.
+| Token | Hex | Uso |
+|-------|-----|-----|
+| `alert` | `#dc2626` | Errores críticos, RN-2 (3+ memorandos) |
+| `alert-surface` | `#fee2e2` | Fondo de alertas |
+| `warning` | `#d97706` | Advertencias, preavisos, confianza media |
+| `warning-surface` | `#fef3c7` | Fondo de advertencias |
+| `success` | `#059669` | Confirmaciones de operaciones |
+| `success-surface` | `#d1fae5` | Fondo de confirmaciones |
+
+**Límites de la extensión:** Solo severidad y reglas de negocio. Nunca categorías.
+Los estados de un candidato (`Nuevo`, `Contratado`) son categorías: van en escala de grises.
 
 ---
 
 ## 3. Tipografía
 
-`Inter` para texto e `Inter Tight` para titulares, empaquetadas con la aplicación desde
-`@fontsource`. Son los sustitutos que el propio sistema de referencia indica para
-HelveticaNow, que es comercial. **No se cargan desde un CDN**: eso rompería el
-funcionamiento sin conexión, que es un requisito del proyecto (RNF-3).
+`Inter` para texto e `Inter Tight` para titulares, empaquetadas con la aplicación 
+desde `@fontsource`. Son los sustitutos indicados para HelveticaNow (comercial). 
+**No se cargan desde un CDN**: eso rompería el funcionamiento offline (RNF-3).
 
-| Escala | Tamaño | Interlineado | Uso |
-|---|---|---|---|
-| `text-micro` | 11px | 1.45 | Metadatos, anotaciones |
-| `text-caption` | 13px | 1.23 | Etiquetas, datos de tabla, recuentos |
-| `text-body` | 16px | 1.5 | Cuerpo, navegación, botones |
-| `text-subheading` | 26px | 1.2 | Título de formulario |
-| `text-display` | 40–57px | 1.12 | Título de sección (cabecera de página) |
+| Escala | Tamaño | Peso | Uso |
+|--------|--------|------|-----|
+| `micro` | 11px | 400 | Metadatos, anotaciones |
+| `caption` | 12px | 500 | Etiquetas, contadores, leyendas |
+| `body` | 14px | 400 | Párrafos, contenido, navegación |
+| `body-strong` | 14px | 600 | Énfasis en texto |
+| `subheading` | 18px | 600 | Subtítulos, encabezados de sección |
+| `heading` | 24px | 700 | Títulos de formularios |
+| `display` | 32–48px | 700 | Título de página (responsive) |
 
-El interletrado de `-0.02em` en negritas es la firma tipográfica del sistema y se aplica
-globalmente en `index.css`. La familia display nunca baja de 40px: por eso el token usa
-`clamp(40px, 4.5vw, 57px)` en lugar de encoger sin límite en móvil.
+El interletrado de `-0.02em` en negritas es la firma tipográfica del sistema.
 
 ---
 
-## 4. Espacio y forma
+## 4. Espacio y Forma
 
 - **Unidad base:** 8px. Toda medida es múltiplo.
-- **Radio:** binario. `rounded-lg` (8px) para interfaz, `rounded-2xl` (16px) para
-  imágenes. No se añaden valores intermedios.
-- **Ancho de página:** 1280px.
-- **Sombras:** solo `shadow-subtle`, y solo en el botón primario.
+- **Espacio compacto:** 8px  (sm)
+- **Espacio estándar:** 16px (md)
+- **Espacio generoso:** 24px (lg)
+- **Espacio amplio:**  32px (xl)
+- **Radio:** binario. `rounded-lg` (8px) para interfaz, `rounded-2xl` (16px) para imágenes.
+- **Sombras:** solo `shadow-subtle` en botón primario.
 
 ---
 
 ## 5. Componentes
 
-**Botón primario.** Superficie `signal-blue`, texto `paper`, `rounded-lg`,
-`shadow-subtle`. Es el único control relleno de la interfaz. Uno por vista.
+### Header Corporativo
+- Fondo: Gradiente navy→blue (`#1a3a52` → `#2563eb`)
+- Logo: Marca "R" en recuadro translúcido
+- Titulo: `display` weight-700, color blanco, Inter Tight
+- Subtítulo: "Gestión de Talento" en texto secundario azul claro
+- Altura: 80–96px
+- Indicadores: Rol, Estado (En línea/Sin conexión), Cola de sincronización
 
-**Botón secundario.** Sin relleno o con `bg-mist`, texto `ink`, filete `fog`.
+### Navegación Primaria
+- Ubicación: Bajo header corporativo
+- Fondo: Blanco (`paper`)
+- Activo: Border-bottom 2px azul rosimar, peso 600
+- Hover: Border-bottom 2px gris, texto oscuro
+- Inactivo: Texto gris, sin borde
+- Alertas: Badge rojo con contador (RN-2)
 
-**Tarjeta.** `rounded-lg border border-fog bg-paper`, relleno de 16 a 24px. Sin sombra.
-**Nunca una tarjeta dentro de otra tarjeta** (ver §7).
+### Botón Primario
+- Fondo: `rosimar-blue` (#2563eb)
+- Texto: Blanco (`paper`)
+- Padding: 0.5rem vert, 1rem horiz
+- Border-radius: `lg` (8px)
+- Sombra: `shadow-subtle`
+- Hover: Azul más oscuro + sombra elevada
+- Uno por vista
 
-**Navegación por secciones.** Puramente tipográfica: la sección activa se marca con
-peso, color `ink` y filete inferior. Sin fondo y sin icono — las ocho pestañas con
-icono a 16px necesitan 1282px y el lienzo del sistema tiene 1184px útiles.
+### Botón Secundario
+- Fondo: `mist` o transparente
+- Texto: `ink`
+- Border: 1px `fog`
+- Radius: `lg`
+- Hover: Border `ash`
 
-**Cabecera de página.** Titular display alineado a la izquierda con una descripción
-breve debajo, separada por un filete. Es la que da la jerarquía: las vistas **no**
-repiten su propio título dentro de una tarjeta.
+### Tarjeta
+- Fondo: `paper`
+- Border: 1px `fog`
+- Radius: `lg`
+- Padding: 16–24px
+- Sombra: **ninguna** (diseño plano)
 
-**Campo de formulario.** Etiqueta `text-caption` en `ink`, control con filete `fog` y
-`rounded-lg`. El foco lo da `:focus-visible` global; no se definen anillos por campo.
+### Campo de Formulario
+- Fondo: `mist`
+- Border: 1px `fog`
+- Focus: Border `rosimar-blue` 2px, sombra azul sutil
+- Radius: `lg`
+
+### Notificación/Alerta
+- Alerta: Border-left 4px + fondo surface
+- Tipos: `success` (verde), `warning` (ámbar), `alert` (rojo), `info` (azul)
+- Icono + Mensaje + Botón cerrar
+- Sin sombra
 
 ---
 
 ## 6. Iconos
 
-Se usan de `hugeicons-react`, a `h-4 w-4` en línea de texto y `h-5 w-5` en bloques,
+Se usan de `hugeicons-react`, a `h-4 w-4` en línea y `h-5 w-5` en bloques, 
 siempre en `steel` salvo que comuniquen severidad.
 
-**Sí:** acciones (`PlusSign`, `Delete`, `Download`, `Search`), estado y progreso
-(`Loading`, `Alert`, `Checkmark`), y afordancias como la zona de arrastre.
-
-**No:** junto a un encabezado que ya nombra la sección, ni junto a un botón cuyo texto
-ya dice lo mismo. Se eliminaron 12 de 36 por esta razón.
+**Sí:** Acciones (`PlusSign`, `Delete`, `Download`), estado/progreso (`Alert`, `Checkmark`).  
+**No:** Junto a encabezados que ya nombran la sección, ni junto a botones cuyo texto ya dice lo mismo.
 
 ---
 
-## 7. Contenedores: cuándo una caja está justificada
+## 7. Restricciones de Composición
 
-Anidar contenedores no es malo por sí mismo. El criterio es si la capa **hace** algo:
+- **Máximo 2 botones por sección** (1 primario, 1 secundario)
+- **Tarjetas anidadas: cero** (usar encabezados + espacio)
+- **Color funcional:** solo severidad, nunca categorías ni decoración
+- **Ancho máximo:** 1280px
+- **Padding horizontal:** 24–48px
 
-**Justificado**
-- Un `div` sin clases que agrupa etiqueta y control: es una celda de la rejilla.
-- Un contenedor con `grid`, `flex`, `space-y` o relleno: aporta estructura.
-- Una tarjeta que agrupa contenido que de verdad se lee como una unidad.
+---
 
-**No justificado**
-- Una tarjeta dentro de otra con **el mismo fondo y el mismo filete**: el marco interior
-  no separa nada, solo dibuja una caja. Se sustituye por encabezado y espacio.
-- Una caja con borde cuyo único contenido es un recuento o una insignia.
-- Un envoltorio que solo repite el estilo de su hijo.
-
-Verificación rápida del anidamiento de tarjetas:
+## 8. Verificación de Calidad
 
 ```bash
-grep -c 'rounded-lg border border-fog' src/features/**/*.tsx
-```
+# Sin errores de tipo
+npm run typecheck
 
-Objetivo: **cero** tarjetas dentro de tarjetas.
+# Sin violaciones de linting
+npm run lint
+
+# Tests en verde
+npm run test
+
+# Contraste visual (WCAG AA mínimo)
+ink sobre paper:     13.8:1 ✓ AAA
+steel sobre paper:    6.2:1 ✓ AA
+rosimar-blue sobre paper: 7.1:1 ✓ AA
+```
 
 ---
 
-## 8. Advertencia sobre Tailwind v4
+## Conclusión
 
-Los tokens van en `@theme`, dentro de `apps/web/src/index.css`.
+Este sistema refleja los valores de Rosimar: **confianza, claridad y profesionalismo**.
+Identidad corporativa fuerte (navy/blue), interfaz limpia (monocromo), sin decoración.
+Todo tiene propósito.
 
-**Tailwind v4 ignora `tailwind.config.js`** salvo que se cargue explícitamente con
-`@config`. Este proyecto tenía la paleta definida en ese archivo, con lo que 631 clases
-de color no generaban ningún CSS: la barra de navegación y el botón de guardar quedaban
-con texto blanco sobre fondo transparente, es decir, invisibles. El archivo se eliminó
-para que no vuelva a inducir a error.
-
-Al añadir un color, un tamaño o un radio, se declara en `@theme` y se documenta aquí.

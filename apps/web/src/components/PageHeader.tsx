@@ -8,22 +8,29 @@ interface PageHeaderProps {
 }
 
 /**
- * Zona hero de cada sección: titular editorial a la izquierda con una
- * descripción breve debajo.
+ * Zona hero de cada sección: titular editorial alineado a la izquierda 
+ * con descripción breve e indicador de acción.
  *
- * Es lo que le faltaba a la aplicación para tener jerarquía. Antes cada vista
- * empezaba con una tarjeta que mezclaba título, contador, buscador y filtros al
- * mismo peso visual, así que no había forma de saber dónde estabas de un
- * vistazo.
+ * Estructura: titular display, descripción secundaria (opcional), acción derecha.
+ * Es la zona de mayor jerarquía visual de cada sección: orienta al usuario dónde está
+ * y cuál es el objetivo principal.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, action }) => (
-  <div className="flex flex-col gap-6 border-b border-mist py-12 sm:flex-row sm:items-end sm:justify-between">
-    <div className="max-w-2xl">
-      <h1 className="font-display text-display font-medium tracking-[-0.01em] text-ink">
+  <div className="flex flex-col gap-8 border-b border-slate-200 py-8 sm:flex-row sm:items-end sm:justify-between">
+    <div className="max-w-2xl flex-1">
+      <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
         {title}
       </h1>
-      {description && <p className="mt-4 text-body text-steel">{description}</p>}
+      {description && (
+        <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+          {description}
+        </p>
+      )}
     </div>
-    {action && <div className="shrink-0">{action}</div>}
+    {action && (
+      <div className="shrink-0 flex items-center">
+        {action}
+      </div>
+    )}
   </div>
 );
