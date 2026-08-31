@@ -8,7 +8,11 @@ import { parseCvText } from './parser-cv';
 import { parseContractText } from './parser-contract';
 import { parseIdCardText } from './parser-id';
 import { parseHealthText } from './parser-health';
+import { parseLiquidacionText } from './parser-liquidacion';
+import { parseMemorandoText } from './parser-memorando';
+import { parseFuncionesText } from './parser-funciones';
 import { detectarCargos } from './cargos';
+import { clasificarHistorial } from './document-classifier';
 import { DocumentLayout, layoutFromPlainText } from './layout';
 
 const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
@@ -71,11 +75,23 @@ export async function processDocument(
   onProgress?.(90, 'Clasificando y estructurando campos del formulario...');
 
   const detectedType = classifyDocumentType(extractedText);
+  const categoria = clasificarHistorial(extractedText);
 
   const candidateData = detectedType === 'cv' ? parseCvText(extractedText, layout) : undefined;
-  const contractData = detectedType === 'contract' ? parseContractText(extractedText) : undefined;
+  const contractData = detectedType === 'contract' ? parseContractText(extractedText, layout) : undefined;
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;
   const healthData = detectedType === 'health' ? parseHealthText(extractedText) : undefined;
+  const liquidacionData =
+    detectedType === 'liquidacion' ? parseLiquidacionText(extractedText) : undefined;
+  // Memorando / llamado de atencion y funciones de cargo no tienen formulario
+  // propio (detectedType 'unknown') pero se estructuran para registrarlos en sus
+  // tablas y en la ficha del empleado.
+  const memorandoData =
+    categoria === 'memorando' || categoria === 'llamado_atencion'
+      ? parseMemorandoText(extractedText)
+      : undefined;
+  const funcionesData =
+    categoria === 'funciones' ? parseFuncionesText(extractedText) : undefined;
 
   const { confidence, warnings, fieldConfidence } = evaluarCalidad(
     detectedType,
@@ -99,6 +115,9 @@ export async function processDocument(
     contractData,
     idCardData,
     healthData,
+    liquidacionData,
+    memorandoData,
+    funcionesData,
     warnings: warnings.length > 0 ? warnings : undefined,
     fieldConfidence,
     detectedRoles: candidateData ? detectarCargos(candidateData.experience) : undefined,
@@ -199,4 +218,7 @@ export * from './parser-cv';
 export * from './parser-contract';
 export * from './parser-id';
 export * from './parser-health';
+export * from './parser-liquidacion';
+export * from './parser-memorando';
+export * from './parser-funciones';
 export * from './extraer-zip';

@@ -68,4 +68,4 @@ Para evitar sobreingeniería y mantener la velocidad, puedes estructurar el fluj
 * **Cero Alucinaciones:** Toda la información en el JSON resultante proviene exactamente de lo que leyó el OCR.
 
 * **Velocidad Extrema:** Procesa cada hoja de vida en 1-2 segundos en una CPU convencional.  
-* **Privacidad y Costo Cero:** Funciona 100% de forma local, offline y sin consumo de APIs externas.  
+* **Privacidad y Costo Cero:** Funciona 100% de forma local, offline y sin consumo de APIs externa

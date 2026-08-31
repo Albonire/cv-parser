@@ -1,4 +1,5 @@
 import { IdCardFormData } from '../../types/id-card';
+import { repartirNombre } from './fields/nombres';
 
 /**
  * Parsea el texto extraido de un documento de identidad sin datos quemados.
@@ -35,11 +36,11 @@ export function parseIdCardText(text: string): IdCardFormData {
   if (!firstNames && !lastNames) {
     const nameMatch = text.match(/(?:nombre\s+completo|titular|full\s+name)\s*[:#.-]?\s*([a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+?)(?=\n|$)/i);
     if (nameMatch) {
-      const parts = nameMatch[1].trim().split(/\s+/);
-      if (parts.length >= 2) {
-        firstNames = parts[0];
-        lastNames = parts.slice(1).join(' ');
-      }
+      // Reparto colombiano unificado: "JUAN DAVID PEREZ GOMEZ" -> primero=2,
+      // apellidos=2, en lugar del naive primero=1 / resto=apellidos.
+      const { firstNames: f, lastNames: l } = repartirNombre(nameMatch[1]);
+      firstNames = f;
+      lastNames = l;
     }
   }
 

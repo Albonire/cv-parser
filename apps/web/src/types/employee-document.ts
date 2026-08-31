@@ -15,6 +15,7 @@
 /** Categorias de historial laboral reconocibles por el lector. */
 export type DocumentCategory =
   | 'contrato'
+  | 'liquidacion'
   | 'memorando'
   | 'llamado_atencion'
   | 'renuncia'

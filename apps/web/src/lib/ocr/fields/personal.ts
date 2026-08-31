@@ -5,6 +5,7 @@ import { contieneCargo } from '../../contexto/diccionario';
 import { findLabeledValue, normalize, splitLabeledPairs, stripBullets, wordCount } from '../text-utils';
 import { FECHA_SUELTA } from './dates';
 import { buscarTelefono } from './phone';
+import { repartirNombre } from './nombres';
 
 const ETIQUETAS = {
   nombres: ['nombres', 'nombre', 'nombre completo', 'first name', 'name', 'given names'],
@@ -61,11 +62,17 @@ const ES_CARGO_GENERICO =
   /\b(?:senior|junior|semi-?senior|lead|head|trainee|intern|director|directora|gerente|jefe|jefa|coordinador|coordinadora|analista|desarrollador|developer|engineer|ingenier[oa]|arquitect[oa]|architect|consultor|consultant|t[eé]cnic[oa]|technician|tecn[oó]log[oa]|operari[oa]|asistente|assistant|auxiliar|especialista|specialist|manager|analyst|abogad[oa]|contador[a]?|administrador[a]?|dise[nñ]ador[a]?|designer|profesional|estudiante|bachiller|professional|officer|supervisor|supervisora|teller|banker|mechanic|maintenance)\b/i;
 
 /**
- * Palabras funcionales que delatan una frase, no un nombre propio. Se conservan
- * las particulas usadas en apellidos hispanos (de, del, la, los, las, y).
+ * Palabras funcionales que delatan una frase, no un nombre propio.
+ *
+ * NO incluye las particulas usadas en apellidos hispanos (de, del, la, los,
+ * las, y), que si pueden formar parte de un nombre ("Ana de la Cruz").
  */
 const PALABRA_FUNCIONAL =
-  /\b(?:i|am|is|are|was|were|with|and|the|of|for|in|on|at|to|from|my|your|his|her|our|their|con|para|por|sobre|entre|desde|hasta|que|como|muy|mas|pero|soy|es|son|era|tengo|tiene)\b/i;
+  /\b(?:soy|eres|somos|es|son|era|era|sido|tengo|tienes|tiene|tienen|tener|i|am|is|are|was|were|with|and|the|of|for|in|on|at|to|from|my|your|his|her|our|their|a|an|we|you|they|he|she|it|that|this|these|those|con|para|por|sobre|entre|desde|hasta|que|como|muy|mas|pero|en|un|una|se|su|sus|al|del)\b/i;
+
+/** Palabras funcionales SELECTIVAS que con 2 o mas delatan una frase. */
+const PALABRA_FUNCIONAL_FUERTE =
+  /\b(?:soy|eres|somos|es|son|era|sido|tengo|tienes|tiene|tienen|tener|i|am|is|are|was|were|with|and|the|of|for|in|on|at|to|from|my|your|his|her|our|their|a|an|we|you|they|he|she|it|that|this|these|those|con|para|por|sobre|entre|desde|hasta|que|como|muy|mas|pero|en|un|una|se|su|sus|al)\b/i;
 
 const PREFIJOS_TRATAMIENTO =
   /^(?:ing\.?|ingeniero|ingeniera|dr\.?|dra\.?|doctor|doctora|lic\.?|licenciado|licenciada|abg\.?|abogado|abogada|psic\.?|tec\.?|tecn[oó]logo|sr\.?|sra\.?|srta\.?|mr\.?|ms\.?|mrs\.?)\s+/i;
@@ -97,33 +104,44 @@ function textos(lines: LayoutLine[]): string[] {
   return lines.map((l) => l.text);
 }
 
-/** Un renglon que solo tiene letras y de 2 a 5 palabras puede ser un nombre. */
+/**
+ * Un renglon que solo tiene letras y de 1 a 7 palabras puede ser un nombre.
+ * Antes se exigia 2 a 5 (perdia nombres de 1 palabra y compuestos de 6-7
+ * tokens) y se rechazaba al primer indicio funcional (perdia nombres con un
+ * apellido que se escribe igual que una palabra de uso corriente).
+ */
 function pareceNombre(texto: string): boolean {
   const limpio = stripBullets(texto).replace(PREFIJOS_TRATAMIENTO, '').trim();
-  if (limpio.length < 5 || limpio.length > 60) return false;
+  if (limpio.length < 4 || limpio.length > 70) return false;
   if (NO_ES_NOMBRE.test(limpio)) return false;
-  if (contieneCargo(limpio) || ES_CARGO_GENERICO.test(limpio)) return false;
-  if (PALABRA_FUNCIONAL.test(limpio)) return false;
   if (/[@\d]|https?:|www\./.test(limpio)) return false;
   if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'´\s.]+$/.test(limpio)) return false;
 
-  const palabras = wordCount(limpio);
-  return palabras >= 2 && palabras <= 5;
+  const palabras = limpio.split(/\s+/).filter((w) => /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(w));
+  if (palabras.length < 1 || palabras.length > 7) return false;
+
+  // Una frase con 2+ palabras funcionales fuertes (verbos/pronom. sueltos)
+  // no es un nombre ("I am a developer", "Ensuring the best").
+  const funcionales = palabras.filter((p) => PALABRA_FUNCIONAL_FUERTE.test(p)).length;
+  if (funcionales >= 2) return false;
+
+  // Una sola palabra en MAYUSCULA SOSTENIDA suele ser encabezado de seccion
+  // ("HIGHLIGHTS", "SUMMARY"), no un nombre.
+  if (palabras.length === 1 && limpio === limpio.toUpperCase()) return false;
+
+  if (EsMayoriaCargo(palabras)) return false;
+
+  return true;
 }
 
-/** Reparte el nombre completo segun la convencion colombiana de dos apellidos. */
-export function repartirNombre(completo: string): { firstNames: string; lastNames: string } {
-  const partes = stripBullets(completo)
-    .replace(PREFIJOS_TRATAMIENTO, '')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (partes.length === 0) return { firstNames: '', lastNames: '' };
-  if (partes.length === 1) return { firstNames: partes[0], lastNames: '' };
-  if (partes.length === 2) return { firstNames: partes[0], lastNames: partes[1] };
-  if (partes.length === 3) return { firstNames: partes[0], lastNames: partes.slice(1).join(' ') };
-
-  return { firstNames: partes.slice(0, 2).join(' '), lastNames: partes.slice(2).join(' ') };
+/** True si la mayoria de las palabras del renglon son cargos o titulares. */
+function EsMayoriaCargo(palabras: string[]): boolean {
+  if (palabras.length === 0) return false;
+  let cargos = 0;
+  for (const p of palabras) {
+    if (contieneCargo(p) || ES_CARGO_GENERICO.test(p)) cargos++;
+  }
+  return cargos / palabras.length > 0.5;
 }
 
 function extraerNombre(

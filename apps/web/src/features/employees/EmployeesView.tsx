@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { EmployeeItem, TerminationReason } from '../../types/employee';
-import { db } from '../../lib/offline/db';
-import { queueMutation } from '../../lib/offline/sync';
-import { Alert02Icon, UserRemove01Icon, Search01Icon, Cancel01Icon, ArchiveIcon } from 'hugeicons-react';
+import { finalizarEmpleado, reingresarEmpleado } from '../../lib/offline/status-history';
+import { Alert02Icon, UserRemove01Icon, Search01Icon, Cancel01Icon, ArchiveIcon, UserAdd01Icon } from 'hugeicons-react';
 
 interface EmployeesViewProps {
   employees: EmployeeItem[];
@@ -25,6 +24,10 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
   const [terminationDate, setTerminationDate] = useState(new Date().toISOString().split('T')[0]);
   const [terminationReason, setTerminationReason] = useState<TerminationReason>('renuncia');
 
+  // Formulario de reingreso
+  const [rehireTarget, setRehireTarget] = useState<EmployeeItem | null>(null);
+  const [rehireDate, setRehireDate] = useState(new Date().toISOString().split('T')[0]);
+
   const filteredEmployees = employees.filter((e) => {
     const candidate = e.candidateData;
     const name = candidate ? `${candidate.firstNames} ${candidate.lastNames}` : '';
@@ -43,22 +46,46 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
     }
 
     try {
-      const updated: EmployeeItem = {
-        ...selectedForExit,
-        status: 'inactivo',
+      const updated = await finalizarEmpleado({
+        empleado: selectedForExit,
         terminationDate,
         terminationReason,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await db.employees.put(updated);
-      await queueMutation("update", "employees", updated.id, updated as unknown as Record<string, unknown>);
+      });
+      if (!updated) {
+        alert('Debe especificar la fecha de salida y la razon de salida (Regla RN-5).');
+        return;
+      }
       alert(`Empleado ${selectedForExit.candidateData.firstNames} ${selectedForExit.candidateData.lastNames} registrado como inactivo.`);
       setSelectedForExit(null);
       onReload();
     } catch (err) {
       console.error(err);
       alert('Error al desactivar el empleado.');
+    }
+  };
+
+  const handleReingresar = async () => {
+    if (!rehireTarget) return;
+    if (!rehireDate) {
+      alert('Debe especificar la fecha de reingreso.');
+      return;
+    }
+    try {
+      const updated = await reingresarEmpleado({
+        empleado: rehireTarget,
+        rehireDate,
+        note: 'Reingreso registrado desde Empleados.',
+      });
+      if (!updated) {
+        alert('Debe especificar la fecha de reingreso.');
+        return;
+      }
+      alert(`Empleado ${rehireTarget.candidateData.firstNames} ${rehireTarget.candidateData.lastNames} reingresado exitosamente.`);
+      setRehireTarget(null);
+      onReload();
+    } catch (err) {
+      console.error(err);
+      alert('Error al reingresar al empleado.');
     }
   };
 
@@ -189,6 +216,16 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                           Desactivar
                         </button>
                       )}
+                      {emp.status === 'inactivo' && (
+                        <button
+                          onClick={() => setRehireTarget(emp)}
+                          className="inline-flex items-center rounded-lg border border-fog px-2 py-1 text-[11px] font-semibold text-steel transition-colors hover:border-signal-blue hover:text-signal-blue"
+                          title="Reingresar al empleado (nueva vinculacion)"
+                        >
+                          <UserAdd01Icon className="h-3.5 w-3.5 mr-1" />
+                          Reingresar
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -265,6 +302,53 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
                 className="px-4 py-1.5 bg-alert hover:bg-alert text-white rounded text-xs font-semibold"
               >
                 Confirmar Desactivacion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reingreso de Empleado */}
+      {rehireTarget && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-paper rounded-lg max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-fog">
+              <h3 className="text-base font-bold text-ink flex items-center text-signal-blue">
+                Reingreso de Empleado
+              </h3>
+              <button onClick={() => setRehireTarget(null)} className="text-steel hover:text-ink">
+                <Cancel01Icon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-steel">
+              Reingresar a <strong>{rehireTarget.candidateData.firstNames} {rehireTarget.candidateData.lastNames}</strong> ({rehireTarget.employeeCode}). Se conserva la historia completa de la salida anterior.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-medium text-ink mb-1">Fecha de Reingreso *</label>
+                <input
+                  type="date"
+                  value={rehireDate}
+                  onChange={(e) => setRehireDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-fog rounded text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-fog flex justify-end gap-2">
+              <button
+                onClick={() => setRehireTarget(null)}
+                className="px-3 py-1.5 bg-mist hover:bg-fog text-ink rounded text-xs font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReingresar}
+                className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold"
+              >
+                Confirmar Reingreso
               </button>
             </div>
           </div>

@@ -10,6 +10,8 @@ import { EmployerConfig } from '../../types/employer';
 import { VacancyFormData, VacancyRequirement, CandidateRanking } from '../../types/vacancy';
 import { AuditLogItem } from '../../types/audit';
 import { EmployeeDocumentRecord } from '../../types/employee-document';
+import { EmployeeStatusHistoryItem } from '../../types/employee-status-history';
+import { LiquidacionRecord } from '../../types/liquidacion-record';
 
 export interface SyncQueueItem {
   id?: number;
@@ -42,6 +44,8 @@ export class TalentDatabase extends Dexie {
   vacancyRequirements!: Table<VacancyRequirement, number>;
   candidateRankings!: Table<CandidateRanking, number>;
   employeeDocuments!: Table<EmployeeDocumentRecord, string>;
+  employeeStatusHistory!: Table<EmployeeStatusHistoryItem, string>;
+  liquidaciones!: Table<LiquidacionRecord, string>;
   auditLog!: Table<AuditLogItem, number>;
   syncQueue!: Table<SyncQueueItem, number>;
 
@@ -89,6 +93,45 @@ export class TalentDatabase extends Dexie {
       vacancyRequirements: '++id, vacancyId',
       candidateRankings: '++id, vacancyId, candidateId',
       employeeDocuments: 'id, employeeId, workerDocumentNumber, category, processedAt, createdAt',
+      auditLog: '++id, tableName, action, createdAt',
+      syncQueue: '++id, action, tableName, recordId, timestamp, synced',
+    });
+
+    // v6: linea de tiempo de estados del empleado (contratado / inactivo / reingreso).
+    this.version(6).stores({
+      candidates: 'id, documentNumber, status, firstNames, lastNames, email, phone, createdAt',
+      employees: 'id, employeeCode, status, candidateId, hireDate, memoCount',
+      contracts: 'id, employeeId, workerDocumentNumber, status, startDate, endDate',
+      memoranda: 'id, employeeId, memoType, memoDate, status',
+      alerts: 'id, employeeId, alertType, severity, status, dueDate',
+      idCards: 'id, documentNumber',
+      healthAffiliations: 'id, documentNumber, epsName',
+      employers: 'id',
+      vacancies: 'id, status, title, createdAt',
+      vacancyRequirements: '++id, vacancyId',
+      candidateRankings: '++id, vacancyId, candidateId',
+      employeeDocuments: 'id, employeeId, workerDocumentNumber, category, processedAt, createdAt',
+      employeeStatusHistory: 'id, employeeId, status, eventType, date, createdAt',
+      auditLog: '++id, tableName, action, createdAt',
+      syncQueue: '++id, action, tableName, recordId, timestamp, synced',
+    });
+
+    // v7: tabla de liquidaciones (retiro de empleados).
+    this.version(7).stores({
+      candidates: 'id, documentNumber, status, firstNames, lastNames, email, phone, createdAt',
+      employees: 'id, employeeCode, status, candidateId, hireDate, memoCount',
+      contracts: 'id, employeeId, workerDocumentNumber, status, startDate, endDate',
+      memoranda: 'id, employeeId, memoType, memoDate, status',
+      alerts: 'id, employeeId, alertType, severity, status, dueDate',
+      idCards: 'id, documentNumber',
+      healthAffiliations: 'id, documentNumber, epsName',
+      employers: 'id',
+      vacancies: 'id, status, title, createdAt',
+      vacancyRequirements: '++id, vacancyId',
+      candidateRankings: '++id, vacancyId, candidateId',
+      employeeDocuments: 'id, employeeId, workerDocumentNumber, category, processedAt, createdAt',
+      employeeStatusHistory: 'id, employeeId, status, eventType, date, createdAt',
+      liquidaciones: 'id, employeeId, workerDocumentNumber, fechaRetiro, createdAt',
       auditLog: '++id, tableName, action, createdAt',
       syncQueue: '++id, action, tableName, recordId, timestamp, synced',
     });

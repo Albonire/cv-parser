@@ -192,6 +192,20 @@ describe('Clasificador historico (expediente por empleado)', () => {
     expect(classifyDocumentType(texto)).toBe('unknown');
   });
 
+  it('liquidacion -> liquidacion (formulario, no colisiona con contrato)', () => {
+    const texto =
+      'LIQUIDACION FINAL DE CONTRATO\nTrabajador: CARLOS MARTINEZ\nEmpleador: ROSIMAR S.A.S.\nCedula: 1050234987\nDias trabajados: 365\nCesantias: $1.250.000\nPRESTACIONES/PRIMA: $1.250.000\nVacaciones: $320.000\nTOTAL LIQUIDACION A PAGAR: $2.970.000';
+    expect(clasificarHistorial(texto)).toBe('liquidacion');
+    expect(classifyDocumentType(texto)).toBe('liquidacion');
+  });
+
+  it('liquidacion degradada (palabras pegadas) -> liquidacion', () => {
+    const texto =
+      'LIQUIDACIÓNFINALCONTRATO CESANTÍASDOBLES SALARIOPENDIENTE VACACIONES INDEMNIZACION TOTALAPAGAR $1.317.172';
+    expect(clasificarHistorial(texto)).toBe('liquidacion');
+    expect(classifyDocumentType(texto)).toBe('liquidacion');
+  });
+
   it('localiza la cedula dentro del texto OCR del documento', () => {
     const texto = 'CC No. 32.891.622 CALLE 84 # 56 - 36 VILLA OLIMPICA GALAPA';
     expect(buscarCedulaEnTexto(texto)).toBe('32891622');

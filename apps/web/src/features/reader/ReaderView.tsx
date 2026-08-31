@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ReaderUploader } from './ReaderUploader';
 import { EditableCvForm } from './EditableCvForm';
 import { EditableContractForm } from './EditableContractForm';
 import { EditableIdForm } from './EditableIdForm';
 import { EditableHealthForm } from './EditableHealthForm';
+import { EditableLiquidacionForm } from './EditableLiquidacionForm';
+import { HistorialEmpleadoPanel, DatosFotos } from './HistorialEmpleadoPanel';
 import { processDocument } from '../../lib/ocr';
 import { extraerArchivosDeZip, esZip } from '../../lib/ocr/extraer-zip';
 import { ExtractedDocumentData, BatchItem } from '../../types/reader';
@@ -11,11 +13,20 @@ import { CandidateFormData } from '../../types/candidate';
 import { ContractFormData } from '../../types/contract';
 import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
+import { LiquidacionFormData } from '../../types/liquidacion';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
-import { construirExpediente, guardarDocumentoExpediente } from '../../lib/offline/expediente';
+import { construirExpediente, guardarDocumentoExpediente, buscarCedulaEnTexto } from '../../lib/offline/expediente';
 import { clasificarHistorial } from '../../lib/ocr/document-classifier';
 import { agruparPorEmpleado, sintetizarResultadoConsolidado, GrupoLote } from '../../lib/ocr/agrupar-lote';
+import { obtenerHistorialEmpleado, HistorialEmpleadoConLineaTiempo } from '../../lib/offline/historial';
+import { guardarHojaDeVidaEmpleado } from '../../lib/offline/empleado-cv';
+import {
+  determinarEvidenciaLaboral,
+  crearOActualizarEmpleadoDesdeHistorial,
+  EstadoEmpleadoPorHistorial,
+} from '../../lib/offline/empleado-historial';
+import { guardarLoteEmpleado } from '../../lib/offline/guardar-lote';
 import { LegalDocument02Icon, CheckmarkCircle01Icon, Alert01Icon, ArchiveIcon } from 'hugeicons-react';
 
 interface ReaderViewProps {
@@ -37,6 +48,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showRawText, setShowRawText] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [historialEmpleado, setHistorialEmpleado] = useState<HistorialEmpleadoConLineaTiempo | null>(null);
 
   // Consolida el lote en grupos por empleado (cedula/nombre) para ver las fotos
   // de un mismo empleado en conjunto, en vez de foto por foto.
@@ -47,6 +59,46 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       ),
     [batchQueue]
   );
+
+  // Todos los resultados actuales (lote masivo + documento en revision) para
+  // inferir si la persona es empleado de Rosimar por su historial documental.
+  const todosLosResultados = useMemo<ExtractedDocumentData[]>(() => {
+    const delLote = batchQueue
+      .map((item) => item.result)
+      .filter((r): r is ExtractedDocumentData => Boolean(r));
+    if (!currentResult) return delLote;
+    const yaIncluido = delLote.some((r) => r.fileName === currentResult.fileName);
+    return yaIncluido ? delLote : [...delLote, currentResult];
+  }, [batchQueue, currentResult]);
+
+  const evidenciaLaboral = useMemo<EstadoEmpleadoPorHistorial>(
+    () => determinarEvidenciaLaboral(todosLosResultados),
+    [todosLosResultados]
+  );
+
+  // La persona es empleado si esta registrada en Rosimar o si sus documentos
+  // (contrato, liquidacion, renuncia) prueban una relacion laboral.
+  const esEmpleadoRegistrado = Boolean(historialEmpleado?.empleado);
+  const esEmpleadoPorHistorial = evidenciaLaboral.esEmpleado;
+
+  // Resuelve el historial en Rosimar cuando cambia el resultado actual: si se
+  // detecta la cedula de un empleado registrado (activo/inactivo), se carga su
+  // historial interno (contratos, memorandos, razon de salida) para mostrarlo
+  // junto a los datos leidos de las fotos.
+  useEffect(() => {
+    const cedula = cedulaDeResultado(currentResult);
+    if (!cedula) {
+      setHistorialEmpleado(null);
+      return;
+    }
+    let activo = true;
+    obtenerHistorialEmpleado(cedula).then((hist) => {
+      if (activo) setHistorialEmpleado(hist);
+    });
+    return () => {
+      activo = false;
+    };
+  }, [currentResult]);
 
   /** Abre el formulario del empleado con los datos consolidados de su grupo. */
   const handleLlenarFormulario = (grupo: GrupoLote) => {
@@ -194,8 +246,66 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   };
 
-  const handleSaveCv = async (candidateData: CandidateFormData) => {
+  /** Asegura que una persona con evidencia laboral quede registrada en Empleados
+   *  (activa/inactiva segun sus documentos), creandola si aun no existe. */
+  const asegurarEmpleadoDesdeHistorial = async () => {
+    if (!esEmpleadoPorHistorial) return;
+    const cedula = evidenciaLaboral.cedula;
+    if (!cedula) return;
+    await crearOActualizarEmpleadoDesdeHistorial({
+      results: todosLosResultados,
+      cedula,
+      estado: evidenciaLaboral.estado,
+      fechaSalida: evidenciaLaboral.fechaSalida,
+      razonSalida: evidenciaLaboral.razonSalida,
+    });
+  };
+
+  const handleSaveCv = async (
+    candidateData: CandidateFormData,
+    destino: 'candidato' | 'empleado' = 'candidato'
+  ) => {
     try {
+      // Escenario clave para Rosimar: muchos CVs no son de candidatos sino de
+      // empleados (activos o inactivos) cuya informacion se vuelve a cargar para
+      // actualizar su hoja de vida y dejarla en el historial, sin duplicar.
+      if (destino === 'empleado') {
+        const cedula =
+          candidateData.documentNumber ||
+          historialEmpleado?.empleado?.candidateData?.documentNumber ||
+          evidenciaLaboral.cedula;
+
+        // 1. Crear o actualizar la ficha del empleado con su historial documental.
+        if (historialEmpleado?.empleado && currentResult) {
+          await guardarHojaDeVidaEmpleado(
+            historialEmpleado.empleado,
+            candidateData,
+            currentResult,
+            currentFile ?? undefined
+          );
+        } else if (cedula) {
+          await crearOActualizarEmpleadoDesdeHistorial({
+            results: todosLosResultados,
+            cedula,
+            candidato: candidateData,
+            estado: evidenciaLaboral.estado,
+            fechaSalida: evidenciaLaboral.fechaSalida,
+            razonSalida: evidenciaLaboral.razonSalida,
+          });
+        }
+
+        // 2. Guardar todos los documentos del lote como historial del empleado.
+        await guardarHistorialDeResultados(todosLosResultados, currentFile ?? undefined);
+
+        const nombre = `${candidateData.firstNames} ${candidateData.lastNames}`.trim();
+        setNotification({
+          type: 'success',
+          message: `Hoja de vida e historial de ${nombre} registrados en Rosimar.`,
+        });
+        handleNextOrClear();
+        return;
+      }
+
       const id = candidateData.id || `cand-${Date.now()}`;
       const toSave = {
         ...candidateData,
@@ -238,6 +348,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
       await db.contracts.put(toSave);
       await queueMutation("create", "contracts", id, toSave);
+
+      // Un contrato es evidencia directa de relacion laboral: se asegura que la
+      // persona quede registrada en Empleados (y no como simple candidato).
+      await asegurarEmpleadoDesdeHistorial();
 
       setNotification({
         type: 'success',
@@ -293,6 +407,101 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   };
 
   /**
+   * Guarda una liquidacion leida por OCR en el expediente del empleado. No
+   * existe una tabla propia de liquidaciones: se adjunta como documento de
+   * historial (categoria liquidacion) vinculado por cedula.
+   */
+  const handleSaveLiquidacion = async (data: LiquidacionFormData) => {
+    try {
+      const base = await construirExpediente(
+        currentResult!,
+        'liquidacion',
+        currentFile ?? undefined
+      );
+      await guardarDocumentoExpediente({
+        ...base,
+        workerName: data.workerName || base.workerName,
+        workerDocumentNumber: data.workerDocumentNumber || base.workerDocumentNumber,
+      });
+
+      // La liquidacion acredita que la persona termino su relacion laboral:
+      // se registra la ficha del empleado (inactivo) si aun no existia.
+      await asegurarEmpleadoDesdeHistorial();
+
+      setNotification({
+        type: 'success',
+        message: `Liquidacion guardada en el expediente y vinculada al empleado de Rosimar.`,
+      });
+      handleNextOrClear();
+    } catch (err) {
+      console.error(err);
+      setNotification({ type: 'error', message: 'Error al guardar la liquidacion en el expediente.' });
+    }
+  };
+
+  /**
+   * Guarda un lote completo de documentos en las tablas del empleado
+   * (memoranda, liquidaciones, contracts, etc.) y crea el expediente vinculado.
+   * 
+   * Este es el flujo principal cuando se suben multiples fotos de un mismo empleado
+   * (contrato + liquidacion + memorando + cedula + EPS) para guardarlas todas de una vez
+   * (RN-7: revisar primero, luego guardar).
+   */
+  const handleGuardarEmpleadoYLote = async (candidateData: CandidateFormData) => {
+    try {
+      setIsProcessing(true);
+      setProgressMessage('Creando empleado y guardando lote de documentos...');
+
+      const cedula = candidateData.documentNumber || evidenciaLaboral.cedula;
+      if (!cedula) {
+        throw new Error('No se encontro numero de documento para vincular el lote.');
+      }
+
+      // 1. Crear o actualizar el empleado.
+      const empleado = await crearOActualizarEmpleadoDesdeHistorial({
+        results: todosLosResultados,
+        cedula,
+        candidato: candidateData,
+        estado: evidenciaLaboral.estado,
+        fechaSalida: evidenciaLaboral.fechaSalida,
+        razonSalida: evidenciaLaboral.razonSalida,
+      });
+
+      // 2. Guardar todos los documentos del lote en sus tablas y expediente.
+      const archivos = batchQueue
+        .map((item) => item.file)
+        .filter(Boolean) as File[];
+      
+      await guardarLoteEmpleado({
+        employee: empleado,
+        cedula,
+        results: todosLosResultados,
+        files: archivos,
+      });
+
+      const nombre = `${candidateData.firstNames} ${candidateData.lastNames}`.trim();
+      setNotification({
+        type: 'success',
+        message: `Empleado ${nombre} y lote de ${batchQueue.length} documentos guardados exitosamente en Rosimar.`,
+      });
+
+      handleNextOrClear();
+      setBatchQueue([]);
+      setCurrentBatchIndex(0);
+    } catch (err) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : 'Error desconocido al guardar el lote';
+      setNotification({
+        type: 'error',
+        message: `Error guardando el lote: ${msg}`,
+      });
+    } finally {
+      setIsProcessing(false);
+      setProgressMessage('');
+    }
+  };
+
+  /**
    * Guarda el documento procesado en el expediente del empleado. Se vincula al
    * empleado por su numero de documento (cedula); si el empleado no existe aun,
    * la ficha queda con los datos de identidad para vincularla despues.
@@ -305,6 +514,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         currentFile ?? undefined
       );
       const doc = await guardarDocumentoExpediente(base);
+
+      // Si el documento es evidencia laboral (contrato, liquidacion, renuncia,
+      // memorando), se asegura que la persona quede registrada en Empleados.
+      await asegurarEmpleadoDesdeHistorial();
 
       const vinculacion =
         doc.employeeId || doc.matchedEmployeeId
@@ -588,13 +801,73 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             )}
           </div>
 
+          <HistorialEmpleadoPanel
+            historial={historialEmpleado}
+            datosFotos={datosFotosDelResultado(currentResult)}
+            porHistorial={
+              esEmpleadoPorHistorial && !esEmpleadoRegistrado
+                ? {
+                    estado: evidenciaLaboral.estado,
+                    fechaSalida: evidenciaLaboral.fechaSalida,
+                    razonSalida: evidenciaLaboral.razonSalida,
+                  }
+                : undefined
+            }
+          />
+
           {currentResult.detectedType === 'cv' && currentResult.candidateData && (
-            <EditableCvForm
-              initialData={currentResult.candidateData}
-              confidenceScore={currentResult.confidenceScore}
-              onSave={handleSaveCv}
-              onCancel={() => setCurrentResult(null)}
-            />
+            <>
+              <EditableCvForm
+                initialData={currentResult.candidateData}
+                confidenceScore={currentResult.confidenceScore}
+                onSave={handleSaveCv}
+                onCancel={() => setCurrentResult(null)}
+                esEmpleadoExistente={esEmpleadoRegistrado || esEmpleadoPorHistorial}
+                empleadoNombre={
+                  esEmpleadoRegistrado
+                    ? `${historialEmpleado!.empleado.candidateData?.firstNames ?? ''} ${
+                        historialEmpleado!.empleado.candidateData?.lastNames ?? ''
+                      }`.trim()
+                    : currentResult.candidateData
+                    ? `${currentResult.candidateData.firstNames} ${currentResult.candidateData.lastNames}`.trim()
+                    : undefined
+                }
+              />
+
+              {/* Boton "Guardar empleado y lote" cuando hay multiples documentos */}
+              {batchQueue.length > 1 && (
+                <div className="bg-paper rounded-lg border border-fog p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-ink mb-1">Guardar empleado y lote</h3>
+                      <p className="text-xs text-steel">
+                        Tienes {batchQueue.length} documentos cargados de este empleado (memorandos, contratos,
+                        liquidaciones, cedulas, EPS, funciones). Usa este boton para guardar TODOS los documentos en
+                        sus tablas correspondientes y crear el expediente completo del empleado en una operacion.
+                        <strong className="block mt-1">RN-7: revisa y corrige los datos arriba antes de guardar.</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setCurrentResult(null)}
+                      className="px-4 py-2 bg-mist hover:bg-fog text-ink text-sm font-semibold rounded-lg"
+                      disabled={isProcessing}
+                    >
+                      Revisar otros documentos
+                    </button>
+                    <button
+                      onClick={() => handleGuardarEmpleadoYLote(currentResult.candidateData!)}
+                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle disabled:opacity-50"
+                      disabled={isProcessing}
+                    >
+                      <CheckmarkCircle01Icon className="h-4 w-4 mr-2" />
+                      Guardar empleado y {batchQueue.length} documentos
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {currentResult.detectedType === 'contract' && currentResult.contractData && (
@@ -620,6 +893,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               initialData={currentResult.healthData}
               confidenceScore={currentResult.confidenceScore}
               onSave={handleSaveHealth}
+              onCancel={() => setCurrentResult(null)}
+            />
+          )}
+
+          {currentResult.detectedType === 'liquidacion' && currentResult.liquidacionData && (
+            <EditableLiquidacionForm
+              initialData={currentResult.liquidacionData}
+              confidenceScore={currentResult.confidenceScore}
+              onSave={handleSaveLiquidacion}
               onCancel={() => setCurrentResult(null)}
             />
           )}
@@ -678,9 +960,28 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   );
 };
 
+/** Guarda todos los documentos de historial laboral del lote en el expediente
+ *  del empleado, vinculados por cedula. La hoja de vida (cv) no se guarda como
+ *  ficha de expediente: ya quedo consolidada en la ficha del empleado. */
+async function guardarHistorialDeResultados(
+  results: ExtractedDocumentData[],
+  imageFile?: File
+): Promise<void> {
+  for (const r of results) {
+    if (!r || r.detectedType === 'cv') continue;
+    const base = await construirExpediente(
+      r,
+      clasificarHistorial(r.extractedText),
+      imageFile
+    );
+    await guardarDocumentoExpediente(base);
+  }
+}
+
 function etiquetaCategoria(categoria: string): string {
   const mapa: Record<string, string> = {
     contrato: 'Contrato laboral',
+    liquidacion: 'Liquidacion final',
     memorando: 'Memorando',
     llamado_atencion: 'Llamado de atencion',
     renuncia: 'Renuncia',
@@ -698,7 +999,31 @@ function etiquetaTipo(tipo: string): string {
     contract: 'Contrato',
     id_card: 'Cedula',
     health: 'Seguridad social / EPS',
+    liquidacion: 'Liquidacion final',
     unknown: 'Documento',
   };
   return mapa[tipo] ?? tipo;
+}
+
+/** Devuelve la cedula/nit detectada en un resultado extraido, si la hay. */
+function cedulaDeResultado(r: ExtractedDocumentData | null): string | undefined {
+  if (!r) return undefined;
+  if (r.candidateData?.documentNumber) return r.candidateData.documentNumber;
+  if (r.contractData?.workerDocumentNumber) return r.contractData.workerDocumentNumber;
+  if (r.idCardData?.documentNumber) return r.idCardData.documentNumber;
+  if (r.healthData?.documentNumber) return r.healthData.documentNumber;
+  if (r.liquidacionData?.workerDocumentNumber) return r.liquidacionData.workerDocumentNumber;
+  // Documentos sin estructura (memorando/renuncia/funciones): se intenta localizar
+  // la cedula directamente en el texto OCR para poder enlazar el historial en Rosimar.
+  return buscarCedulaEnTexto(r.extractedText);
+}
+
+/** Reune los datos de historial leidos de las fotos (rol, contrato, liquidacion). */
+function datosFotosDelResultado(r: ExtractedDocumentData | null): DatosFotos | undefined {
+  if (!r) return undefined;
+  const datos: DatosFotos = {};
+  if (r.contractData) datos.contrato = r.contractData;
+  if (r.liquidacionData) datos.liquidacion = r.liquidacionData;
+  if (r.candidateData?.headline) datos.rol = r.candidateData.headline;
+  return datos.contrato || datos.liquidacion || datos.rol ? datos : undefined;
 }

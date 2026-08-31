@@ -9,6 +9,7 @@ import { parseContractText } from './parser-contract';
 import { parseIdCardText } from './parser-id';
 import { parseHealthText } from './parser-health';
 import { layoutFromPlainText } from './layout';
+import { repartirNombre } from './fields/nombres';
 
 /**
  * Agrupacion de un lote de documentos por empleado.
@@ -77,7 +78,7 @@ export function identidadDeResultado(r: ExtractedDocumentData): IdentidadEmplead
 }
 
 const PATRON_NOMBRE_EMPLEADO =
-  /(?:\bpara\b|emplead[oa]|trabajad[oa]r|afiliad[oa]|cotizante|beneficiari[oa]|contratista|nombre\s+del\s+emplead[oa]|nombre\s+del\s+trabajador|nombre\s+del\s+afiliad[oa])\s*[:.#-]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,}\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,}(?:\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,}){0,3})(?=\n|$)/i;
+  /(?:\bpara\b|emplead[oa]|trabajad[oa]r|afiliad[oa]|cotizante|beneficiari[oa]|contratista|nombre\s+del\s+emplead[oa]|nombre\s+del\s+trabajador|nombre\s+del\s+afiliad[oa])\s*[:.#-]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}(?:\s+(?:de\s+|del\s+|de\s+la\s+|de\s+los\s+)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}){0,4})(?=\n|$)/i;
 
 /** Extrae el nombre del empleado desde encabezados comunes de documentos de RRHH. */
 export function buscarNombreEnTexto(texto: string): string | undefined {
@@ -89,7 +90,7 @@ export function buscarNombreEnTexto(texto: string): string | undefined {
   const m = linea.match(PATRON_NOMBRE_EMPLEADO);
   if (!m) return undefined;
   const nombre = m[1].trim();
-  if (nombre.split(/\s+/).length < 2 || /@|\d|www\.|https?:/i.test(nombre)) return undefined;
+  if (nombre.split(/\s+/).length < 1 || /@|\d|www\.|https?:/i.test(nombre)) return undefined;
   return nombre;
 }
 
@@ -202,8 +203,20 @@ export function sintetizarResultadoConsolidado(grupo: GrupoLote): ExtractedDocum
   let idCardData: IdCardFormData | undefined;
   let healthData: HealthFormData | undefined;
 
+  // Se preservan los datos estructurados de las fotos individuales del lote que
+  // no tienen formulario propio en la "hoja corrida" (liquidacion, memorando,
+  // funciones) para que no se pierdan: al guardar el empleado y el lote, cada
+  // documento se persiste en su tabla con su informacion leida.
+  let liquidacionData = grupo.items.find((it) => it.liquidacionData)?.liquidacionData;
+  let memorandoData = grupo.items.find((it) => it.memorandoData)?.memorandoData;
+  let funcionesData = grupo.items.find((it) => it.funcionesData)?.funcionesData;
+
   if (detectedType === 'contract') {
-    contractData = parseContractText(texto);
+    contractData = parseContractText(texto, layoutFromPlainText(texto));
+    // El rol del contrato tambien se aprovecha como cargo/funcion del empleado.
+    if (contractData?.position && !funcionesData) {
+      funcionesData = { position: contractData.position, funciones: [] };
+    }
   } else if (detectedType === 'id_card') {
     idCardData = parseIdCardText(texto);
   } else if (detectedType === 'health') {
@@ -238,17 +251,19 @@ export function sintetizarResultadoConsolidado(grupo: GrupoLote): ExtractedDocum
     contractData,
     idCardData,
     healthData,
+    liquidacionData,
+    memorandoData,
+    funcionesData,
   };
 }
 
-/** Reparte un nombre completo segun la convencion colombiana de dos apellidos. */
+/** Reparte un nombre completo segun la convencion colombiana de dos apellidos.
+ *  Delega en el helper unificado `repartirNombre` de fields/nombres.ts para que
+ *  el reparto sea identico al del parser de CV, contrato y cedula. */
 function repartirNombreEnCandidato(
   candidato: CandidateFormData,
   nombreCompleto: string
 ): CandidateFormData {
-  const partes = nombreCompleto.trim().split(/\s+/).filter(Boolean);
-  if (partes.length <= 1) return { ...candidato, firstNames: partes[0] ?? '', lastNames: '' };
-  if (partes.length === 2) return { ...candidato, firstNames: partes[0], lastNames: partes[1] };
-  if (partes.length === 3) return { ...candidato, firstNames: partes[0], lastNames: partes.slice(1).join(' ') };
-  return { ...candidato, firstNames: partes.slice(0, 2).join(' '), lastNames: partes.slice(2).join(' ') };
+  const { firstNames, lastNames } = repartirNombre(nombreCompleto);
+  return { ...candidato, firstNames, lastNames };
 }

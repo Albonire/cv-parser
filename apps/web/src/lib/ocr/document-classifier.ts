@@ -87,6 +87,24 @@ export function clasificarHistorial(texto: string): DocumentCategory {
     return 'renuncia';
   }
 
+  // Liquidacion final de contrato. Se evalua ANTES que `contrato` porque la
+  // liquidacion contiene muchas palabras propias del contrato (trabajador,
+  // empleador, NIT, fechas). Las claves distintivas son los conceptos laborales
+  // y el cuadro de valores. Calibrado para OCR real de fotos (palabras pegadas
+  // como "CESANTÍASDOBLES").
+  const liquidacion =
+    (lower.includes('liquidacion') ? 4 : 0) +
+    (lower.includes('liquidacion final') ? 4 : 0) +
+    (lower.includes('cesantias') ? 4 : 0) +
+    (lower.includes('prima') ? 3 : 0) +
+    (lower.includes('vacaciones') ? 2 : 0) +
+    (lower.includes('indemnizacion') ? 3 : 0) +
+    (lower.includes('intereses de cesantias') ? 4 : 0) +
+    (lower.includes('retencion') ? 2 : 0) +
+    (lower.includes('total liquidacion') ? 4 : 0) +
+    (lower.includes('total a pagar') ? 3 : 0);
+  if (liquidacion >= 4) return 'liquidacion';
+
   // Contrato laboral. Tolerante a ruido ("TÉRMINOACONTRATO", "trabajad", "NIT").
   const contrato = contar(
     lower,
@@ -130,6 +148,7 @@ export function clasificarHistorial(texto: string): DocumentCategory {
 const CATEGORIA_A_TIPO: Record<DocumentCategory, DetectedDocumentType> = {
   hoja_de_vida: 'cv',
   contrato: 'contract',
+  liquidacion: 'liquidacion',
   salud: 'health',
   cedula: 'id_card',
   memorando: 'unknown',

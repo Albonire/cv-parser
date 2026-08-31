@@ -15,6 +15,7 @@ interface ExpedienteViewProps {
 
 const CATEGORIA_LABEL: Record<DocumentCategory, string> = {
   contrato: 'Contrato laboral',
+  liquidacion: 'Liquidacion final',
   memorando: 'Memorando',
   llamado_atencion: 'Llamado de atencion',
   renuncia: 'Renuncia',
@@ -27,6 +28,7 @@ const CATEGORIA_LABEL: Record<DocumentCategory, string> = {
 
 const CATEGORIA_BADGE: Record<DocumentCategory, string> = {
   contrato: 'bg-mist text-ink',
+  liquidacion: 'bg-signal-blue/10 text-signal-blue',
   memorando: 'bg-warning-surface text-warning',
   llamado_atencion: 'bg-warning-surface text-warning',
   renuncia: 'bg-mist text-steel',

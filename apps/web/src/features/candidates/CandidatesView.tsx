@@ -4,6 +4,7 @@ import { familiaDeCargo } from '../../lib/contexto/diccionario';
 import { db } from '../../lib/offline/db';
 import { queueMutation } from '../../lib/offline/sync';
 import { EmployeeItem } from '../../types/employee';
+import { registrarEstadoEmpleado } from '../../lib/offline/status-history';
 import { Search01Icon, UserCheck01Icon, Briefcase01Icon, CapIcon, EyeIcon, Cancel01Icon, LanguageCircleIcon, Award01Icon, Dollar01Icon, Clock01Icon } from 'hugeicons-react';
 
 interface CandidatesViewProps {
@@ -117,13 +118,29 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
       await db.candidates.put(updatedCandidate);
       await queueMutation("update", "candidates", updatedCandidate.id!, updatedCandidate as unknown as Record<string, unknown>);
 
-      // 2. Crear registro de empleado
+      // 2. Crear registro de empleado. La fecha de ingreso (RN) toma como
+      // referencia la fecha de inicio del contrato del candidato si existe, en
+      // lugar de asumir "hoy".
+      const docNum = candidate.documentNumber?.replace(/[\s.]/g, '');
+      const contratosCandidato = docNum
+        ? await db.contracts
+            .where('workerDocumentNumber')
+            .equals(docNum)
+            .toArray()
+        : [];
+      const contratosFiltrados = contratosCandidato.filter((c) => c.workerName);
+      const contratoInicial = [...contratosFiltrados].sort(
+        (a, b) => new Date(a.startDate || 0).getTime() - new Date(b.startDate || 0).getTime()
+      )[0];
+      const hireDate =
+        contratoInicial?.startDate || new Date().toISOString().split('T')[0];
+
       const newEmployee: EmployeeItem = {
         id: `emp-${Date.now()}`,
         candidateId: candidate.id,
         employeeCode: `ROS-${Math.floor(1000 + Math.random() * 9000)}`,
         status: 'activo',
-        hireDate: new Date().toISOString().split('T')[0],
+        hireDate,
         candidateData: updatedCandidate,
         memoCount: 0,
         createdAt: new Date().toISOString(),
@@ -131,6 +148,23 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
       };
       await db.employees.put(newEmployee);
       await queueMutation("create", "employees", newEmployee.id, newEmployee as unknown as Record<string, unknown>);
+
+      // Vincular contratos del candidato al empleado y registrar el evento
+      // "contratado" en la linea de tiempo de estados.
+      for (const c of contratosFiltrados) {
+        if (!c.employeeId && c.id) {
+          const conEmpleado = { ...c, employeeId: newEmployee.id };
+          await db.contracts.put(conEmpleado);
+          await queueMutation("update", "contracts", c.id, conEmpleado as unknown as Record<string, unknown>);
+        }
+      }
+      await registrarEstadoEmpleado({
+        employeeId: newEmployee.id,
+        eventType: 'contratado',
+        status: 'activo',
+        date: hireDate,
+        note: `Contratado y convertido desde candidato (${candidate.id})`,
+      });
 
       alert(`Empleado ${candidate.firstNames} ${candidate.lastNames} contratado exitosamente.`);
       onReload();

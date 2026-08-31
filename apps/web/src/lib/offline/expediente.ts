@@ -22,7 +22,7 @@ export function normalizarDocumento(valor?: string): string {
  * Limitado a archivos de imagen razonables (< 10 MB) para no colapsar la
  * cuota del navegador.
  */
-export async function fileToBase64(file: File): Promise<string> {
+export async function fileToBase64(file: Blob): Promise<string> {
   if (file.size > 10 * 1024 * 1024) {
     throw new Error('La imagen excede 10 MB. Reduzca la resolucion antes de guardar.');
   }
