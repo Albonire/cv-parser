@@ -37,8 +37,10 @@ export interface ContractFormData {
   employerAddress?: string;
   employerEmail?: string;
   workerName: string;
+  workerDateOfBirth?: string;
   workerDocumentNumber: string;
   workerAddress?: string;
+  workerEmail?: string;
   position: string;
   salary: number;
   currency: string;

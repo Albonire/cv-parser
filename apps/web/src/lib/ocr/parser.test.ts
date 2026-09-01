@@ -255,6 +255,45 @@ describe('Parser CV (Formulario 5.1)', () => {
     expect(parsed.experience.length).toBeGreaterThan(0);
     expect(parsed.skills.some((s) => s.skillName === 'React')).toBe(true);
   });
+
+  it('detecta cargo, cedula y salario cuando etiqueta y valor caen en renglones separados (fotos y escaneos)', () => {
+    // El OCR parte el par "Etiqueta: valor" en dos renglones. El parser debe
+    // devolver el renglon siguiente como valor sin cruzarse con otra seccion.
+    const sampleCv = `
+      LUIS CARLOS MENDOZA VEGA
+      CC
+      1098765432
+      SALARIO ESPERADO
+      $ 2.500.000
+      CARGO AL QUE ASPIRA
+      Auxiliar de Bodega
+      EDUCACION
+      Bachiller
+      EXPERIENCIA
+      Cargo: Auxiliar de Bodega
+    `;
+
+    const parsed = parseCvText(sampleCv);
+
+    expect(parsed.documentNumber).toBe('1098765432');
+    expect(parsed.salaryExpectation).toBe(2500000);
+    expect(parsed.headline).toContain('Auxiliar de Bodega');
+  });
+
+  it('detecta salario mencionado en prosa por palabras clave', () => {
+    const sampleCv = `
+      ANDRES FELIPE ROJAS SUAREZ
+      Ingeniero de Sistemas
+      CC 1098765432
+      Aspiro a un salario de $ 3.200.000 mensuales como Desarrollador Full Stack.
+      EDUCACION
+      Ingenieria de Sistemas
+    `;
+
+    const parsed = parseCvText(sampleCv);
+
+    expect(parsed.salaryExpectation).toBe(3200000);
+  });
 });
 
 describe('Parser Contrato (Formulario 5.2)', () => {
@@ -283,6 +322,104 @@ describe('Parser Contrato (Formulario 5.2)', () => {
     expect(parsed.salary).toBe(1600000);
     expect(parsed.contractType).toBe('termino_fijo');
     expect(parsed.trialPeriodDays).toBe(60);
+  });
+
+  it('completa cedula, cargo y salario en escaneos con etiqueta y valor en renglones separados', () => {
+    const sampleContract = `
+      CONTRATO INDIVIDUAL DE TRABAJO A TERMINO FIJO
+      EMPLEADOR: Rosimar S.A.S.
+      TRABAJADOR
+      Pedro Antonio Luna Castro
+      CEDULA DE CIUDADANIA
+      1045678901
+      CARGO
+      Operario de Produccion
+      SALARIO MENSUAL
+      $ 1.800.000 COP
+      FECHA DE INICIO
+      2025-03-01
+      FORMA DE PAGO: Quincenal
+    `;
+
+    const parsed = parseContractText(sampleContract);
+
+    expect(parsed.workerName).toBe('Pedro Antonio Luna Castro');
+    expect(parsed.workerDocumentNumber).toBe('1045678901');
+    expect(parsed.position).toBe('Operario de Produccion');
+    expect(parsed.salary).toBe(1800000);
+  });
+
+  it('encuentra cedula, cargo y salario mencionados en prosa', () => {
+    const sampleContract = [
+      'CONTRATO INDIVIDUAL DE TRABAJO A TERMINO FIJO',
+      'Entre ROSIMAR S.A.S., identificada con NIT 900.123.456-7, y el trabajador LUIS CARLOS MENDOZA VEGA,',
+      'identificado con cedula de ciudadania numero 1098765432, quien se obliga a desempenar',
+      'el cargo de: Auxiliar de Bodega, a cambio de un salario mensual de $ 1.650.000.',
+    ].join('\n');
+
+    const parsed = parseContractText(sampleContract);
+
+    expect(parsed.workerDocumentNumber).toBe('1098765432');
+    expect(parsed.position).toBe('Auxiliar de Bodega');
+    expect(parsed.salary).toBe(1650000);
+  });
+
+  it('clasifica como contrato una foto degradada sin la palabra CONTRATO', () => {
+    const foto = [
+      'Entre ROSIMAR S.A.S., quien actua como EMPLEADOR, y el TRABAJADOR',
+      'LUIS CARLOS MENDOZA VEGA, identificado con el NIT 900.123.456-7,',
+      'FORMA DE PAGO: MENSUAL.',
+    ].join('\n');
+    expect(clasificarHistorial(foto)).toBe('contrato');
+  });
+
+  it('extrae los datos ampliados del formulario 5.2 (domicilios, correos, nacimiento y duracion)', () => {
+    const sampleContract = `
+      CONTRATO INDIVIDUAL DE TRABAJO
+      EMPLEADOR: Rosimar S.A.S.
+      NIT: 900.123.456-7
+      DOMICILIO DEL EMPLEADOR: Cra 12 # 34-56, Bogota
+      CORREO ELECTRONICO DEL EMPLEADOR: rrhh@rosimar.com
+      TRABAJADOR: Laura Camila Gutierrez Ospina
+      FECHA DE NACIMIENTO: 12 de mayo de 1990
+      CEDULA: 1054567890
+      DOMICILIO DEL TRABAJADOR: Calle 45 # 23-10, Medellin
+      CORREO ELECTRONICO DEL TRABAJADOR: laura.gutierrez@correo.co
+      CARGO: Auxiliar Contable
+      SALARIO: $ 1.700.000
+      FORMA DE PAGO: Quincenal
+      FECHA DE INICIO: 2024-03-04
+      PERIODO DE PRUEBA: 45 dias
+      FECHA DE VENCIMIENTO: 2025-03-03
+      LUGAR DE TRABAJO: Medellin
+    `;
+
+    const parsed = parseContractText(sampleContract);
+
+    expect(parsed.employerAddress).toBe('Cra 12 # 34-56, Bogota');
+    expect(parsed.employerEmail).toBe('rrhh@rosimar.com');
+    expect(parsed.workerDateOfBirth).toBe('1990-05-12');
+    expect(parsed.workerAddress).toBe('Calle 45 # 23-10, Medellin');
+    expect(parsed.workerEmail).toBe('laura.gutierrez@correo.co');
+    expect(parsed.durationMonths).toBe(12);
+  });
+
+  it('lee etiquetas degradadas por el OCR de fotos mediante coincidencia difusa', () => {
+    const foto = [
+      'CONTRATO INDIVIDUAL DE TRABAJO',
+      'EMPLFADOR: Rosimar S.A.S.',
+      'NIT: 900.123.456-7',
+      'TRABAJADOR: Juan Pablo Rojas Diaz',
+      'CEDULA DE CIUDADANIA: 1023456789',
+      'CARG: Auxiliar de Talento Humano',
+      'SALARIO MENSUAL: $ 2.200.000',
+    ].join('\n');
+
+    const parsed = parseContractText(foto);
+
+    expect(parsed.employerName).toBe('Rosimar S.A.S.');
+    expect(parsed.position).toBe('Auxiliar de Talento Humano');
+    expect(parsed.salary).toBe(2200000);
   });
 });
 

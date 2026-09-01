@@ -1,5 +1,6 @@
 import { ExtractedDocumentData, FieldConfidence } from '../../types/reader';
 import { CandidateFormData } from '../../types/candidate';
+import { ContractFormData } from '../../types/contract';
 import { readDocxFile } from './docx-reader';
 import { readPdfFile } from './pdf-reader';
 import { performOcr } from './tesseract-worker';
@@ -32,6 +33,25 @@ function pareceHojaDeVida(candidato: CandidateFormData): boolean {
   const tieneTrayectoria = candidato.experience.length > 0 || candidato.education.length > 0;
 
   return contacto.length > 0 || tieneTrayectoria;
+}
+
+/**
+ * Senales minimas de contrato de trabajo en un texto callejero (fotos con el
+ * "CONTRATO" inicial degradado, ausente o cortado). Se usa como guardia para
+ * no dejar que el lector maltrate un contrato como si fuera hoja de vida.
+ */
+function senalesDeContrato(texto: string): boolean {
+  const t = texto.toLowerCase();
+  const palabras = [
+    'empleador', 'trabajad', 'forma de pago', 'lugar de ejecucion',
+    'periodo de prueba', 'nit', 'domicilio', 'termino fijo', 'clausul',
+  ];
+  let cuantas = 0;
+  for (const p of palabras) if (t.includes(p)) cuantas++;
+  const esHojaDeVida =
+    t.includes('hoja de vida') || t.includes('curriculum') ||
+    t.includes('experiencia laboral') || t.includes('perfil profesional');
+  return !esHojaDeVida && cuantas >= 2 && t.includes('empleador');
 }
 
 /**
@@ -95,6 +115,8 @@ export async function processDocument(
   let detectedType = classifyDocumentType(extractedText);
 
   let candidateData = detectedType === 'cv' ? parseCvText(extractedText, layout) : undefined;
+  let contractData: ContractFormData | undefined =
+    detectedType === 'contract' ? parseContractText(extractedText, layout) : undefined;
 
   // Una hoja de vida sin ningun encabezado de seccion no da ninguna palabra
   // clave, asi que el clasificador la deja en `desconocido`. En vez de mandarla
@@ -102,7 +124,7 @@ export async function processDocument(
   // hoja de vida SOLO si el resultado trae datos de una persona real. Asi no se
   // fuerza nunca un formulario vacio, que es lo que el clasificador evita, pero
   // tampoco se pierde una hoja de vida por no llevar titulos.
-  if (categoria === 'desconocido' && !candidateData) {
+  if (categoria === 'desconocido' && !candidateData && !contractData) {
     // Se prueban las dos lecturas. La maquetacion ayuda en los documentos con
     // columnas o encabezados, pero en una hoja sin ningun titulo el texto
     // plano encuentra el bloque de contacto que la maquetacion no agrupa.
@@ -111,12 +133,20 @@ export async function processDocument(
       ? conMaquetacion
       : parseCvText(extractedText);
 
-    if (pareceHojaDeVida(posible)) {
+    if (senalesDeContrato(extractedText)) {
+      // Una foto de contrato con el titulo "CONTRATO" degradado cae aqui y no
+      // debe leerse como hoja de vida (produjo "COMBARRANQUILLA" como nombre y
+      // cargo). Si el texto huele a contrato, se prefiere ese formulario.
+      const contrato = parseContractText(extractedText, layout);
+      if (contrato.employerName || contrato.workerName) {
+        detectedType = 'contract';
+        contractData = contrato;
+      }
+    } else if (pareceHojaDeVida(posible)) {
       detectedType = 'cv';
       candidateData = posible;
     }
   }
-  const contractData = detectedType === 'contract' ? parseContractText(extractedText, layout) : undefined;
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;
   const healthData = detectedType === 'health' ? parseHealthText(extractedText) : undefined;
   const liquidacionData =

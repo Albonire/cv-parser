@@ -15,7 +15,7 @@ export async function writeAudit(
   try {
     const user = getSessionUser();
     const entry: AuditLogItem = {
-      user: user.name,
+      user: user?.name ?? 'Administrador',
       action,
       tableName,
       recordId,

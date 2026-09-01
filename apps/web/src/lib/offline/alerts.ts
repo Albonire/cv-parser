@@ -110,4 +110,30 @@ export async function generateSystemAlerts() {
       }
     }
   }
+
+  // Limpieza de alertas obsoletas: una alerta "pendiente" cuya condicion ya no
+  // aplica se marca resuelta en vez de acumularse para siempre (empleado
+  // inactivo, contrato ya no vigente, memorandos por debajo del umbral).
+  const contratosVigentes = new Set(
+    contracts.filter((c) => c.status === 'vigente').map((c) => c.id)
+  );
+  const aResolver = existingAlerts.filter((a) => {
+    if (a.status === 'resuelta') return false;
+    const emp = employees.find((e) => e.id === a.employeeId);
+    if (!emp) return false;
+    const inactivo = emp.status !== 'activo';
+
+    if (a.alertType === 'contrato_vencido' || a.alertType === 'vencimiento_contrato') {
+      return inactivo || (a.contractId ? !contratosVigentes.has(a.contractId) : false);
+    }
+    if (a.alertType === 'limite_memorandos') {
+      return inactivo || (emp.memoCount ?? 0) < memoThreshold;
+    }
+    return inactivo;
+  });
+
+  for (const alert of aResolver) {
+    await db.alerts.update(alert.id, { status: 'resuelta' });
+    await queueMutation('update', 'alerts', alert.id, { ...alert, status: 'resuelta' } as unknown as Record<string, unknown>);
+  }
 }

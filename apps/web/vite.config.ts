@@ -21,8 +21,8 @@ export default defineConfig({
         lang: 'es-CO',
         start_url: '/',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#0f172a',
+        background_color: '#f9f8f6',
+        theme_color: '#2a5234',
         icons: [
           { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
         ],

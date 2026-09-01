@@ -81,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         <div className="bg-paper p-5 rounded-lg border border-fog flex items-center space-x-4">
-          <div className="p-3 bg-purple-100 text-purple-700 rounded-lg">
+          <div className="p-3 text-steel">
             <DocumentValidationIcon className="h-6 w-6" />
           </div>
           <div>

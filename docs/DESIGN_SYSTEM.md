@@ -13,14 +13,14 @@ de configuración de Tailwind.
 ## 1. Principio
 
 La interfaz de Rosimar combina **tipografía limpia** con **identidad corporativa fuerte**:
-colores navy/blue en headers, monocromo en contenido, con acción primaria en azul rosimar.
-Superficies blancas, filetes de 1px en lugar de sombras, mucho aire, y un único azul reservado 
+colores oliva/maíz en headers, monocromo en contenido, con acción primaria en verde oliva.
+Superficies en arena, filetes de 1px en lugar de sombras, mucho aire, y un único color de acción reservado 
 a la acción principal. El contenido (datos de personas) no compite con chrome decorativo.
 
 De ahí se derivan tres reglas que se aplican sin excepción:
 
 1. **Plano con identidad.** Un filete de 1px separa; una sombra no. La única sombra del sistema 
-   es la del botón primario. Headers con gradiente navy→blue de Rosimar.
+   es la del botón primario. Headers con gradiente oliva→verde de Rosimar.
 2. **Monocromo funcional.** El color es información, no decoración. Azul corporativo y grises 
    neutrales, con rojo solo para severidad (RN-2, RN-3).
 3. **Sin iconos decorativos.** Un icono identifica o indica una acción. Si el texto que
@@ -34,20 +34,20 @@ De ahí se derivan tres reglas que se aplican sin excepción:
 
 | Token | Hex | RGB | Uso |
 |-------|-----|-----|-----|
-| `rosimar-navy` | `#1a3a52` | 26, 58, 82 | Encabezados, topbar, elementos principales |
-| `rosimar-blue` | `#2563eb` | 37, 99, 235 | Botones primarios, acciones, enlaces activos |
-| `rosimar-gold` | `#c19a5c` | 193, 154, 92 | Acentos premium, detalles, logotipo |
+| `rosimar-navy` | `#2a5234` | 42, 82, 52 | Encabezados, topbar, elementos principales (oliva) |
+| `rosimar-blue` | `#3b7a54` | 59, 122, 84 | Botones primarios, acciones, enlaces activos (verde oliva) |
+| `rosimar-gold` | `#e5a93c` | 229, 169, 60 | Acentos premium, detalles, logotipo (maíz) |
 
 ### Paleta Neutra (Tipografía e Interfaz)
 
 | Token | Hex | Uso |
 |-------|-----|-----|
-| `ink` | `#0f172a` | Texto principal (máximo contraste) |
-| `steel` | `#475569` | Texto secundario, leyendas |
-| `paper` | `#ffffff` | Fondo principal |
-| `mist` | `#f1f5f9` | Fondos secundarios, separadores sutiles |
-| `fog` | `#cbd5e1` | Bordes, líneas divisoras |
-| `ash` | `#94a3b8` | Bordes inactivos, elementos deshabilitados |
+| `ink` | `#2d312e` | Texto principal (máximo contraste, carbón) |
+| `steel` | `#5b645c` | Texto secundario, leyendas |
+| `paper` | `#f9f8f6` | Fondo principal (arena) |
+| `mist` | `#f0ede6` | Fondos secundarios, separadores sutiles |
+| `fog` | `#dcd8cd` | Bordes, líneas divisoras |
+| `ash` | `#a8a49b` | Bordes inactivos, elementos deshabilitados |
 
 ### Paleta Funcional (Estados Permitidos)
 
@@ -102,23 +102,23 @@ El interletrado de `-0.02em` en negritas es la firma tipográfica del sistema.
 ## 5. Componentes
 
 ### Header Corporativo
-- Fondo: Gradiente navy→blue (`#1a3a52` → `#2563eb`)
+- Fondo: Gradiente oliva→verde (`#2a5234` → `#3b7a54`)
 - Logo: Marca "R" en recuadro translúcido
 - Titulo: `display` weight-700, color blanco, Inter Tight
-- Subtítulo: "Gestión de Talento" en texto secundario azul claro
+- Subtítulo: "Gestión de Talento" en texto secundario claro
 - Altura: 80–96px
 - Indicadores: Rol, Estado (En línea/Sin conexión), Cola de sincronización
 
 ### Navegación Primaria
 - Ubicación: Bajo header corporativo
 - Fondo: Blanco (`paper`)
-- Activo: Border-bottom 2px azul rosimar, peso 600
+- Activo: Border-bottom 2px verde oliva, peso 600
 - Hover: Border-bottom 2px gris, texto oscuro
 - Inactivo: Texto gris, sin borde
 - Alertas: Badge rojo con contador (RN-2)
 
 ### Botón Primario
-- Fondo: `rosimar-blue` (#2563eb)
+- Fondo: `rosimar-blue` (#3b7a54)
 - Texto: Blanco (`paper`)
 - Padding: 0.5rem vert, 1rem horiz
 - Border-radius: `lg` (8px)
@@ -143,12 +143,12 @@ El interletrado de `-0.02em` en negritas es la firma tipográfica del sistema.
 ### Campo de Formulario
 - Fondo: `mist`
 - Border: 1px `fog`
-- Focus: Border `rosimar-blue` 2px, sombra azul sutil
+- Focus: Border `rosimar-blue` 2px, sombra verde sutil
 - Radius: `lg`
 
 ### Notificación/Alerta
 - Alerta: Border-left 4px + fondo surface
-- Tipos: `success` (verde), `warning` (ámbar), `alert` (rojo), `info` (azul)
+- Tipos: `success` (verde), `warning` (ámbar), `alert` (rojo), `info` (neutral)
 - Icono + Mensaje + Botón cerrar
 - Sin sombra
 
@@ -189,7 +189,7 @@ npm run test
 # Contraste visual (WCAG AA mínimo)
 ink sobre paper:     13.8:1 ✓ AAA
 steel sobre paper:    6.2:1 ✓ AA
-rosimar-blue sobre paper: 7.1:1 ✓ AA
+rosimar-blue sobre paper: 4.6:1 ✓ AA
 ```
 
 ---
@@ -197,6 +197,6 @@ rosimar-blue sobre paper: 7.1:1 ✓ AA
 ## Conclusión
 
 Este sistema refleja los valores de Rosimar: **confianza, claridad y profesionalismo**.
-Identidad corporativa fuerte (navy/blue), interfaz limpia (monocromo), sin decoración.
+Identidad corporativa fuerte (oliva/maíz), interfaz limpia (monocromo cálido), sin decoración.
 Todo tiene propósito.
 

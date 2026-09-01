@@ -3,6 +3,8 @@ import { queueMutation } from './sync';
 import { ExtractedDocumentData } from '../../types/reader';
 import { CandidateFormData } from '../../types/candidate';
 import { EmployeeItem, TerminationReason } from '../../types/employee';
+import { EmployeeDocumentRecord } from '../../types/employee-document';
+import { LiquidacionRecord } from '../../types/liquidacion-record';
 import { clasificarHistorial } from '../ocr/document-classifier';
 import { normalizarDocumento, buscarCedulaEnTexto } from './expediente';
 
@@ -333,4 +335,97 @@ function cedulaDeResultado(r: ExtractedDocumentData): string | undefined {
   const liquidacion = r.liquidacionData?.workerDocumentNumber;
   if (liquidacion) return liquidacion;
   return buscarCedulaEnTexto(r.extractedText);
+}
+
+/**
+ * Recalcula el estado de los empleados desde la EVIDENCIA PERSISTIDA
+ * (liquidaciones y renuncias en la tabla `liquidaciones` y en el expediente).
+ *
+ * Corrige registros historicos que quedaron `activo` porque la salida se guardo
+ * despues o en otro lote sin re-derivar el estado. Un empleado con liquidacion o
+ * renuncia registrada nunca puede seguir figurando como activo (RN-5).
+ * Tambien completa fecha/razon de salida que falten en fichas ya inactivas.
+ */
+export async function recalcularEstadosEmpleados(): Promise<void> {
+  const empleados = await db.employees.toArray();
+  const liquidaciones = await db.liquidaciones.toArray();
+  const docs = await db.employeeDocuments.toArray();
+  const now = new Date().toISOString();
+
+  for (const emp of empleados) {
+    const cedula = normalizarDocumento(emp.candidateData?.documentNumber);
+    const salidas = liquidaciones.filter(
+      (l) => l.employeeId === emp.id || (cedula && l.workerDocumentNumber === cedula)
+    );
+    const evidenciaDocs = docs.filter(
+      (d) =>
+        (d.employeeId === emp.id || (cedula && d.workerDocumentNumber === cedula)) &&
+        (d.category === 'liquidacion' || d.category === 'renuncia')
+    );
+
+    if (emp.status === 'inactivo') {
+      // Completa razon/fecha ausentes sin pisar lo ya registrado.
+      if (!emp.terminationReason || !emp.terminationDate) {
+        const salida = derivarSalida(salidas, evidenciaDocs);
+        if (salida) {
+          const actualizado = {
+            ...emp,
+            terminationDate: emp.terminationDate ?? salida.fecha,
+            terminationReason: emp.terminationReason ?? salida.razon,
+            updatedAt: now,
+          };
+          await db.employees.put(actualizado);
+          await queueMutation('update', 'employees', emp.id, actualizado as unknown as Record<string, unknown>);
+        }
+      }
+      continue;
+    }
+
+    // Activo: si hay liquidacion o renuncia registrada, deja de serlo.
+    if (salidas.length > 0 || evidenciaDocs.length > 0) {
+      const salida = derivarSalida(salidas, evidenciaDocs);
+      const actualizado: EmployeeItem = {
+        ...emp,
+        status: 'inactivo',
+        terminationDate: salida.fecha,
+        terminationReason: salida.razon,
+        updatedAt: now,
+      };
+      await db.employees.put(actualizado);
+      await queueMutation('update', 'employees', emp.id, actualizado as unknown as Record<string, unknown>);
+    }
+  }
+}
+
+interface SalidaInferida {
+  fecha?: string;
+  razon: TerminationReason;
+}
+
+/** Deriva fecha y razon de salida desde la liquidacion o renuncia mas reciente. */
+function derivarSalida(
+  liquidaciones: LiquidacionRecord[],
+  docs: EmployeeDocumentRecord[]
+): SalidaInferida {
+  // La liquidacion tiene prioridad por su fecha de retiro estructurada.
+  if (liquidaciones.length > 0) {
+    const ultima = [...liquidaciones].sort(
+      (a, b) =>
+        new Date(b.fechaRetiro || 0).getTime() - new Date(a.fechaRetiro || 0).getTime()
+    )[0];
+    return {
+      fecha: ultima.fechaRetiro || undefined,
+      razon: 'terminacion_unilateral_empleador',
+    };
+  }
+
+  // Siguiente: renuncia mas reciente, con la fecha del texto del documento.
+  const renuncias = docs
+    .filter((d) => d.category === 'renuncia')
+    .sort((a, b) => new Date(b.processedAt).getTime() - new Date(a.processedAt).getTime());
+  if (renuncias[0]) {
+    return { fecha: fechaEnTexto(renuncias[0].extractedText), razon: 'renuncia' };
+  }
+
+  return { razon: 'terminacion_unilateral_empleador' };
 }

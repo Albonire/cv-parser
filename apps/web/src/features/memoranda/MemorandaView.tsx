@@ -20,6 +20,77 @@ const STATUS_LABELS: Record<MemorandumStatus, string> = {
   archivado: 'Archivado',
 };
 
+/**
+ * Fecha del memorando, siempre editable: si el OCR no la reconocio es una
+ * fecha vacia que RRHH debe consignar (RN-7), y si la leyo mal puede corregirse
+ * desde la tabla sin re-extraer el documento.
+ */
+const FechaMemorandoCell: React.FC<{ memo: MemorandumItem; onSaved: () => void }> = ({
+  memo,
+  onSaved,
+}) => {
+  const [editando, setEditando] = useState(false);
+  const [fecha, setFecha] = useState(memo.memoDate);
+
+  const guardar = async () => {
+    if (!fecha) return;
+    await db.memoranda.update(memo.id, { memoDate: fecha });
+    await queueMutation('update', 'memoranda', memo.id, {
+      ...memo,
+      memoDate: fecha,
+    } as unknown as Record<string, unknown>);
+    setEditando(false);
+    onSaved();
+  };
+
+  if (editando) {
+    return (
+      <div className="inline-flex items-center gap-1">
+        <input
+          type="date"
+          value={fecha}
+          onChange={(e) => setFecha(e.target.value)}
+          className="border border-fog rounded px-1 py-0.5 text-[11px] bg-paper"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={guardar}
+          className="text-signal-blue text-[11px] font-semibold hover:underline"
+        >
+          Guardar
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditando(false)}
+          className="text-steel text-[11px] font-semibold hover:underline"
+        >
+          Cancelar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      {memo.memoDate ? (
+        <span className="font-mono text-steel">{memo.memoDate}</span>
+      ) : (
+        <span className="text-[11px] font-semibold bg-warning-surface text-warning px-1.5 py-0.5 rounded">
+          Sin fecha
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={() => setEditando(true)}
+        className="text-signal-blue text-[11px] font-semibold hover:underline"
+      >
+        {memo.memoDate ? 'Editar' : 'Asignar'}
+      </button>
+    </div>
+  );
+};
+
 export const MemorandaView: React.FC<MemorandaViewProps> = ({
   memoranda,
   employees,
@@ -104,7 +175,7 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
       case 'llamado_atencion':
         return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-warning-surface text-warning">Llamado de Atencion</span>;
       case 'amonestacion_preventiva':
-        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-800">Amonestacion Preventiva</span>;
+        return <span className="px-2 py-0.5 rounded text-xs font-semibold border border-fog bg-mist text-ink">Amonestacion Preventiva</span>;
       case 'amonestacion_disciplinaria':
         return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-alert-surface text-alert">Amonestacion Disciplinaria</span>;
       default:
@@ -209,7 +280,9 @@ export const MemorandaView: React.FC<MemorandaViewProps> = ({
             <tbody className="divide-y divide-mist bg-paper">
               {memoranda.map((m) => (
                 <tr key={m.id} className="hover:bg-paper transition-colors">
-                  <td className="px-4 py-3 text-steel font-mono">{m.memoDate}</td>
+                  <td className="px-4 py-3">
+  <FechaMemorandoCell memo={m} onSaved={onReload} />
+</td>
                   <td className="px-4 py-3 font-semibold text-ink">{m.employeeName || 'Empleado'}</td>
                   <td className="px-4 py-3">{getMemoBadge(m.memoType)}</td>
                   <td className="px-4 py-3">

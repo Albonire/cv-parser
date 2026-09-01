@@ -20,6 +20,7 @@ export async function processSyncQueue() {
 
   console.log(`Iniciando sincronización de ${pendingItems.length} items pendientes.`);
 
+  let procesados = 0;
   for (const item of pendingItems) {
     try {
       if (item.action === 'create' || item.action === 'update') {
@@ -38,10 +39,16 @@ export async function processSyncQueue() {
       }
 
       await db.syncQueue.update(item.id!, { synced: 1 });
+      procesados++;
     } catch (err) {
       console.error(`Error sincronizando item ${item.id}:`, err);
       // Se mantiene en la cola para la próxima vez
     }
+  }
+
+  // Notifica a la interfaz para que refresque el contador de pendientes.
+  if (procesados > 0) {
+    window.dispatchEvent(new Event('sync-queue-changed'));
   }
 }
 
@@ -63,6 +70,10 @@ export async function queueMutation(
   recordId: string,
   payload: Record<string, unknown>
 ) {
+  // Sin Supabase configurado la aplicacion opera 100% local (costo $0): no se
+  // encola nada, la cola no acumula "pendientes" que nunca podran sincronizarse.
+  if (!isSupabaseConfigured) return;
+
   await db.syncQueue.add({
     action,
     tableName,

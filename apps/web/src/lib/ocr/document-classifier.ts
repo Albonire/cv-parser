@@ -155,18 +155,30 @@ export function clasificarHistorial(texto: string): DocumentCategory {
     lower,
     [
       'contrato',
-      'emplead',
+      'empleador',
       'trabajad',
       'periodo de prueba',
       'termino fijo',
       'termino indefinido',
       'indefinido',
       'clausul',
+      'forma de pago',
+      'lugar de ejecucion',
+      'vencimiento',
+      'domicilio',
+      'sueldo',
       'nit',
+      'salario',
     ],
-    [4, 2, 2, 3, 2, 2, 2, 2, 1]
+    [4, 2, 2, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1]
   );
   if (contrato >= 4) return 'contrato';
+  // En las fotos de WhatsApp el "CONTRATO" inicial llega degradado o se corta:
+  // con menos puntos, la pareja empleador+trabajador ya es evidencia de
+  // contrato, pero solo si la hoja de vida no tiene ninguna senal propia.
+  if (contrato >= 2 && cv < 3 && lower.includes('empleador') && lower.includes('trabajad')) {
+    return 'contrato';
+  }
 
   // Funciones de cargo: listado de responsabilidades de un puesto.
   //

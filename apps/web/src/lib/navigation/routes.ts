@@ -18,6 +18,7 @@ export type SectionId =
   | 'contracts'
   | 'vacancies'
   | 'memoranda'
+  | 'liquidaciones'
   | 'alerts'
   | 'dashboard'
   | 'reports'
@@ -84,6 +85,13 @@ export const SECTIONS: SectionDefinition[] = [
     label: 'Memorandos',
     title: 'Memorandos',
     description: 'Registro disciplinario. Al acumular tres, el contador exige revisión manual.',
+  },
+  {
+    id: 'liquidaciones',
+    path: 'liquidaciones',
+    label: 'Liquidaciones',
+    title: 'Liquidaciones',
+    description: 'Liquidación final de contratos al retirarse: conceptos, fecha de retiro y total por empleado.',
   },
   {
     id: 'alerts',

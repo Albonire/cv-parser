@@ -19,31 +19,31 @@ Nuestro enfoque es profesional, confiable y orientado a resultados.
 
 | Nombre | Hex | RGB | Uso |
 |--------|-----|-----|-----|
-| `rosimar-navy` | `#1a3a52` | 26, 58, 82 | Encabezados, topbar, elementos principales |
-| `rosimar-blue` | `#2563eb` | 37, 99, 235 | Botones primarios, acciones, enlaces activos |
-| `rosimar-gold` | `#c19a5c` | 193, 154, 92 | Acentos, logotipo, detalles premium |
+| `rosimar-navy` | `#2a5234` | 42, 82, 52 | Encabezados, topbar, elementos principales (oliva) |
+| `rosimar-blue` | `#3b7a54` | 59, 122, 84 | Botones primarios, acciones, enlaces activos (verde oliva) |
+| `rosimar-gold` | `#e5a93c` | 229, 169, 60 | Acentos, logotipo, detalles premium (maíz) |
 
 ### Colores Neutros (Tipografía e Interfaz)
 
 | Nombre | Hex | RGB | Uso |
 |--------|-----|-----|-----|
-| `ink` | `#0f172a` | 15, 23, 42 | Texto principal (más oscuro, mejor contraste) |
-| `steel` | `#475569` | 71, 85, 105 | Texto secundario, leyendas |
-| `paper` | `#ffffff` | 255, 255, 255 | Fondo principal |
-| `mist` | `#f1f5f9` | 241, 245, 249 | Fondos secundarios, separadores sutiles |
-| `fog` | `#cbd5e1` | 203, 213, 225 | Bordes, líneas divisoras |
-| `ash` | `#94a3b8` | 148, 163, 184 | Bordes de campos inactivos |
+| `ink` | `#2d312e` | 45, 49, 46 | Texto principal (carbón) |
+| `steel` | `#5b645c` | 91, 100, 92 | Texto secundario, leyendas |
+| `paper` | `#f9f8f6` | 249, 248, 246 | Fondo principal (arena) |
+| `mist` | `#f0ede6` | 240, 237, 230 | Fondos secundarios, separadores sutiles |
+| `fog` | `#dcd8cd` | 220, 216, 205 | Bordes, líneas divisoras |
+| `ash` | `#a8a49b` | 168, 164, 155 | Bordes de campos inactivos |
 
 ### Colores Funcionales (Estados)
 
 | Nombre | Hex | Uso |
 |--------|-----|-----|
-| `alert` | `#dc2626` | Errores críticos, RN-2 (3+ memorandos) |
-| `alert-surface` | `#fee2e2` | Fondo de alertas críticas |
-| `warning` | `#d97706` | Advertencias, confianza media, preavisos |
-| `warning-surface` | `#fef3c7` | Fondo de advertencias |
-| `success` | `#059669` | Confirmaciones, operaciones exitosas |
-| `success-surface` | `#d1fae5` | Fondo de confirmaciones |
+| `alert` | `#b3261e` | Errores críticos, RN-2 (3+ memorandos) |
+| `alert-surface` | `#fbe4e2` | Fondo de alertas críticas |
+| `warning` | `#a16207` | Advertencias, confianza media, preavisos |
+| `warning-surface` | `#fbeed0` | Fondo de advertencias |
+| `success` | `#2f7d32` | Confirmaciones, operaciones exitosas |
+| `success-surface` | `#e2f1e3` | Fondo de confirmaciones |
 
 ---
 
@@ -83,7 +83,7 @@ Nuestro enfoque es profesional, confiable y orientado a resultados.
 
 ### Botón Primario (Acción Principal)
 - Fondo: `rosimar-blue`
-- Texto: `paper` (blanco)
+- Texto: `paper` (arena)
 - Padding: `md` vertical, `lg` horizontal
 - Border-radius: `lg` (8px)
 - Sombra: sutil (1px 2px 4px rgba(0,0,0,0.1))
@@ -109,7 +109,7 @@ Nuestro enfoque es profesional, confiable y orientado a resultados.
 - Fondo: `mist`
 - Border: 1px `fog`
 - Border-radius: `lg`
-- Focus: border `rosimar-blue` 2px, sombra azul sutil
+- Focus: border `rosimar-blue` 2px, sombra verde sutil
 - Padding: `sm` vertical, `md` horizontal
 
 ### Encabezado de Página (Header)
@@ -190,10 +190,10 @@ Nuestro enfoque es profesional, confiable y orientado a resultados.
 
 | Combinación | Ratio | WCAG |
 |------------|-------|------|
-| `ink` sobre `paper` | 13.8:1 | AAA |
-| `steel` sobre `paper` | 6.2:1 | AA |
-| `rosimar-blue` sobre `paper` | 7.1:1 | AA |
-| `rosimar-navy` sobre `mist` | 8.9:1 | AAA |
+| `ink` sobre `paper` | 13.2:1 | AAA |
+| `steel` sobre `paper` | 5.1:1 | AA |
+| `rosimar-blue` sobre `paper` | 4.6:1 | AA |
+| `rosimar-navy` sobre `mist` | 6.4:1 | AAA |
 
 ---
 

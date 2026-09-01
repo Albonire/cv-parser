@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { EmployerConfig, DEFAULT_EMPLOYER, EMPLOYER_ID_DEFAULT } from '../../types/employer';
 import { db } from '../../lib/offline/db';
 import { writeAudit } from '../../lib/audit';
+import { cambiarClaveAdmin } from '../../lib/employer';
 
 export const EmployerSettingsView: React.FC = () => {
   const [config, setConfig] = useState<EmployerConfig>({ ...DEFAULT_EMPLOYER });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [claveNueva, setClaveNueva] = useState('');
+  const [claveGuardando, setClaveGuardando] = useState(false);
+  const [claveMensaje, setClaveMensaje] = useState<string | null>(null);
 
   const loadConfig = async () => {
     const existing = await db.employers.get(EMPLOYER_ID_DEFAULT);
@@ -154,6 +158,51 @@ export const EmployerSettingsView: React.FC = () => {
             <p className="mt-1 text-[10px] text-steel">Maximo legal 2 meses (Colombia)</p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-paper rounded-lg border border-fog p-6 space-y-6">
+        <h3 className="text-sm font-bold text-ink border-b border-fog pb-2">Contraseña de Administrador</h3>
+        <p className="text-xs text-steel">
+          El acceso al sistema se autentica localmente con esta contraseña (100% en el
+          navegador, costo $0). Se guarda como hash en el dispositivo.
+        </p>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex-1">
+            <label className="block font-medium text-ink mb-1">Nueva contraseña (min. 6 caracteres)</label>
+            <input
+              type="password"
+              value={claveNueva}
+              onChange={(e) => setClaveNueva(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 border border-fog rounded bg-paper focus:outline-none focus:border-rosimar-blue"
+            />
+          </div>
+          <button
+            onClick={async () => {
+              setClaveMensaje(null);
+              setClaveGuardando(true);
+              try {
+                await cambiarClaveAdmin(claveNueva);
+                await writeAudit('settings', 'employers', EMPLOYER_ID_DEFAULT, 'contraseña de administrador actualizada');
+                setClaveNueva('');
+                setClaveMensaje('Contraseña actualizada correctamente.');
+              } catch (err) {
+                setClaveMensaje((err as Error).message);
+              } finally {
+                setClaveGuardando(false);
+              }
+            }}
+            disabled={claveGuardando || !claveNueva}
+            className="px-5 py-2 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle disabled:opacity-50"
+          >
+            {claveGuardando ? 'Guardando...' : 'Cambiar Contraseña'}
+          </button>
+        </div>
+
+        {claveMensaje && (
+          <p className="text-xs font-semibold text-ink">{claveMensaje}</p>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

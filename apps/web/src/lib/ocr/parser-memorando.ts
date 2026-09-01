@@ -22,9 +22,7 @@ export function parseMemorandoText(text: string): MemorandoOCR {
   const subject = extraerEtiqueta(lineas, /^asunto\s*[:#.-]/i);
   const para = extraerEtiqueta(lineas, /^para\s*[:#.-]/i);
   const de = extraerEtiqueta(lineas, /^de\s*[:#.-]/i);
-  const memoDate = normalizarFecha(
-    /^fecha\s*[:#.-]\s*(\d{1,4}[/-]\d{1,2}[/-]\d{1,4})/i.exec(lower)?.[1]
-  );
+  const memoDate = extraerFechaMemo(lower);
 
   return {
     workerName: para || (lower.match(/\b(?:emplead[oa]|trabajad[oa]r)\s*[:#.-]?\s*([a-z\u00e0-\u00ff\u00f1\s.'-]{3,50})/i)?.[1] ?? undefined),
@@ -47,6 +45,25 @@ function extraerEtiqueta(lineas: string[], re: RegExp): string | undefined {
     }
   }
   return undefined;
+}
+
+/**
+ * Fecha del memorando. Se prefiere la etiqueta "FECHA:" venga donde venga en la
+ * linea (el OCR de fotos suele desplazarla del inicio) y en formato numerico o
+ * textual ("12/05/2024", "12 de mayo de 2024"). De no haber etiqueta, se intenta
+ * la fecha libre del encabezado ("Bogota D.C., 12 de mayo de 2024").
+ */
+function extraerFechaMemo(lower: string): string | undefined {
+  const etiquetada = lower.match(
+    /fecha\s*[:#.-]?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4})/i
+  );
+  if (etiquetada) return normalizarFecha(etiquetada[1]);
+
+  const libre = lower.match(
+    /\b(\d{1,2}\s+de\s+(?:de\s+)?[a-z]+\s+de\s+(?:del\s+)?\d{4})\b/i
+  );
+  const numerica = lower.match(/\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/);
+  return normalizarFecha(libre?.[1] ?? numerica?.[0]);
 }
 
 /** Cuerpo del memorando: lineas posteriores a ASUNTO/FECHA, sin encabezados. */

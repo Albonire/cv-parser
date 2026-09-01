@@ -95,7 +95,7 @@ export async function guardarLoteEmpleado(input: {
           memoType,
           subject: memoData?.subject || `Llamado de atención`,
           description: memoData?.description || result.extractedText.slice(0, 500),
-          memoDate: memoData?.memoDate || new Date().toISOString().split('T')[0],
+          memoDate: memoData?.memoDate ?? '',
           responsiblePerson: memoData?.responsiblePerson || 'Gestion Humana - Rosimar S.A.S.',
           status: 'registrado',
           createdAt: new Date().toISOString(),
@@ -135,6 +135,15 @@ export async function guardarLoteEmpleado(input: {
         const liquidacionData = result.liquidacionData;
         const liq = await guardarLiquidacionDesdeOcr(limpia, liquidacionData!);
 
+        // RN-5: la liquidacion es prueba de salida; la salida posterior a un
+        // contrato vigente lo invalida. Nunca se deriva de la fecha actual.
+        empleadoActualizado.status = 'inactivo';
+        empleadoActualizado.terminationDate =
+          liquidacionData?.fechaRetiro ?? empleadoActualizado.terminationDate;
+        empleadoActualizado.terminationReason =
+          empleadoActualizado.terminationReason ?? 'terminacion_unilateral_empleador';
+        hayCambios = true;
+
         // Vincular al empleado recien creado.
         if (liq && !liq.employeeId) {
           await vincularLiquidacionAlEmpleado(limpia, employee.id);
@@ -142,6 +151,19 @@ export async function guardarLoteEmpleado(input: {
 
         // Guardar documento en expediente.
         await registrarEnExpediente(result, 'liquidacion', file, employee.id, limpia);
+      }
+
+      // --- RENUNCIA ---
+      if (categoria === 'renuncia') {
+        // La renuncia no tiene formulario estructurado, pero es evidencia de
+        // salida: marca al empleado como inactivo con razon 'renuncia'.
+        const fechaSalida = fechaEnTexto(result.extractedText);
+        empleadoActualizado.status = 'inactivo';
+        empleadoActualizado.terminationDate = fechaSalida ?? empleadoActualizado.terminationDate;
+        empleadoActualizado.terminationReason = empleadoActualizado.terminationReason ?? 'renuncia';
+        hayCambios = true;
+
+        await registrarEnExpediente(result, 'renuncia', file, employee.id, limpia);
       }
 
       // --- CONTRATO ---
@@ -276,4 +298,13 @@ export async function guardarLoteEmpleado(input: {
     employee.id,
     `Lote guardado: ${results.length} documentos, ${memoCount} memorandos`
   );
+}
+
+/** Localiza una fecha ISO en un texto suelto (para la razon de renuncia). */
+function fechaEnTexto(texto: string): string | undefined {
+  const m = texto.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})\b/);
+  if (!m) return undefined;
+  const [, d, mo, y] = m;
+  const anio = y.length === 2 ? `20${y}` : y;
+  return `${anio}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }

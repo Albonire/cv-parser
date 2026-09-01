@@ -124,6 +124,95 @@ export function findLabeledValue(lines: string[], labels: string[]): string | nu
   return null;
 }
 
+/**
+ * Como findLabeledValue, pero ademas acepta el formato de formularios y
+ * escaneos donde la etiqueta ocupa un renglon completo y el valor cae en el
+ * renglon siguiente: el OCR separa el par `Etiqueta: valor` en dos lineas
+ * ("CARGO" y debajo "AUXILIAR DE ASEO").
+ *
+ * Solo se acepta el renglon siguiente cuando es corto y no parece otra
+ * etiqueta, para no cruzar un rotulo con el valor de la seccion contigua.
+ */
+export function findLabeledValueOrNextLine(
+  lines: string[],
+  labels: string[],
+  options?: { maxValueWords?: number }
+): string | null {
+  const directo = findLabeledValue(lines, labels);
+  if (directo) return directo;
+
+  const wanted = labels.map(normalize).filter((l) => l.length >= 3);
+  const maxWords = options?.maxValueWords ?? 10;
+
+  for (let i = 0; i < lines.length; i++) {
+    const rotulo = stripBullets(lines[i]).replace(/[:.]$/, '').trim();
+    if (wordCount(rotulo) > 4) continue;
+    const norm = normalize(rotulo);
+    const esEtiqueta = wanted.some(
+      (w) => norm === w || norm.startsWith(`${w} `) || norm.endsWith(` ${w}`) || norm.includes(` ${w} `)
+    );
+    if (!esEtiqueta) continue;
+
+    for (let j = i + 1; j < lines.length && j < i + 3; j++) {
+      const valor = lines[j].trim();
+      if (!valor || valor.length < 2 || valor.length > 90) continue;
+      // Si la linea siguiente es otra etiqueta ("Etiqueta: valor"), no es el
+      // valor y se corta la busqueda de esa etiqueta.
+      if (splitLabeledPairs(valor).length > 0) continue;
+      const valorNorm = normalize(valor);
+      if (wanted.some((w) => valorNorm.includes(w))) continue;
+      if (wordCount(valor) > maxWords) continue;
+      return valor;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Fallback para OCR ruidoso de fotos (WhatsApp, escaneos moviles): la etiqueta
+ * llega con caracteres alterados ("EMPLFADOR", "SALARIOI", "TRABRAJADOR") y el
+ * emparejamiento exacto no la reconoce. Compara por similitud, primero los pares
+ * `Etiqueta: valor` de una linea y luego los renglones-cabecera cortos cuyo
+ * valor cae en el renglon siguiente.
+ */
+export function findLabeledValueFuzzy(
+  lines: string[],
+  labels: string[],
+  options?: { minSimilarity?: number; maxValueWords?: number }
+): string | null {
+  const wanted = labels.map(normalize).filter((l) => l.length >= 3);
+  if (wanted.length === 0) return null;
+  const min = options?.minSimilarity ?? 0.78;
+  const maxWords = options?.maxValueWords ?? 12;
+
+  for (const line of lines) {
+    for (const pair of splitLabeledPairs(line)) {
+      const norm = normalize(pair.label);
+      if (norm.length < 3) continue;
+      if (bestMatch(norm, wanted, min)) return pair.value;
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const rotulo = stripBullets(lines[i]).replace(/[:.]$/, '').trim();
+    if (wordCount(rotulo) > 4 || normalize(rotulo).length < 3) continue;
+    if (!bestMatch(normalize(rotulo), wanted, min)) continue;
+
+    for (let j = i + 1; j < lines.length && j < i + 3; j++) {
+      const valor = lines[j].trim();
+      if (!valor || valor.length < 2 || valor.length > 90) continue;
+      if (splitLabeledPairs(valor).length > 0) continue;
+      const valorNorm = normalize(valor);
+      if (wanted.some((w) => valorNorm.includes(w))) continue;
+      if (wordCount(valor) > maxWords) continue;
+      return valor;
+    }
+  }
+
+  return null;
+}
+
 /** Limpia viñetas, numeracion y puntuacion sobrante al inicio y al final. */
 export function stripBullets(line: string): string {
   return line

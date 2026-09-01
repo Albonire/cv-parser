@@ -3,6 +3,7 @@ import { DocumentType } from '../../../types/candidate';
 import { findKnownPlace, findKnownPlaceFuzzy } from '../../contexto/lugares';
 import { contieneCargo } from '../../contexto/diccionario';
 import { findLabeledValue, normalize, splitLabeledPairs, stripBullets, wordCount } from '../text-utils';
+import { findLabeledValueOrNextLine } from '../text-utils';
 import { FECHA_SUELTA } from './dates';
 import { buscarTelefono } from './phone';
 import { repartirNombre } from './nombres';
@@ -11,8 +12,10 @@ const ETIQUETAS = {
   nombres: ['nombres', 'nombre', 'nombre completo', 'first name', 'name', 'given names'],
   apellidos: ['apellidos', 'apellido', 'last name', 'surname', 'family name'],
   documento: [
-    'cedula', 'cedula de ciudadania', 'cc', 'c c', 'documento', 'documento de identidad',
-    'numero de documento', 'identificacion', 'no de identificacion', 'nit', 'id',
+    'cedula', 'cedula de ciudadania', 'cedula ciudadania', 'cedula de ciudadania no',
+    'cc', 'c c', 'cc no', 'numero de cedula', 'no de cedula', 'cedula numero',
+    'documento', 'documento de identidad', 'documento identidad', 'documento de identificacion',
+    'numero de documento', 'identificacion', 'no de identificacion', 'identificacion personal', 'nit', 'id',
     'cedula de extranjeria', 'ce', 'tarjeta de identidad', 'ti', 'pasaporte',
   ],
   telefono: [
@@ -34,6 +37,9 @@ const ETIQUETAS = {
   salario: [
     'aspiracion salarial', 'expectativa salarial', 'pretension salarial',
     'aspiracion', 'expectativa', 'salario esperado', 'sueldo esperado', 'salary expectation',
+    'salario', 'sueldo', 'remuneracion', 'remuneracion mensual', 'salario mensual',
+    'salario basico', 'salario basico mensual', 'salario devengado', 'salario aspirado',
+    'salario actual', 'asalario', 'ingresos', 'ingresos esperados', 'honorarios',
   ],
   disponibilidad: ['disponibilidad', 'disponibilidad para iniciar', 'incorporacion', 'availability'],
   licencia: ['licencia de conduccion', 'licencia de transito', 'licencia', 'pase', 'categoria'],
@@ -296,6 +302,24 @@ function digitosDocumento(entrada: string): string {
   return entrada.replace(/[\s.,]/g, '');
 }
 
+/**
+ * Ultimo recurso para escaneos donde el numero y su etiqueta quedan separados:
+ * un numero de cedula precedido de "CC"/"cédula"/"documento", o un numero
+ * aislado de 8 a 10 digitos (se descartan los que empiezan en 3: moviles).
+ */
+function buscarCedulaGenerica(texto: string): string | undefined {
+  const limpio = texto.replace(/\b(?:telefono|telefonos|celular|movil|whatsapp|contacto)\b/gi, ' ');
+  const etiquetada = limpio.match(
+    /(?:\bcc\b|cedula|documento(?:\s+de\s+(?:identidad|identificacion))?|identificacion)\s*(?:n[oº°]?\.?|numero)?\s*(\d[\d.\s-]{5,}\d)/i
+  );
+  if (etiquetada) {
+    const digito = etiquetada[1].replace(/[.\s-]/g, '');
+    if (digito.length >= 7 && digito.length <= 11) return digito;
+  }
+  const grupos = limpio.match(/(?<![\d.])\d{8,10}(?![\d.])/g) ?? [];
+  return grupos.find((n) => !n.startsWith('3'));
+}
+
 function extraerDocumento(todas: LayoutLine[]): { documentType: DocumentType; documentNumber: string } {
   const lineas = textos(todas);
 
@@ -330,6 +354,25 @@ function extraerDocumento(todas: LayoutLine[]): { documentType: DocumentType; do
       return { documentType: tipo, documentNumber: digitos };
     }
   }
+
+  // Etiqueta en un renglon y el numero en el siguiente (escaneos: el OCR parte
+  // el par "Cedula de ciudadania" / "1098765432" en dos lineas).
+  const continuaDocumento = findLabeledValueOrNextLine(lineas, [...ETIQUETAS.documento], {
+    maxValueWords: 4,
+  });
+  if (continuaDocumento) {
+    const numero = continuaDocumento.match(PATRON_NUMERO_DOCUMENTO);
+    if (numero) {
+      const digitos = digitosDocumento(numero[0]);
+      if (digitos.length >= 6 && digitos.length <= 15) {
+        return { documentType: 'CC', documentNumber: digitos };
+      }
+    }
+  }
+
+  // Ultimo recurso: numero aislado con forma de cedula colombiana.
+  const cedulaGenerica = buscarCedulaGenerica(lineas.join('\n'));
+  if (cedulaGenerica) return { documentType: 'CC', documentNumber: cedulaGenerica };
 
   return { documentType: 'CC', documentNumber: '' };
 }
@@ -460,10 +503,12 @@ function extraerTitular(
   ciudad: string
 ): string {
   // 1. Etiqueta explicita de objetivo o cargo aspirado.
-  const porEtiqueta = findLabeledValue(textos(encabezado), [
-    'titular', 'cargo al que aspira', 'cargo', 'objetivo', 'objetivo profesional',
-    'job objective', 'headline', 'target role',
-  ]);
+  const etiquetasCargo = [
+    'titular', 'cargo al que aspira', 'cargo aspirado', 'cargo', 'cargo actual',
+    'objetivo', 'objetivo profesional', 'puesto', 'puesto de trabajo', 'empleo al que aspira',
+    'ocupacion', 'job objective', 'headline', 'target role',
+  ];
+  const porEtiqueta = findLabeledValue(textos(encabezado), etiquetasCargo);
   if (porEtiqueta && porEtiqueta.length > 3 && pareceTitular(porEtiqueta, ciudad)) {
     return porEtiqueta.replace(/[.;]\s*$/, '').trim();
   }
@@ -487,10 +532,36 @@ function extraerTitular(
     if (contieneCargo(candidato) || ES_CARGO_GENERICO.test(candidato)) return candidato;
   }
 
+  // 4. Etiqueta en un renglon y el cargo en el siguiente, solo dentro del
+  // encabezado (asi un "Cargo:" de la vida laboral no se vuelve el objetivo).
+  const porContinuacion = findLabeledValueOrNextLine(textos(encabezado), etiquetasCargo, {
+    maxValueWords: 8,
+  });
+  if (porContinuacion && porContinuacion.length > 3 && pareceTitular(porContinuacion, ciudad)) {
+    return porContinuacion.replace(/[.;]\s*$/, '').trim();
+  }
+
   return '';
 }
 
 /** Extrae todos los datos personales del encabezado y de las etiquetas del documento. */
+export /** Convierte un fragmento con numero de salario a un valor numerico, o undefined. */
+function extraerMontoSalario(texto: string | null): number | undefined {
+  if (!texto) return undefined;
+  const numero = texto.match(/[\d][\d.,]{4,14}/);
+  if (!numero) return undefined;
+  const valor = parseInt(numero[0].replace(/[.,]/g, ''), 10);
+  return !Number.isNaN(valor) && valor > 10000 ? valor : undefined;
+}
+
+/** Barrido de salario/pago por palabra clave cuando no hay etiqueta estructurada. */
+function buscarMontoSalarioEnTexto(texto: string): number | undefined {
+  const match = texto.match(
+    /(?:salario|sueldo|remuneraci[oó]n|asalario|honorarios|ingresos|pago)(?:\s+(?:mensual|basico|esperado|devengado|aspirado|integral))?\s*(?:[:#.-]|\$|de\s+un\s+|por\s+un\s+|de\s+)\s*\$?\s*([\d][\d.,]{4,14})\b/i
+  );
+  return extraerMontoSalario(match ? match[1] : null);
+}
+
 export function extraerDatosPersonales(
   encabezado: LayoutLine[],
   todas: LayoutLine[]
@@ -507,15 +578,10 @@ export function extraerDatosPersonales(
   const github = textoCompleto.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i);
   if (github) socialLinks.push(github[0].startsWith('http') ? github[0] : `https://${github[0]}`);
 
-  const salarioTexto = findLabeledValue(lineas, [...ETIQUETAS.salario]);
-  let salaryExpectation: number | undefined;
-  if (salarioTexto) {
-    const numero = salarioTexto.match(/[\d][\d.,]{4,14}/);
-    if (numero) {
-      const valor = parseInt(numero[0].replace(/[.,]/g, ''), 10);
-      if (!Number.isNaN(valor) && valor > 10000) salaryExpectation = valor;
-    }
-  }
+  const salarioTexto = findLabeledValueOrNextLine(lineas, [...ETIQUETAS.salario], {
+    maxValueWords: 8,
+  });
+  const salaryExpectation = extraerMontoSalario(salarioTexto) ?? buscarMontoSalarioEnTexto(textoCompleto);
 
   const fechaTexto = findLabeledValue(lineas, [...ETIQUETAS.fechaNacimiento]);
   const fechaMatch = fechaTexto?.match(FECHA_SUELTA);

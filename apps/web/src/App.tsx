@@ -9,6 +9,7 @@ import { ExpedienteView } from './features/expediente/ExpedienteView';
 import { ContractsView } from './features/contracts/ContractsView';
 import { VacanciesView } from './features/vacancies/VacanciesView';
 import { MemorandaView } from './features/memoranda/MemorandaView';
+import { LiquidacionesView } from './features/liquidaciones/LiquidacionesView';
 import { AlertsView } from './features/alerts/AlertsView';
 import { DashboardView } from './features/dashboard/DashboardView';
 import { ReportsView } from './features/reports/ReportsView';
@@ -19,13 +20,16 @@ import { EmployeeItem } from './types/employee';
 import { EmployeeDocumentRecord } from './types/employee-document';
 import { ContractFormData } from './types/contract';
 import { MemorandumItem } from './types/memorandum';
+import { LiquidacionRecord } from './types/liquidacion-record';
 import { AlertItem } from './types/alert';
 import { VacancyFormData } from './types/vacancy';
 import { SessionUser } from './types/session';
-import { getSessionUser, setSessionUser } from './lib/employer';
+import { getSessionUser, setSessionUser, clearSessionUser, canManage } from './lib/employer';
+import { LoginView } from './features/auth/LoginView';
 
 import { initOfflineSync } from './lib/offline/sync';
 import { generateSystemAlerts } from './lib/offline/alerts';
+import { recalcularEstadosEmpleados } from './lib/offline/empleado-historial';
 
 export const App: React.FC = () => {
   // La sección activa vive en la URL, no en el estado: así funcionan el botón
@@ -35,7 +39,7 @@ export const App: React.FC = () => {
 
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncQueueCount, setSyncQueueCount] = useState(0);
-  const [session, setSession] = useState<SessionUser>(() => getSessionUser());
+  const [session, setSession] = useState<SessionUser | null>(() => getSessionUser());
 
   // Estados de datos
   const [candidates, setCandidates] = useState<CandidateFormData[]>([]);
@@ -43,6 +47,7 @@ export const App: React.FC = () => {
   const [employeeDocuments, setEmployeeDocuments] = useState<EmployeeDocumentRecord[]>([]);
   const [contracts, setContracts] = useState<ContractFormData[]>([]);
   const [memoranda, setMemoranda] = useState<MemorandumItem[]>([]);
+  const [liquidaciones, setLiquidaciones] = useState<LiquidacionRecord[]>([]);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [vacancies, setVacancies] = useState<VacancyFormData[]>([]);
 
@@ -55,9 +60,13 @@ export const App: React.FC = () => {
   const loadData = useCallback(async () => {
     try {
       const c = await db.candidates.toArray();
+      // Deriva el estado activo/inactivo desde la evidencia persistida
+      // (liquidaciones y renuncias) antes de cargar la lista (RN-5).
+      await recalcularEstadosEmpleados();
       const e = await db.employees.toArray();
       const con = await db.contracts.toArray();
       const m = await db.memoranda.toArray();
+      const liq = await db.liquidaciones.toArray();
       const v = await db.vacancies.toArray();
       const exp = await db.employeeDocuments.toArray();
       const s = getSessionUser();
@@ -71,6 +80,7 @@ export const App: React.FC = () => {
       setEmployeeDocuments(exp);
       setContracts(con);
       setMemoranda(m);
+      setLiquidaciones(liq);
       setAlerts(a);
       setVacancies(v);
       setSession(s);
@@ -85,13 +95,16 @@ export const App: React.FC = () => {
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleSyncChanged = () => loadData();
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('sync-queue-changed', handleSyncChanged);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sync-queue-changed', handleSyncChanged);
     };
   }, [loadData]);
 
@@ -99,6 +112,23 @@ export const App: React.FC = () => {
   const handleNavigateToExpediente = (empId: string) => navegarA('expediente', { empleado: empId });
 
   const pendingAlertCount = alerts.filter((a) => a.status !== 'resuelta').length;
+
+  const handleLogin = (user: SessionUser) => {
+    setSessionUser(user);
+    setSession(user);
+    loadData();
+  };
+
+  const handleLogout = () => {
+    clearSessionUser();
+    setSession(null);
+  };
+
+  if (!session) {
+    return <LoginView onLogin={handleLogin} />;
+  }
+
+  const gestionPermitida = canManage(session.role);
 
   return (
     <div className="flex min-h-screen flex-col bg-paper">
@@ -108,11 +138,7 @@ export const App: React.FC = () => {
         isOnline={isOnline}
         syncQueueCount={syncQueueCount}
         sessionRole={session.role}
-        onRoleChange={(role) => {
-          const updated = { ...session, role };
-          setSessionUser(updated);
-          setSession(updated);
-        }}
+        onLogout={handleLogout}
       />
 
       <main className="mx-auto w-full max-w-[1280px] flex-1 px-6 pb-24">
@@ -145,6 +171,10 @@ export const App: React.FC = () => {
           <ExpedienteView
             documents={employeeDocuments}
             employees={employees}
+            contracts={contracts}
+            memoranda={memoranda}
+            liquidaciones={liquidaciones}
+            canManage={gestionPermitida}
             onReload={loadData}
             preselectedEmployeeId={expedienteEmployeeFilter}
           />
@@ -168,6 +198,15 @@ export const App: React.FC = () => {
             employees={employees}
             onReload={loadData}
             preselectedEmployeeId={memoEmployeeFilter}
+          />
+        )}
+
+        {activeSection === 'liquidaciones' && (
+          <LiquidacionesView
+            liquidaciones={liquidaciones}
+            employees={employees}
+            canManage={gestionPermitida}
+            onReload={loadData}
           />
         )}
 

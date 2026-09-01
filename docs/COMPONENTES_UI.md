@@ -23,9 +23,9 @@ Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) para principios y [BRANDING_ROSIMAR.md]
 ### Paleta Completa (en @theme)
 
 ```css
---color-rosimar-navy: #1a3a52;      /* Encabezados, topbar */
---color-rosimar-blue: #2563eb;      /* Botones primarios, acciones */
---color-rosimar-gold: #c19a5c;      /* Acentos premium */
+--color-rosimar-navy: #2a5234;      /* Encabezados, topbar (oliva) */
+--color-rosimar-blue: #3b7a54;      /* Botones primarios, acciones */
+--color-rosimar-gold: #e5a93c;      /* Acentos premium (maíz) */
 ```
 
 ---
@@ -43,12 +43,12 @@ Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) para principios y [BRANDING_ROSIMAR.md]
 ```
 
 **Estilos:**
-- Fondo: Blue Rosimar (#2563eb)
-- Texto: Blanco
+- Fondo: Verde oliva (#3b7a54)
+- Texto: Arena (#f9f8f6)
 - Padding: 10px 16px
 - Border-radius: 8px (lg)
 - Sombra: Sombra sutil en hover
-- Hover: Azul más oscuro + elevación
+- Hover: Oliva más oscuro + elevación
 
 **Restricción:** Uno por vista máximo.
 
@@ -63,9 +63,9 @@ Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) para principios y [BRANDING_ROSIMAR.md]
 ```
 
 **Estilos:**
-- Fondo: Mist (#f1f5f9)
-- Texto: Ink (#0f172a)
-- Border: 1px fog (#cbd5e1)
+- Fondo: Mist (#f0ede6)
+- Texto: Ink (#2d312e)
+- Border: 1px fog (#dcd8cd)
 - Hover: Border más oscuro
 
 ### Tarjeta
@@ -103,7 +103,7 @@ Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) para principios y [BRANDING_ROSIMAR.md]
 **Estilos:**
 - Fondo: Mist (#f1f5f9)
 - Border: 1px fog (#cbd5e1)
-- Focus: Border azul 2px + sombra azul sutil
+  - Focus: Border verde oliva 2px + sombra verde sutil
 - Border-radius: 8px
 - Font: body (14px)
 
@@ -162,7 +162,7 @@ Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) para principios y [BRANDING_ROSIMAR.md]
 ```
 
 **Estilos:**
-- Gradiente: Navy → Blue (#1a3a52 → #2563eb)
+- Gradiente: Oliva → Verde (#2a5234 → #3b7a54)
 - Altura: 80–96px
 - Padding: 24px
 - Texto blanco

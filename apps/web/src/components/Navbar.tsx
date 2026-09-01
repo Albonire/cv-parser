@@ -18,7 +18,7 @@ interface NavbarProps {
   isOnline: boolean;
   syncQueueCount?: number;
   sessionRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
+  onLogout: () => void;
 }
 
 // Secciones visibles sólo para ciertos roles.
@@ -27,7 +27,7 @@ const ROLE_GATED: Partial<Record<SectionId, UserRole[]>> = {
 };
 
 /** Secciones de consulta ocasional: viven en el menú "Más". */
-const SECUNDARIAS: SectionId[] = ['dashboard', 'reports', 'settings'];
+const SECUNDARIAS: SectionId[] = ['dashboard', 'reports', 'liquidaciones', 'settings'];
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeSection,
@@ -35,7 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isOnline,
   syncQueueCount = 0,
   sessionRole,
-  onRoleChange,
+  onLogout,
 }) => {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -102,18 +102,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
 
             <div className="ml-auto hidden items-center gap-4 sm:flex">
-              <select
-                value={sessionRole}
-                onChange={(e) => onRoleChange(e.target.value as UserRole)}
-                aria-label="Rol de usuario"
-                className="cursor-pointer rounded-lg border-0 bg-paper px-3 py-1.5 text-caption font-medium text-ink focus:outline-none focus:ring-2 focus:ring-paper focus:ring-offset-2 focus:ring-offset-rosimar-navy"
-              >
-                {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-3">
+                <span className="text-caption font-semibold text-paper">
+                  {ROLE_LABELS[sessionRole]}
+                </span>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="cursor-pointer rounded-lg border border-paper/40 bg-transparent px-3 py-1.5 text-caption font-medium text-paper transition-colors hover:bg-paper/10 focus:outline-none"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
 
               <div className="flex items-center gap-1.5 text-caption font-medium text-paper">
                 <span
@@ -124,8 +124,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {syncQueueCount > 0 && (
-                <div className="border-l border-paper/30 pl-3 text-caption font-medium text-warning-surface">
-                  {syncQueueCount} pendiente{syncQueueCount !== 1 ? 's' : ''}
+                <div
+                  className="border-l border-paper/30 pl-3 text-caption font-medium text-warning-surface"
+                  title="Cambios guardados en este dispositivo que aun no se suben a la nube. Se sincronizaran cuando la conexion lo permita."
+                >
+                  {syncQueueCount} por sincronizar
                 </div>
               )}
             </div>

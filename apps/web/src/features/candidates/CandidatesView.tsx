@@ -179,8 +179,8 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
     const map: Record<CandidateStatus, { label: string; color: string }> = {
       nuevo: { label: 'Nuevo', color: 'border border-fog text-steel' },
       en_revision: { label: 'En Revisión', color: 'bg-warning-surface text-warning' },
-      preseleccionado: { label: 'Preseleccionado', color: 'bg-purple-100 text-purple-800' },
-      en_entrevista: { label: 'En Entrevista', color: 'bg-indigo-100 text-indigo-800' },
+      preseleccionado: { label: 'Preseleccionado', color: 'border border-fog bg-mist text-ink' },
+      en_entrevista: { label: 'En Entrevista', color: 'border border-ash/60 bg-paper text-ink' },
       contratado: { label: 'Contratado', color: 'border border-ink text-ink font-semibold' },
       descartado: { label: 'Descartado', color: 'bg-alert-surface text-alert' },
       archivado: { label: 'Archivado', color: 'bg-mist text-ink' },

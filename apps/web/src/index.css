@@ -23,46 +23,46 @@
 
 @theme {
   /* ------------------------------------------------ COLORES CORPORATIVOS */
-  /* Paleta profesional de Rosimar S.A.S. — Ver docs/BRANDING_ROSIMAR.md */
-  --color-rosimar-navy: #1a3a52;      /* Encabezados, topbar, identidad principal */
-  --color-rosimar-blue: #2563eb;      /* Botones primarios, acciones principales */
-  --color-rosimar-blue-dark: #1d4ed8; /* Estado :hover del azul de acción */
-  --color-rosimar-gold: #c19a5c;      /* Acentos premium, detalles, logotipo */
+  /* Paleta profesional de Rosimar S.A.S. — Ver docs/BRANDING_ROSIMAR.md
+     Oliva (sector agroindustrial), maíz (producto estrella de la distribuidora),
+     arena y carbón. Identidad monocroma: el oliva manda, el maíz es el acento. */
+  --color-rosimar-navy: #2a5234;      /* Encabezados, topbar, identidad principal (oliva) */
+  --color-rosimar-blue: #3b7a54;      /* Botones primarios, acciones principales (verde oliva) */
+  --color-rosimar-blue-dark: #2f6646; /* Estado :hover del color de accion */
+  --color-rosimar-gold: #e5a93c;      /* Acentos premium, detalles, logotipo (maiz) */
 
   /* ------------------------------------------------- COLORES NEUTROS */
-  /* Escala de grises corporativa: tipografía e interfaz limpia */
-  --color-ink: #0f172a;               /* Texto principal (más oscuro, mejor contraste) */
-  --color-steel: #475569;             /* Texto secundario, leyendas, iconos */
-  --color-paper: #ffffff;             /* Fondo principal */
-  --color-mist: #f1f5f9;              /* Fondos secundarios, separadores sutiles */
-  --color-fog: #cbd5e1;               /* Bordes, líneas divisoras */
-  --color-ash: #94a3b8;               /* Bordes inactivos, elementos deshabilitados */
+  /* Escala neutra cálida derivada del papel arena: tipografía e interfaz limpia */
+  --color-ink: #2d312e;               /* Texto principal (carbón) */
+  --color-steel: #5b645c;             /* Texto secundario, leyendas, iconos */
+  --color-paper: #f9f8f6;             /* Fondo principal (arena) */
+  --color-mist: #f0ede6;              /* Fondos secundarios, separadores sutiles */
+  --color-fog: #dcd8cd;               /* Bordes, líneas divisoras */
+  --color-ash: #a8a49b;               /* Bordes inactivos, elementos deshabilitados */
 
   /* ------------------------------------------------ COLORES FUNCIONALES */
   /* Estados: solo para severidad y reglas de negocio (RN-2, RN-3). 
      Nunca para categorías ni decoración. */
-  --color-alert: #dc2626;             /* Errores críticos, RN-2 (3+ memorandos) */
-  --color-alert-surface: #fee2e2;     /* Fondo de alertas */
-  --color-warning: #d97706;           /* Advertencias, preavisos de vencimiento */
-  --color-warning-surface: #fef3c7;   /* Fondo de advertencias */
-  --color-success: #059669;           /* Confirmaciones de operaciones exitosas */
-  --color-success-surface: #d1fae5;   /* Fondo de confirmaciones */
+  --color-alert: #b3261e;             /* Errores críticos, RN-2 (3+ memorandos) */
+  --color-alert-surface: #fbe4e2;     /* Fondo de alertas */
+  --color-warning: #a16207;           /* Advertencias, preavisos de vencimiento */
+  --color-warning-surface: #fbeed0;   /* Fondo de advertencias */
+  --color-success: #2f7d32;           /* Confirmaciones de operaciones exitosas */
+  --color-success-surface: #e2f1e3;   /* Fondo de confirmaciones */
 
   /* ------------------------------------------------ SERIES DE GRÁFICAS */
-  /* Rampa derivada de la identidad corporativa, de más oscuro a más claro.
-     El sistema reserva los colores funcionales (alert, warning, success) para
-     severidad y reglas de negocio, nunca para categorías: una gráfica de tipos
-     de contrato no es una alerta, así que se distingue por valor tonal. */
-  --color-chart-1: #1a3a52;
-  --color-chart-2: #2563eb;
-  --color-chart-3: #475569;
-  --color-chart-4: #94a3b8;
-  --color-chart-5: #c19a5c;
+  /* Rampa derivada de la identidad corporativa, de más oscuro a más claro:
+     el oliva y el carbón gobiernan la serie, el maíz marca los puntos altos. */
+  --color-chart-1: #2a5234;
+  --color-chart-2: #3b7a54;
+  --color-chart-3: #5e8f6b;
+  --color-chart-4: #a8a49b;
+  --color-chart-5: #e5a93c;
 
   /* -------------------------------------------------- ACCIÓN PRINCIPAL */
   /* Reservado exclusivamente para CTA (call-to-action) primario.
      Usar --color-rosimar-blue. */
-  --color-signal-blue: #2563eb;       /* Alias: rosimar-blue */
+  --color-signal-blue: #3b7a54;       /* Alias: rosimar-blue */
 
   /* -------------------------------------------------------- TIPOGRAFÍA */
   --font-display: 'Inter Tight Variable', 'Inter Tight', 'Helvetica Neue', system-ui, sans-serif;
@@ -182,7 +182,7 @@ th,
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--color-rosimar-blue-dark);
-  box-shadow: 0px 4px 12px 0px rgba(37, 99, 235, 0.3);
+  box-shadow: 0px 4px 12px 0px rgba(59, 122, 84, 0.3);
   transform: translateY(-1px);
 }
 
@@ -253,7 +253,7 @@ th,
   outline: none;
   background-color: var(--color-paper);
   border-color: var(--color-rosimar-blue);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 122, 84, 0.1);
 }
 
 .form-input::placeholder {

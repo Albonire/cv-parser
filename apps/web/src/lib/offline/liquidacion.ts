@@ -29,7 +29,9 @@ export async function guardarLiquidacionDesdeOcr(
     id: `liq-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     employeeId: empleadoExistente?.id,
     workerDocumentNumber: limpia,
-    fechaRetiro: liquidacionData.fechaRetiro || new Date().toISOString().split('T')[0],
+    // Nunca se deriva la fecha de retiro de la fecha actual: si el OCR no la
+    // encontro queda sin fecha y RRHH la corrige en la vista de Liquidaciones.
+    fechaRetiro: liquidacionData.fechaRetiro || '',
     liquidacionData,
     createdAt: now,
     updatedAt: now,

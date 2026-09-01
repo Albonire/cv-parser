@@ -15,7 +15,7 @@ const TOKENS_SERIE = [
 ] as const;
 
 /** Respaldo para Node (pruebas) y para el primer render antes de tener estilos. */
-const RESPALDO = ['#1a3a52', '#2563eb', '#475569', '#94a3b8', '#c19a5c'];
+const RESPALDO = ['#2a5234', '#3b7a54', '#5e8f6b', '#a8a49b', '#e5a93c'];
 
 export function coloresDeSerie(): string[] {
   if (typeof window === 'undefined') return RESPALDO;

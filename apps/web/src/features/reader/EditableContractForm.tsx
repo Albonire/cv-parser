@@ -66,6 +66,24 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
                 className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Domicilio del Empleador</label>
+              <input
+                type="text"
+                value={formData.employerAddress || ''}
+                onChange={(e) => handleFieldChange('employerAddress', e.target.value)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Correo del Empleador</label>
+              <input
+                type="text"
+                value={formData.employerEmail || ''}
+                onChange={(e) => handleFieldChange('employerEmail', e.target.value)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
+              />
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -87,6 +105,33 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
                 type="text"
                 value={formData.workerDocumentNumber}
                 onChange={(e) => handleFieldChange('workerDocumentNumber', e.target.value)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Fecha de Nacimiento</label>
+              <input
+                type="date"
+                value={formData.workerDateOfBirth || ''}
+                onChange={(e) => handleFieldChange('workerDateOfBirth', e.target.value)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Domicilio del Trabajador</label>
+              <input
+                type="text"
+                value={formData.workerAddress || ''}
+                onChange={(e) => handleFieldChange('workerAddress', e.target.value)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Correo del Trabajador</label>
+              <input
+                type="text"
+                value={formData.workerEmail || ''}
+                onChange={(e) => handleFieldChange('workerEmail', e.target.value)}
                 className="w-full px-3 py-1.5 border border-fog rounded text-sm bg-paper"
               />
             </div>
@@ -142,6 +187,15 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
                 <option value="aprendizaje">Contrato de Aprendizaje</option>
                 <option value="tiempo_parcial">Tiempo Parcial</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-ink mb-1">Duracion (Meses)</label>
+              <input
+                type="number"
+                value={formData.durationMonths ?? ''}
+                onChange={(e) => handleFieldChange('durationMonths', parseInt(e.target.value, 10) || undefined)}
+                className="w-full px-3 py-1.5 border border-fog rounded text-sm"
+              />
             </div>
           </div>
         </div>
