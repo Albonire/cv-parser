@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ReaderUploader } from './ReaderUploader';
+import { TextoReconocido } from './TextoReconocido';
 import { EditableCvForm } from './EditableCvForm';
 import { EditableContractForm } from './EditableContractForm';
 import { EditableIdForm } from './EditableIdForm';
@@ -661,7 +662,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   </span>
                   <button
                     onClick={() => handleLlenarFormulario(grupo)}
-                    className="px-3 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold transition-colors shadow-subtle"
+                    className="px-3 py-1.5 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-xs font-semibold transition-colors shadow-subtle"
                   >
                     Llenar formulario
                   </button>
@@ -683,9 +684,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 <summary className="cursor-pointer text-xs font-semibold text-signal-blue hover:underline">
                   Ver texto consolidado de las {grupo.items.length} fotos
                 </summary>
-                <pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-mist p-3 text-[11px] font-mono text-ink">
-                  {grupo.textoConsolidado || 'Sin texto reconocido.'}
-                </pre>
+                <div className="mt-2">
+                  <TextoReconocido
+                    texto={grupo.textoConsolidado}
+                    alturaMaxima="16rem"
+                    vacio="Sin texto reconocido en estas fotos."
+                  />
+                </div>
               </details>
             </div>
           ))}
@@ -795,9 +800,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             )}
 
             {showRawText && (
-              <pre className="p-3 bg-mist rounded-lg text-[11px] font-mono text-ink max-h-80 overflow-y-auto whitespace-pre-wrap">
-                {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
-              </pre>
+              <TextoReconocido texto={currentResult.extractedText} alturaMaxima="20rem" />
             )}
           </div>
 
@@ -858,7 +861,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleGuardarEmpleadoYLote(currentResult.candidateData!)}
-                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle disabled:opacity-50"
+                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-rosimar-blue-dark text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle disabled:opacity-50"
                       disabled={isProcessing}
                     >
                       <CheckmarkCircle01Icon className="h-4 w-4 mr-2" />
@@ -914,22 +917,54 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               const noVinculado = !currentResult.contractData && !currentResult.candidateData;
               return (
                 <div className="bg-paper p-6 rounded-lg border border-fog space-y-4">
-                  <h3 className="text-base font-bold text-ink">
+                  <h3 className="text-subheading font-bold text-ink">
                     {categoria === 'desconocido'
                       ? 'No se pudo estructurar el documento'
                       : 'Documento reconocido'}
                   </h3>
-                  <p className="text-xs text-steel">
-                    Tipo detectado: <strong>{currentResult.detectedType.toUpperCase()}</strong>
-                    {categoria !== 'desconocido' && (
-                      <>
-                        {' '}· Categoria: <strong>{etiquetaCategoria(categoria)}</strong>
-                      </>
-                    )}. Puede guardarlo en el expediente del empleado o revisar el texto.
+
+                  {/* El resumen va primero. Antes el contenido principal de esta
+                      pantalla era el volcado crudo del OCR, que con el ruido del
+                      reconocimiento es justo lo que menos ayuda a decidir. */}
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                    <div>
+                      <dt className="text-micro uppercase tracking-wide text-steel">Tipo</dt>
+                      <dd className="text-body font-semibold text-ink">
+                        {etiquetaTipo(currentResult.detectedType)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-micro uppercase tracking-wide text-steel">Categoría</dt>
+                      <dd className="text-body font-semibold text-ink">
+                        {categoria === 'desconocido' ? 'Sin clasificar' : etiquetaCategoria(categoria)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-micro uppercase tracking-wide text-steel">Confianza</dt>
+                      <dd className="text-body font-semibold text-ink">
+                        {Math.round(currentResult.confidenceScore * 100)}%
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-micro uppercase tracking-wide text-steel">Texto leído</dt>
+                      <dd className="text-body font-semibold text-ink">
+                        {currentResult.extractedText.trim().length} caracteres
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <p className="text-caption text-steel">
+                    Puede guardarlo en el expediente del empleado o revisar el texto reconocido.
                   </p>
-                  <pre className="p-4 bg-mist rounded-lg text-xs font-mono text-ink max-h-96 overflow-y-auto whitespace-pre-wrap">
-                    {currentResult.extractedText || 'No se reconocieron lineas de texto.'}
-                  </pre>
+
+                  <details className="group">
+                    <summary className="cursor-pointer text-caption font-semibold text-signal-blue hover:underline">
+                      Ver el texto reconocido
+                    </summary>
+                    <div className="mt-2">
+                      <TextoReconocido texto={currentResult.extractedText} />
+                    </div>
+                  </details>
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setCurrentResult(null)}
@@ -939,7 +974,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                     </button>
                     <button
                       onClick={() => handleSaveExpediente(currentResult)}
-                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle"
+                      className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-rosimar-blue-dark text-white text-sm font-semibold rounded-lg transition-colors shadow-subtle"
                     >
                       <ArchiveIcon className="h-4 w-4 mr-2" />
                       Guardar en expediente

@@ -1,4 +1,5 @@
 import React from 'react';
+import { colorPrincipal, coloresDeSerie } from '../../lib/design/series';
 import { CandidateFormData } from '../../types/candidate';
 import { EmployeeItem } from '../../types/employee';
 import { ContractFormData } from '../../types/contract';
@@ -52,7 +53,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     value,
   }));
 
-  const COLORS = ['#16a34a', '#0284c7', '#8b5cf6', '#f59e0b', '#ef4444'];
+  // Paleta tomada de los tokens del sistema, no de cinco tonos sueltos.
+  const COLORS = coloresDeSerie();
 
   return (
     <div className="space-y-6">
@@ -112,7 +114,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="cantidad" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cantidad" fill={colorPrincipal()} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

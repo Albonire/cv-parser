@@ -26,6 +26,7 @@
   /* Paleta profesional de Rosimar S.A.S. — Ver docs/BRANDING_ROSIMAR.md */
   --color-rosimar-navy: #1a3a52;      /* Encabezados, topbar, identidad principal */
   --color-rosimar-blue: #2563eb;      /* Botones primarios, acciones principales */
+  --color-rosimar-blue-dark: #1d4ed8; /* Estado :hover del azul de acción */
   --color-rosimar-gold: #c19a5c;      /* Acentos premium, detalles, logotipo */
 
   /* ------------------------------------------------- COLORES NEUTROS */
@@ -46,6 +47,17 @@
   --color-warning-surface: #fef3c7;   /* Fondo de advertencias */
   --color-success: #059669;           /* Confirmaciones de operaciones exitosas */
   --color-success-surface: #d1fae5;   /* Fondo de confirmaciones */
+
+  /* ------------------------------------------------ SERIES DE GRÁFICAS */
+  /* Rampa derivada de la identidad corporativa, de más oscuro a más claro.
+     El sistema reserva los colores funcionales (alert, warning, success) para
+     severidad y reglas de negocio, nunca para categorías: una gráfica de tipos
+     de contrato no es una alerta, así que se distingue por valor tonal. */
+  --color-chart-1: #1a3a52;
+  --color-chart-2: #2563eb;
+  --color-chart-3: #475569;
+  --color-chart-4: #94a3b8;
+  --color-chart-5: #c19a5c;
 
   /* -------------------------------------------------- ACCIÓN PRINCIPAL */
   /* Reservado exclusivamente para CTA (call-to-action) primario.
@@ -169,7 +181,7 @@ th,
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: var(--color-rosimar-blue-dark);
   box-shadow: 0px 4px 12px 0px rgba(37, 99, 235, 0.3);
   transform: translateY(-1px);
 }

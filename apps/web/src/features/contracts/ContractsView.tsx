@@ -185,7 +185,7 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts, employe
           </div>
           <button
             onClick={() => { setForm(emptyContract()); setEditingId(null); setShowForm(true); }}
-            className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-signal-blue text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle whitespace-nowrap"
+            className="inline-flex items-center px-4 py-2 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle whitespace-nowrap"
           >
             <PlusSignIcon className="h-4 w-4 mr-1" />
             Nuevo Contrato
@@ -439,7 +439,7 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts, employe
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold shadow-subtle disabled:opacity-50"
+                className="px-4 py-1.5 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-xs font-semibold shadow-subtle disabled:opacity-50"
               >
                 {saving ? 'Guardando...' : editingId ? 'Actualizar' : 'Crear Contrato'}
               </button>
@@ -495,7 +495,7 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ contracts, employe
               <button
                 type="button"
                 onClick={handleCreateRenewal}
-                className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold shadow-subtle"
+                className="px-4 py-1.5 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-xs font-semibold shadow-subtle"
               >
                 Confirmar Prorroga
               </button>

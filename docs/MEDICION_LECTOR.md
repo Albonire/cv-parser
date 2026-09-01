@@ -36,7 +36,7 @@ Las hojas largas (una columna, tablas y la densa de dos paginas) reciben un regi
 cuatro empleos y tres estudios; el resto quedan cortas. La verdad de referencia se genera del mismo
 registro que produce el documento, asi que no puede desincronizarse.
 
-## Lo que aparecio: tres fallos reales
+## Lo que aparecio al medir
 
 ### 1. Los PDF escaneados no se podian leer en Chrome 141 ni anterior
 
@@ -88,65 +88,150 @@ Se anadio una reconstruccion acotada en `fields/personal.ts`: solo actua cuando 
 no encuentra nada, y solo acepta el resultado si el dominio es conocido o el usuario tiene la forma
 `nombre.apellido`. Los correos vacios bajaron de 20 a 11.
 
+### 4. El clasificador daba por no-hoja-de-vida casi cualquier hoja de vida
+
+La regresion mas grave de todas: el banco cayo de **73,9% a 19,6%** y plantillas
+que estaban en 87-95% se quedaron en **0,0%**, con las 115 pruebas unitarias en
+verde. `npm test` no incluye el banco de OCR, asi que nada lo delataba.
+
+Tres causas, todas por buscar palabras sueltas:
+
+- `if (lower.includes('funciones')) return 'funciones'`. "Responsable de las
+  **funciones** propias del cargo" aparece en la experiencia de practicamente
+  cualquier hoja de vida. Ahora se exige un encabezado de verdad ("manual de
+  funciones", "funciones del cargo", "descripcion de funciones").
+- `lower.includes('prima')` puntuaba 3 hacia liquidacion, y **"Primaria"** es el
+  nivel educativo que aparece en casi todas las hojas de vida colombianas. Ahora
+  se busca con frontera de palabra, excluyendo "primaria" y "primario".
+- El curriculum se evaluaba el ultimo, despues de contrato y liquidacion. Ahora,
+  con dos senales fuertes de curriculum, se resuelve antes de mirar el resto.
+
+El resto de claves siguen buscandose por subcadena a proposito: en las fotos de
+WhatsApp el OCR pega las palabras ("TERMINOACONTRATO") y exigir frontera alli
+rompia el reconocimiento de contratos degradados.
+
+`document-classifier.test.ts` fija ahora las dos direcciones: la hoja de vida no
+se pierde, y contrato, liquidacion, memorando y manual de funciones se siguen
+reconociendo.
+
+Ademas, una hoja de vida **sin ningun encabezado** no da ninguna palabra clave y
+se queda en `desconocido`. En vez de mandarla al aviso de documento no
+estructurado, se intenta leerla y se asciende a hoja de vida solo si el
+resultado trae datos de una persona (nombre mas contacto o trayectoria). Nunca
+se fuerza un formulario vacio.
+
+### 5. La eleccion entre gris y binarizada se decidia por confianza
+
+El motor probaba primero la escala de grises, que es lo correcto para las fotos
+de camara, y aceptaba el resultado si tenia texto suficiente con confianza alta.
+El problema: **cuando Tesseract no encuentra nada devuelve confianza 95**, porque
+no hay nada de lo que dudar. Medido, una pagina del perfil duro daba 43
+caracteres con confianza 92 y se aceptaba, cuando la binarizada de la misma
+pagina daba 2.197.
+
+Ahora la lectura en grises se da por buena solo con **400 caracteres y confianza
+0,80**; si no, se lee tambien la binarizada y gana la que reconocio mas texto,
+ponderado por confianza.
+
+### 6. Una pagina girada era una lectura perdida entera
+
+`image-prep` endereza mas o menos cinco grados, que cubre el papel torcido en el
+cristal pero no la hoja metida al reves.
+
+La sonda de orientacion es un OCR sobre la pagina reducida a 800 px. La senal que
+discrimina es la **confianza**, no la cantidad de texto: girada, Tesseract sigue
+emitiendo cientos de caracteres pero baja de 92-95 a 38-51.
+
+Dos decisiones para que no cueste tiempo en el caso corriente:
+
+- **Poda por proporcion.** Una hoja vertical solo puede estar a 0 o 180 grados;
+  una apaisada, a 90 o 270. Sin esta poda el sondeo llegaba a girar 90 grados
+  paginas verticales que estaban perfectamente derechas, y el perfil `medio`
+  perdia 12 puntos.
+- **Solo se sondea cuando hace falta.** Una pagina vertical se lee primero; si la
+  lectura sale bien no se sondea nada. Una apaisada se sondea antes de leerla,
+  porque leerla de lado no cuesta menos y no sirve de nada.
+
+El coste queda concentrado donde hay problema: `limpio` 3,8 s por documento,
+`duro` 12,7 s.
+
+### 7. El proyecto no compilaba y `npm run typecheck` no lo veia
+
+`npm run build` fallaba en `main` con 24 errores de tipos. No se habia notado
+porque `typecheck` era `tsc --noEmit` sobre el `tsconfig.json` raiz, que tiene
+`"files": []` y solo referencias: **no comprobaba ni un archivo**. Ahora es
+`tsc -b`, que es lo que comprueba el proyecto de verdad, y hay CI.
+
 ## Resultado
 
 Precision global (similitud media de todos los campos de los 40 documentos):
 
 | | Precision global |
 |---|---|
-| Linea base | **63,4%** |
+| Primera medicion, antes de arreglar nada | **63,4%** |
 | + umbral local de Sauvola | 68,5% |
 | + deteccion de polaridad | 72,5% |
-| + reconstruccion del correo | **73,9%** |
+| + reconstruccion del correo | 73,9% |
+| Regresion introducida despues por el clasificador | **19,6%** |
+| + clasificador corregido | 64,1% |
+| + eleccion de preprocesado por cantidad de texto | 68,4% |
+| + telefono por fragmento | 69,1% |
+| + deteccion de orientacion | 73,3% |
+| + hoja de vida sin encabezados por evidencia | **75,5%** |
 
-20 documentos mejoran, 13 quedan igual y 7 empeoran ligeramente respecto a la linea base.
+La caida a 19,6% no fue un cambio del motor sino del clasificador de documentos:
+seis de cada nueve hojas de vida salian como "documento no estructurado" y
+llegaban al formulario vacias. Esta documentada mas abajo.
 
 ### Por campo
 
 | Campo | Aciertos | % acierto | Similitud media |
 |---|---|---|---|
-| firstNames | 32/40 | 80,0% | 83,4% |
-| lastNames | 31/40 | 77,5% | 83,5% |
-| documentNumber | 31/40 | 77,5% | 79,5% |
-| phone | 29/40 | 72,5% | 76,3% |
-| cityResidence | 28/40 | 70,0% | 72,8% |
-| education (cantidad) | 28/40 | 70,0% | 83,3% |
-| headline | 27/40 | 67,5% | 75,1% |
-| experience (cantidad) | 24/40 | 60,0% | 75,0% |
-| skills | 23/40 | 57,5% | 72,5% |
-| education[].institution | 23/40 | 57,5% | 74,7% |
-| email | 20/40 | 50,0% | 67,5% |
-| education[].degree | 20/40 | 50,0% | 70,2% |
-| experience[].company | 20/40 | 50,0% | 60,3% |
-| experience[].position | 19/40 | 47,5% | 59,9% |
+| firstNames | 32/40 | 80,0% | 84,0% |
+| lastNames | 31/40 | 77,5% | 82,7% |
+| headline | 31/40 | 77,5% | 83,5% |
+| education (cantidad) | 31/40 | 77,5% | 90,8% |
+| cityResidence | 28/40 | 70,0% | 72,6% |
+| experience (cantidad) | 27/40 | 67,5% | 81,3% |
+| education[].institution | 27/40 | 67,5% | 82,4% |
+| documentNumber | 26/40 | 65,0% | 68,5% |
+| email | 24/40 | 60,0% | 68,8% |
+| education[].degree | 24/40 | 60,0% | 79,4% |
+| skills | 24/40 | 60,0% | 73,8% |
+| phone | 23/40 | 57,5% | 59,3% |
+| experience[].position | 22/40 | 55,0% | 65,9% |
+| experience[].company | 20/40 | 50,0% | 63,5% |
 
 ### Por perfil de degradado
 
 | Perfil | Docs | Precision real | Confianza que reporta el motor |
 |---|---|---|---|
-| medio | 15 | 88,9% | 87,6% |
-| limpio | 13 | 87,3% | 86,9% |
-| duro | 9 | 50,0% | 68,2% |
-| girado90 | 2 | 16,2% | 66,2% |
-| girado180 | 1 | 4,1% | 40,5% |
+| limpio | 13 | 88,1% | 87,5% |
+| girado180 | 1 | 86,2% | 85,9% |
+| medio | 15 | 82,8% | 84,6% |
+| girado90 | 2 | 55,5% | 72,3% |
+| duro | 9 | 48,1% | 68,0% |
+
+La orientacion era el fallo mas caro del motor: girado 180 grados pasa de **4,1%
+a 86,2%** y girado 90 grados de **12,0% a 55,5%**.
 
 ### Por maquetacion
 
 | Plantilla | Precision real |
 |---|---|
-| grande | 95,3% |
-| sin-encabezados | 92,2% |
-| dos-columnas | 91,9% |
+| grande | 95,0% |
+| cabecera-oscura | 90,6% |
 | mecanografiada | 88,9% |
-| una-columna | 87,3% |
-| contacto-pie | 79,1% |
-| italica | 75,1% |
+| sin-encabezados | 88,6% |
+| una-columna | 85,9% |
+| contacto-pie | 84,4% |
+| dos-columnas | 82,6% |
+| italica | 76,7% |
+| nombre-pequeno | 73,8% |
 | desordenado | 70,6% |
-| nombre-pequeno | 69,5% |
-| denso-2p | 62,1% |
-| cabecera-oscura | 60,7% |
 | tabla | 56,4% |
-| formulario | 26,6% |
+| denso-2p | 44,2% |
+| formulario | 39,8% |
 
 ## Comparacion de las tres rutas
 
@@ -154,29 +239,32 @@ Precision global (similitud media de todos los campos de los 40 documentos):
 |---|---|---|---|
 | Documentos | 10 | 40 | 14 |
 | Idioma | espanol | espanol | ingles |
-| Precision | 100% (165/165 campos) | 73,9% | correo 4/14, nombre ~12/14 |
-| Tiempo por documento | menos de 1 s | 4,5 s | 4-10 s |
+| Precision | 100% (165/165 campos) | 75,5% | correo 4/14, nombre ~12/14 |
+| Tiempo por documento | menos de 1 s | 6,9 s | 4-10 s |
 
 El 100% de la ruta digital sigue intacto: las 52 pruebas pasan y el banco de PDF digitales se
 mantiene en 165 de 165.
 
 ## Lo que queda pendiente, por orden de impacto
 
-1. **Orientacion.** Una pagina girada 90 o 180 grados es hoy una perdida casi total (16,2% y 4,1%).
-   `image-prep.ts` endereza mas o menos cinco grados, que cubre el papel torcido en el cristal pero
-   no la hoja metida al reves. Probar las cuatro rotaciones sobre una muestra reducida y quedarse
-   con la de mayor confianza media es barato y convierte un fallo total en una lectura normal.
-2. **Formularios de etiqueta y valor (26,6%) y tablas con bordes (56,4%).** Son justo el formato mas
-   comun en el archivo fisico colombiano. El agrupador de renglones fusiona la celda de etiqueta con
-   la de valor cuando el borde se degrada.
-3. **Empresa y cargo de cada empleo (47-50%).** Es el campo estructurado mas debil.
-4. **El indicador de confianza es sistematicamente optimista.** Correlaciona bien en conjunto
-   (0,87), pero reporta 80,8% de media cuando la precision real es 73,9%, y se equivoca mas
-   justo donde importa: `girado90` reporta 66,2% con 16,2% real. Sigue premiando rellenar campos
-   en vez de acertarlos (`index.ts`, `evaluarCalidad`).
-5. **Ritmo.** 4,5 s por documento son unas **1,26 h para 1.000 hojas de vida**, en serie y con la
-   pestana abierta. Un pool de dos a cuatro workers de Tesseract con `createScheduler` lo baja a
-   la mitad o menos.
+1. **Formularios de etiqueta y valor (39,8%) y tablas con bordes (56,4%).** Son
+   justo el formato mas comun en el archivo fisico colombiano. El agrupador de
+   renglones fusiona la celda de etiqueta con la de valor cuando el borde se
+   degrada.
+2. **Hojas de vida largas y densas (44,2%).** Dos paginas a 7,5 pt: el OCR lee el
+   texto pero los extractores se pierden entre tanta linea.
+3. **Empresa y cargo de cada empleo (50-55%).** Es el campo estructurado mas
+   debil.
+4. **El giro de 90 grados se queda a medias (55,5%).** La orientacion ya se
+   detecta y se corrige, pero el resultado sigue por debajo de la misma
+   maquetacion derecha: queda ver si es la calidad de la imagen girada o la
+   maquetacion reconstruida.
+5. **Ritmo.** 6,9 s por documento son unas **1,9 h para 1.000 hojas de vida**, en
+   serie y con la pestana abierta. Un pool de dos a cuatro workers de Tesseract
+   con `createScheduler` lo baja a la mitad o menos.
+6. **El selector de rol de la barra de navegacion** deja que cualquiera se ponga
+   `admin` desde el navegador. No es un asunto de interfaz sino de autenticacion,
+   y va con la conversacion de roles que quedo pendiente.
 
 ## Como reproducirlo
 

@@ -243,7 +243,9 @@ export async function crearOActualizarEmpleadoDesdeHistorial(input: {
         input.estado === 'inactivo' ? input.fechaSalida ?? existente.terminationDate : undefined,
       terminationReason:
         input.estado === 'inactivo' ? input.razonSalida ?? existente.terminationReason : undefined,
-      hireDate: existente.hireDate || fechaDePrimerContrato(input.results),
+      // `hireDate` es obligatorio: si no hay contrato del que sacarla, se
+      // conserva la que ya tenia la ficha.
+      hireDate: existente.hireDate || fechaDePrimerContrato(input.results) || existente.hireDate,
       updatedAt: now,
     };
     await db.employees.put(actualizado);

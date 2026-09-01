@@ -137,7 +137,7 @@ export const EditableIdForm: React.FC<EditableIdFormProps> = ({
           </button>
           <button
             onClick={() => onSave(formData)}
-            className="px-5 py-2 text-sm font-medium text-white bg-signal-blue hover:bg-signal-blue rounded-lg transition-colors flex items-center shadow-subtle"
+            className="px-5 py-2 text-sm font-medium text-white bg-signal-blue hover:bg-rosimar-blue-dark rounded-lg transition-colors flex items-center shadow-subtle"
           >
           Guardar Cédula
           </button>

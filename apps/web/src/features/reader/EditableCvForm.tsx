@@ -849,7 +849,7 @@ export const EditableCvForm: React.FC<EditableCvFormProps> = ({
           <button
             type="button"
             onClick={() => onSave(formData, destino)}
-            className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-signal-blue hover:bg-signal-blue rounded-lg transition-colors shadow-subtle"
+            className="inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-signal-blue hover:bg-rosimar-blue-dark rounded-lg transition-colors shadow-subtle"
           >
             {esEmpleadoExistente
               ? destino === 'empleado'

@@ -10,6 +10,10 @@ export interface HealthFormData {
   severanceFund?: string;
   compensationBox?: string;
   affiliationDate?: string;
+  /** Contacto que a veces trae la consulta de Seguridad Social. Se usa para
+   *  consolidar la ficha del empleado cuando la hoja de vida no lo traia. */
+  phone?: string;
+  email?: string;
   certificateUrl?: string;
   rawText?: string;
 }

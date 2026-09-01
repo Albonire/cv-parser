@@ -160,7 +160,7 @@ export const EmployerSettingsView: React.FC = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2 bg-signal-blue hover:bg-signal-blue text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle disabled:opacity-50"
+          className="px-5 py-2 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded-lg text-xs font-semibold transition-colors shadow-subtle disabled:opacity-50"
         >
           {saving ? 'Guardando...' : 'Guardar Configuracion'}
         </button>

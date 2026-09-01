@@ -318,7 +318,7 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
                     {c.status !== 'contratado' && (
                       <button
                         onClick={() => handleConvertToEmployee(c)}
-                        className="inline-flex items-center px-2 py-1 bg-signal-blue hover:bg-signal-blue text-white rounded text-[11px] font-semibold shadow-subtle"
+                        className="inline-flex items-center px-2 py-1 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-[11px] font-semibold shadow-subtle"
                         title="Contratar (RN-1)"
                       >
                         <UserCheck01Icon className="h-3.5 w-3.5 mr-1" />
@@ -518,7 +518,7 @@ export const CandidatesView: React.FC<CandidatesViewProps> = ({ candidates, onRe
               {selectedCandidate.status !== 'contratado' && (
                 <button
                   onClick={() => handleConvertToEmployee(selectedCandidate)}
-                  className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold shadow-subtle"
+                  className="px-4 py-1.5 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-xs font-semibold shadow-subtle"
                 >
                   Contratar Empleado (RN-1)
                 </button>
