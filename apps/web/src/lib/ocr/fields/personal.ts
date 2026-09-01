@@ -201,6 +201,14 @@ function extraerNombre(
 const PATRON_CORREO = /[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[a-zA-Z]/;
 
 /**
+ * Patrones alternos cuando el OCR confunde caracteres comunes en emails:
+ * usuario.dominio.com (sin @) o usuario@dominio (sin extension).
+ * Estos son respaldos y se filtran estrictamente.
+ */
+const PATRON_EMAIL_ALTERNATIVO =
+  /[a-zA-Z0-9_.+-]+[\s\.@-]+[a-zA-Z0-9-]+[\s\.]+[a-zA-Z0-9-.]+\.[a-zA-Z]{2,}/i;
+
+/**
  * Glifos con los que el OCR confunde la arroba. Medido sobre el banco de
  * escaneos: de 40 documentos, 20 se quedaban sin correo y en todos los casos
  * revisados la arroba se habia leido como otra cosa
@@ -244,7 +252,47 @@ function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   if (enDocumento) return enDocumento[0].toLowerCase();
 
   // Ninguna arroba legible: se intenta reconstruir la direccion.
-  return reconstruirCorreo(textoEncabezado) || reconstruirCorreo(textoDocumento);
+  const reconstruido = reconstruirCorreo(textoEncabezado) || reconstruirCorreo(textoDocumento);
+  if (reconstruido) return reconstruido;
+
+  // Ultimo recurso: patrones alternos cuando el OCR confunde caracteres
+  // Busca en encabezado primero (donde suele estar el contacto)
+  const alterno = textoEncabezado.match(PATRON_EMAIL_ALTERNATIVO);
+  if (alterno) {
+    const limpio = alterno[0]
+      .replace(/[\s.@-]{2,}/g, '@')  // Normaliza separadores multiples
+      .toLowerCase();
+    if (/^[a-z0-9.+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(limpio)) return limpio;
+  }
+
+  // Último último recurso: buscar patrones muy permisivos de email
+  // "usuario_algo.dominio.com" -> puede ser "usuario.algo@dominio.com"
+  const permisivo = buscarEmailPermisivo(textoEncabezado) || buscarEmailPermisivo(textoDocumento);
+  if (permisivo) return permisivo;
+
+  return '';
+}
+
+/**
+ * Busca emails con patrones muy corruptos donde el @ se perdió completamente.
+ * Ej: "maria.garcia correo.com" -> "maria.garcia@correo.com"
+ */
+function buscarEmailPermisivo(texto: string): string {
+  // Patrón: usuario.algo<space>dominio.com
+  const patronEspacio = /([a-z0-9.+-]{3,})[\s]{1,3}([a-z0-9-]{2,}\.[a-z]{2,})/gi;
+  let match;
+  while ((match = patronEspacio.exec(texto)) !== null) {
+    const usuario = match[1].toLowerCase();
+    const dominio = match[2].toLowerCase();
+    
+    // Valida que tenga punto en usuario o sea dominio conocido
+    if ((usuario.includes('.') || usuario.includes('-') || usuario.includes('_')) && 
+        DOMINIOS_CONOCIDOS.test(dominio)) {
+      return `${usuario}@${dominio}`;
+    }
+  }
+  
+  return '';
 }
 
 /**
@@ -551,7 +599,14 @@ function extraerMontoSalario(texto: string | null): number | undefined {
   const numero = texto.match(/[\d][\d.,]{4,14}/);
   if (!numero) return undefined;
   const valor = parseInt(numero[0].replace(/[.,]/g, ''), 10);
-  return !Number.isNaN(valor) && valor > 10000 ? valor : undefined;
+  if (Number.isNaN(valor)) return undefined;
+  // El "salario real" en Colombia va de un minimo legal (menos de un millon)
+  // hasta unos cuantos millones; un numero de 10+ digito seguidos no es un
+  // monto sino un documento (cedula, NIT), y tomarlo como salario es un error
+  // de lectura. Solo se acepta con cota inferior y superior realistas.
+  if (valor < 200000 || valor > 99_000_000) return undefined;
+  if (numero[0].length >= 12) return undefined;
+  return valor;
 }
 
 /** Barrido de salario/pago por palabra clave cuando no hay etiqueta estructurada. */

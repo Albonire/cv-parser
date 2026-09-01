@@ -5,7 +5,7 @@ import { normalize, splitLabeledPairs, stripBullets } from '../text-utils';
 import { detectarRango, quitarRango } from './dates';
 
 const SUFIJOS_EMPRESA =
-  /\b(?:s\.?a\.?s\.?|s\.?a\.?|ltda\.?|e\.?u\.?|s\.?a\.?s|cia\.?|c[ií]a\.?|&\s*c[ií]a|inc\.?|corp\.?|llc|group|grupo|holding|fundaci[oó]n|corporaci[oó]n|cooperativa|asociaci[oó]n|ministerio|contralor[ií]a|procuradur[ií]a|alcald[ií]a|gobernaci[oó]n|instituto|agencia|industrias|distribuidora|comercializadora|constructora|inversiones|servicios|soluciones|consultores|laboratorios|almacenes|supermercados|transportes|frigor[ií]ficos|alimentos|auditor[ií]a|log[ií]stica)\b/i;
+  /\b(?:s\.?a\.?s\.?|s\.?a\.?|ltda\.?|e\.?u\.?|s\.?a\.?s|cia\.?|c[ií]a\.?|&\s*c[ií]a|inc\.?|corp\.?|llc|group|grupo|holding|fundaci[oó]n|corporaci[oó]n|cooperativa|asociaci[oó]n|ministerio|contralor[ií]a|procuradur[ií]a|alcald[ií]a|gobernaci[oó]n|instituto|agencia|industrias|distribuidora|comercializadora|constructora|inversiones|servicios|soluciones|consultores|laboratorios|almacenes|supermercados|transportes|frigor[ií]ficos|alimentos|auditor[ií]a|log[ií]stica|empresas?|compan[ií]as?|organizaciones?|entidades?|sociedades?)\b/i;
 
 const ES_VINETA = /^[\s•*●▪·+\-–—>]/;
 
@@ -13,17 +13,52 @@ const SIN_EXPERIENCIA =
   /(?:sin\s+experiencia(?:\s+laboral)?(?:\s+(?:previa|formal))?|no\s+(?:tengo|cuento\s+con)\s+experiencia|reci[eé]n\s+egresad[oa]|primera\s+oportunidad\s+laboral|primer\s+empleo)/i;
 
 function pareceEmpresa(texto: string): boolean {
-  const limpio = stripBullets(texto);
+  const limpio = stripBullets(texto).trim();
+  
   // Un renglon de fechas no es una empresa, aunque empiece en mayuscula.
   if (detectarRango(limpio)) return false;
-  return SUFIJOS_EMPRESA.test(limpio) || (/^[A-ZÁÉÍÓÚÑ]/.test(limpio) && limpio.length > 3 && !contieneCargo(limpio));
+  
+  // Demasiado corto no es empresa
+  if (limpio.length < 2) return false;
+  
+  // Tiene sufijo societario conocido - ALTAMENTE probable que sea empresa
+  if (SUFIJOS_EMPRESA.test(limpio)) return true;
+  
+  // Empieza en mayuscula, no es cargo y tiene razonable longitud
+  if (/^[A-ZÁÉÍÓÚÑ]/.test(limpio) && limpio.length >= 3 && limpio.length <= 60) {
+    // No contiene palabras que indiquen que es un cargo
+    if (contieneCargo(limpio)) return false;
+    
+    // Descarta si es todas mayusculas y largo (probablemente una seccion)
+    if (limpio === limpio.toUpperCase() && limpio.length > 20) return false;
+    
+    // Heurística adicional: si contiene números o palabras comunes de empresas,
+    // es más probable que sea empresa
+    if (/(\d+|\bde\b|\bdel\b|\by\b|\binc\b)/.test(limpio.toLowerCase())) {
+      return true;
+    }
+    
+    // Si solo tiene 1-2 palabras cortas, probablemente no es empresa
+    const palabras = limpio.split(/\s+/);
+    if (palabras.length <= 2 && palabras.every(p => p.length < 6)) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  return false;
 }
 
 function pareceCargo(texto: string): boolean {
   const limpio = stripBullets(texto);
-  if (limpio.length < 3 || limpio.length > 70) return false;
+  if (limpio.length < 2 || limpio.length > 80) return false;
+  
+  // Coincide explicitamente con cargo conocido
   if (contieneCargo(limpio)) return true;
-  return /\b(?:ingenier|analista|asistente|auxiliar|coordinador|director|gerente|jefe|l[ií]der|operari|supervisor|t[eé]cnic|tecn[oó]log|asesor|consultor|especialista|desarrollador|dise[nñ]ador|contador|abogad|profesional|practicante|aprendiz|vendedor|cajer|conductor|mensajer|vigilante|secretari|recepcionista|enfermer|docente|profesor)/i.test(
+  
+  // Patrones adicionales de cargo (más comprehensive)
+  return /\b(?:ingenier|analista|asistente|auxiliar|coordinador|director|gerente|jefe|l[ií]der|operari|supervisor|t[eé]cnic|tecn[oó]log|asesor|consultor|especialista|desarrollador|dise[nñ]ador|contador|abogad|profesional|practicante|aprendiz|vendedor|cajer|conductor|mensajer|vigilante|secretari|recepcionista|enfermer|docente|profesor|especialista|ejecutivo|oficial|agente|operador|cajero|vendedor|asesor|contador|mecanico|electricista|plomero|albani|soldador|pintor|carpintero|cocinero|camarero|mesero|chofer)\b/i.test(
     limpio
   );
 }

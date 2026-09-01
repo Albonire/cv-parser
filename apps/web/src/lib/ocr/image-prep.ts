@@ -20,8 +20,11 @@ const PASO_INCLINACION = 0.5;
  */
 const FRACCION_VENTANA = 1 / 50;
 const VENTANA_MINIMA = 15;
-/** Sensibilidad de Sauvola. Mas alto adelgaza el trazo; mas bajo ensucia el fondo. */
+/** Sensibilidad de Sauvola. Mas alto adelgaza el trazo; mas bajo ensucia el fondo. 
+ * Valores: 0.15-0.35. Usamos adaptativo basado en contraste.
+ */
 const K_SAUVOLA = 0.22;
+const K_SAUVOLA_BAJO_CONTRASTE = 0.28;  // Más agresivo para documentos oscuros
 /** Dinamica de la desviacion tipica en la formula de Sauvola. */
 const R_SAUVOLA = 128;
 /**
@@ -126,7 +129,13 @@ export async function preprocessImage(
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const gris = aEscalaDeGrises(imageData);
+  let gris = aEscalaDeGrises(imageData);
+
+  // Aplica CLAHE SOLO para documentos con bajo contraste (foto de celular)
+  const contraste = calcularContraste(gris);
+  if (contraste < 90) {
+    gris = aplicarCLAHE(gris, canvas.width, canvas.height, 64, 2.0);
+  }
 
   if (binarizar) {
     binarizarLocal(imageData, gris, canvas.width, canvas.height);
@@ -140,6 +149,17 @@ export async function preprocessImage(
 
   const blob = await new Promise<Blob | null>((res) => listo.toBlob((b) => res(b), 'image/png'));
   return blob ?? imageFile;
+}
+
+/** Calcula el contraste global como diferencia max-min en la escala de grises */
+function calcularContraste(gris: Uint8ClampedArray): number {
+  let minVal = 255;
+  let maxVal = 0;
+  for (let i = 0; i < gris.length; i++) {
+    minVal = Math.min(minVal, gris[i]);
+    maxVal = Math.max(maxVal, gris[i]);
+  }
+  return maxVal - minVal;
 }
 
 async function cargarImagen(
@@ -247,6 +267,148 @@ function binarizarEnSitio(imageData: ImageData, gris: Uint8ClampedArray, umbral:
 }
 
 /**
+ * CLAHE (Contrast Limited Adaptive Histogram Equalization):
+ * Ecualiza el histograma localmente sin amplificar ruido excesivamente.
+ * Mejora documentos con iluminación desigual.
+ */
+function aplicarCLAHE(
+  gris: Uint8ClampedArray,
+  width: number,
+  height: number,
+  tamañoBloque: number = 64,
+  limiteContraste: number = 2.0
+): Uint8ClampedArray {
+  const resultado = new Uint8ClampedArray(gris.length);
+  const clipLimit = limiteContraste * (tamañoBloque * tamañoBloque);
+  
+  // Divide la imagen en bloques
+  const bloqueAncho = Math.ceil(width / tamañoBloque);
+  const bloqueAlto = Math.ceil(height / tamañoBloque);
+  
+  // Calcula histograma para cada bloque
+  const histogramas = new Array(bloqueAncho * bloqueAlto);
+  for (let by = 0; by < bloqueAlto; by++) {
+    for (let bx = 0; bx < bloqueAncho; bx++) {
+      const hist = new Array(256).fill(0);
+      const y0 = by * tamañoBloque;
+      const y1 = Math.min(y0 + tamañoBloque, height);
+      const x0 = bx * tamañoBloque;
+      const x1 = Math.min(x0 + tamañoBloque, width);
+      
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          hist[gris[y * width + x]]++;
+        }
+      }
+      
+      // Limita el contraste (clip)
+      let pixelOverflow = 0;
+      for (let i = 0; i < 256; i++) {
+        if (hist[i] > clipLimit) {
+          pixelOverflow += hist[i] - clipLimit;
+          hist[i] = clipLimit;
+        }
+      }
+      
+      // Distribuye pixels overflow uniformemente
+      if (pixelOverflow > 0) {
+        const distribucionPorBin = pixelOverflow / 256;
+        for (let i = 0; i < 256; i++) {
+          hist[i] += distribucionPorBin;
+        }
+      }
+      
+      histogramas[by * bloqueAncho + bx] = hist;
+    }
+  }
+  
+  // Aplica CLAHE interpolando entre bloques
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const by = Math.min(Math.floor(y / tamañoBloque), bloqueAlto - 1);
+      const bx = Math.min(Math.floor(x / tamañoBloque), bloqueAncho - 1);
+      const valor = gris[y * width + x];
+      
+      const hist = histogramas[by * bloqueAncho + bx];
+      let cumulativo = 0;
+      for (let i = 0; i <= valor; i++) {
+        cumulativo += hist[i];
+      }
+      
+      resultado[y * width + x] = Math.round((cumulativo / (tamañoBloque * tamañoBloque)) * 255);
+    }
+  }
+  
+  return resultado;
+}
+
+/**
+ * Erosión morfológica: reduce áreas blancas.
+ * Útil para separar texto pegado o eliminar ruido.
+ */
+function erosionar(
+  imageData: ImageData,
+  width: number,
+  height: number,
+  radio: number = 1
+): void {
+  const { data } = imageData;
+  const temporal = new Uint8ClampedArray(width * height);
+  
+  for (let i = 0; i < data.length; i += 4) {
+    temporal[i / 4] = data[i];
+  }
+  
+  for (let y = radio; y < height - radio; y++) {
+    for (let x = radio; x < width - radio; x++) {
+      let minValor = 255;
+      for (let dy = -radio; dy <= radio; dy++) {
+        for (let dx = -radio; dx <= radio; dx++) {
+          const idx = (y + dy) * width + (x + dx);
+          minValor = Math.min(minValor, temporal[idx]);
+        }
+      }
+      const idx = y * width + x;
+      data[idx * 4] = data[idx * 4 + 1] = data[idx * 4 + 2] = minValor;
+      data[idx * 4 + 3] = 255;
+    }
+  }
+}
+
+/**
+ * Dilatación morfológica: expande áreas blancas.
+ * Útil para conectar caracteres quebrados.
+ */
+function dilatar(
+  imageData: ImageData,
+  width: number,
+  height: number,
+  radio: number = 1
+): void {
+  const { data } = imageData;
+  const temporal = new Uint8ClampedArray(width * height);
+  
+  for (let i = 0; i < data.length; i += 4) {
+    temporal[i / 4] = data[i];
+  }
+  
+  for (let y = radio; y < height - radio; y++) {
+    for (let x = radio; x < width - radio; x++) {
+      let maxValor = 0;
+      for (let dy = -radio; dy <= radio; dy++) {
+        for (let dx = -radio; dx <= radio; dx++) {
+          const idx = (y + dy) * width + (x + dx);
+          maxValor = Math.max(maxValor, temporal[idx]);
+        }
+      }
+      const idx = y * width + x;
+      data[idx * 4] = data[idx * 4 + 1] = data[idx * 4 + 2] = maxValor;
+      data[idx * 4 + 3] = 255;
+    }
+  }
+}
+
+/**
  * Umbral local de Sauvola calculado con imagenes integrales.
  *
  * Cada pixel se compara contra la media y la desviacion tipica de su vecindad
@@ -256,6 +418,8 @@ function binarizarEnSitio(imageData: ImageData, gris: Uint8ClampedArray, umbral:
  * recorridos de la imagen y nada mas.
  *
  * Si la imagen es demasiado pequena para una ventana util, se cae a Otsu.
+ * Para documentos con bajo contraste (fotos de celular, escaneos antiguos),
+ * se adapta el parametro K de Sauvola para ser más agresivo.
  */
 export function binarizarLocal(
   imageData: ImageData,
@@ -269,6 +433,16 @@ export function binarizarLocal(
     binarizarEnSitio(imageData, gris, umbralOtsu(gris));
     return;
   }
+
+  // Detecta contraste global para adaptar sensibilidad
+  let minVal = 255;
+  let maxVal = 0;
+  for (let i = 0; i < gris.length; i++) {
+    minVal = Math.min(minVal, gris[i]);
+    maxVal = Math.max(maxVal, gris[i]);
+  }
+  const contraste = maxVal - minVal;
+  const kAdaptativo = contraste < 100 ? K_SAUVOLA_BAJO_CONTRASTE : K_SAUVOLA;
 
   const radio = Math.floor(ventana / 2);
   const ancho = width + 1;
@@ -321,7 +495,7 @@ export function binarizarLocal(
       const invertir = media < MEDIA_REGION_OSCURA;
       const valorPixel = invertir ? 255 - gris[p] : gris[p];
       const mediaUtil = invertir ? 255 - media : media;
-      const umbral = mediaUtil * (1 + K_SAUVOLA * (desviacion / R_SAUVOLA - 1));
+      const umbral = mediaUtil * (1 + kAdaptativo * (desviacion / R_SAUVOLA - 1));
 
       const i = p * 4;
       const valor = valorPixel > umbral ? 255 : 0;

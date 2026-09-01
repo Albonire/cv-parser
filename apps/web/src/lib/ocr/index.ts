@@ -290,3 +290,4 @@ export * from './parser-liquidacion';
 export * from './parser-memorando';
 export * from './parser-funciones';
 export * from './extraer-zip';
+export * from './ocr-normalize';

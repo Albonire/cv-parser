@@ -1,6 +1,7 @@
 import { createWorker, PSM, Worker } from 'tesseract.js';
 import { GiroPagina, girarImagen, muestraGirada, preprocessImage } from './image-prep';
 import { buildLayout, DocumentLayout, PageInput, Word } from './layout';
+import { normalizarPalabraOcr } from './ocr-normalize';
 
 /**
  * Motor de OCR en el navegador (WebAssembly).
@@ -115,7 +116,7 @@ export function tesseractWordsToWords(palabras: PalabraTesseract[]): Word[] {
     .map((p) => {
       const height = Math.max(1, p.bbox.y1 - p.bbox.y0);
       return {
-        text: p.text,
+        text: normalizarPalabraOcr(p.text.trim()),
         x: p.bbox.x0,
         y: p.bbox.y0,
         width: Math.max(1, p.bbox.x1 - p.bbox.x0),
