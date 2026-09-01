@@ -18,6 +18,23 @@ import { DocumentLayout, layoutFromPlainText } from './layout';
 const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
 
 /**
+ * Hay evidencia de que el documento es la hoja de vida de una persona: se leyo
+ * un nombre y ademas alguna forma de identificarla o contactarla. Con menos que
+ * eso se prefiere no proponer un formulario.
+ */
+function pareceHojaDeVida(candidato: CandidateFormData): boolean {
+  const tieneNombre = Boolean(candidato.firstNames?.trim() && candidato.lastNames?.trim());
+  if (!tieneNombre) return false;
+
+  const contacto = [candidato.email, candidato.phone, candidato.documentNumber].filter((v) =>
+    Boolean(v && String(v).trim())
+  );
+  const tieneTrayectoria = candidato.experience.length > 0 || candidato.education.length > 0;
+
+  return contacto.length > 0 || tieneTrayectoria;
+}
+
+/**
  * Orquestador de lectura y extraccion de documentos. Todo corre en el navegador
  * (costo $0) y de forma determinista: sin modelos de lenguaje.
  */
@@ -74,10 +91,31 @@ export async function processDocument(
 
   onProgress?.(90, 'Clasificando y estructurando campos del formulario...');
 
-  const detectedType = classifyDocumentType(extractedText);
   const categoria = clasificarHistorial(extractedText);
+  let detectedType = classifyDocumentType(extractedText);
 
-  const candidateData = detectedType === 'cv' ? parseCvText(extractedText, layout) : undefined;
+  let candidateData = detectedType === 'cv' ? parseCvText(extractedText, layout) : undefined;
+
+  // Una hoja de vida sin ningun encabezado de seccion no da ninguna palabra
+  // clave, asi que el clasificador la deja en `desconocido`. En vez de mandarla
+  // al aviso de documento no estructurado, se intenta leerla y se asciende a
+  // hoja de vida SOLO si el resultado trae datos de una persona real. Asi no se
+  // fuerza nunca un formulario vacio, que es lo que el clasificador evita, pero
+  // tampoco se pierde una hoja de vida por no llevar titulos.
+  if (categoria === 'desconocido' && !candidateData) {
+    // Se prueban las dos lecturas. La maquetacion ayuda en los documentos con
+    // columnas o encabezados, pero en una hoja sin ningun titulo el texto
+    // plano encuentra el bloque de contacto que la maquetacion no agrupa.
+    const conMaquetacion = parseCvText(extractedText, layout);
+    const posible = pareceHojaDeVida(conMaquetacion)
+      ? conMaquetacion
+      : parseCvText(extractedText);
+
+    if (pareceHojaDeVida(posible)) {
+      detectedType = 'cv';
+      candidateData = posible;
+    }
+  }
   const contractData = detectedType === 'contract' ? parseContractText(extractedText, layout) : undefined;
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;
   const healthData = detectedType === 'health' ? parseHealthText(extractedText) : undefined;

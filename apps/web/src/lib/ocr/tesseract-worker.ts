@@ -1,5 +1,5 @@
 import { createWorker, PSM, Worker } from 'tesseract.js';
-import { preprocessImage } from './image-prep';
+import { GiroPagina, girarImagen, muestraGirada, preprocessImage } from './image-prep';
 import { buildLayout, DocumentLayout, PageInput, Word } from './layout';
 
 /**
@@ -67,15 +67,32 @@ export interface OcrExecutionResult {
 }
 
 /**
- * Un resultado de OCR se considera legible cuando tiene texto suficiente con
- * confianza razonable. Menguando el umbral segun la cantidad de texto.
+ * Cuando la lectura en escala de grises es lo bastante buena como para no
+ * gastar un segundo OCR con la imagen binarizada.
+ *
+ * La confianza de Tesseract NO sirve por si sola para decidirlo: cuando no
+ * encuentra nada devuelve 0 caracteres con confianza 95, porque no hay nada de
+ * lo que dudar. Medido sobre el banco de 40 escaneos, esa era la razon de que
+ * el perfil duro se hundiera: en grises daba 43 caracteres con confianza 92 y
+ * se aceptaban, cuando la binarizada de la misma pagina daba 2.197.
+ *
+ * La senal que si discrimina es la CANTIDAD de texto reconocido, acompanada de
+ * una confianza alta.
  */
-function esLegible(texto: string, confianza: number): boolean {
-  const longitud = texto.trim().length;
-  if (longitud < 40) return false;
-  // Con mucho texto, hasta una confianza media es un buen indicio; con poco,
-  // se exige mas seguridad antes de dar por buena la lectura.
-  return confianza >= (longitud >= 300 ? 0.55 : 0.7);
+const CARACTERES_LECTURA_SOLIDA = 400;
+const CONFIANZA_LECTURA_SOLIDA = 0.8;
+
+function lecturaSolida(texto: string, confianza: number): boolean {
+  return texto.trim().length >= CARACTERES_LECTURA_SOLIDA && confianza >= CONFIANZA_LECTURA_SOLIDA;
+}
+
+/**
+ * Compara dos lecturas de la misma pagina. Pesa la cantidad de texto por la
+ * confianza, de modo que una lectura con mucho mas texto gana salvo que su
+ * confianza sea bastante peor.
+ */
+function puntajeLectura(texto: string, confianza: number): number {
+  return texto.trim().length * (0.5 + confianza / 2);
 }
 
 interface CajaTesseract {
@@ -124,66 +141,224 @@ function extraerPalabras(blocks: unknown): PalabraTesseract[] {
   return palabras;
 }
 
-/** Reconoce un elemento de imagen con el preprocesado que mejor lo lea. */
-async function reconocerElemento(
+/**
+ * Deteccion de la orientacion de la pagina.
+ *
+ * `image-prep` endereza mas o menos cinco grados, que cubre el papel torcido en
+ * el cristal del escaner pero no la hoja metida al reves. Medido sobre el banco
+ * de escaneos, una pagina girada 90 grados sacaba 12% de precision y una girada
+ * 180 grados un 4%, contra el 70-95% de la misma maquetacion derecha: no es una
+ * lectura peor, es una lectura perdida entera.
+ *
+ * La sonda es un OCR sobre una version reducida de la pagina. La senal que
+ * discrimina es la CONFIANZA, no la cantidad de texto: girada, Tesseract sigue
+ * emitiendo cientos de caracteres, pero baja de 92-95 a 38-51.
+ *
+ * Se sondea primero 0 y 180 grados, que comparten proporcion; si el derecho
+ * gana con holgura no se prueban los otros dos. Asi la pagina normal, que es el
+ * caso corriente, paga dos sondas pequenas y no cuatro.
+ */
+const ANCHO_SONDA = 800;
+/** Confianza a partir de la cual la pagina derecha se da por buena sin mas sondas. */
+const CONFIANZA_ORIENTACION_CLARA = 85;
+/** Texto minimo para que la confianza de la sonda signifique algo. */
+const CARACTERES_SONDA_UTIL = 60;
+/**
+ * Cuanto tiene que ganarle un giro al derecho para que se aplique. Girar una
+ * pagina que estaba bien cuesta mucho mas que dejar sin girar una torcida, y
+ * las paginas derechas son la inmensa mayoria.
+ */
+const MARGEN_ORIENTACION = 10;
+
+interface Sonda {
+  grados: GiroPagina;
+  chars: number;
+  conf: number;
+  ancho: number;
+  alto: number;
+}
+
+/**
+ * Confianza util de una sonda: cuando Tesseract no encuentra texto devuelve una
+ * confianza alta porque no tiene nada de lo que dudar, asi que sin texto
+ * suficiente la sonda no vale nada.
+ */
+function valorSonda(s: Sonda): number {
+  return s.chars < CARACTERES_SONDA_UTIL ? 0 : s.conf;
+}
+
+async function sondear(
   worker: Worker,
-  item: File | Blob | HTMLCanvasElement
-): Promise<{ texto: string; confianza: number; cajas: unknown }> {
-  // En Node (pruebas) no hay Canvas: se manda el archivo tal cual.
-  if (typeof window === 'undefined' || !(item instanceof File || item instanceof Blob)) {
-    const { data } = await worker.recognize(item as HTMLCanvasElement, {}, { blocks: true, text: true });
-    return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
+  fuente: File | Blob,
+  grados: GiroPagina
+): Promise<Sonda> {
+  const muestra = await muestraGirada(fuente, grados, ANCHO_SONDA);
+  const { data } = await worker.recognize(muestra, {}, { text: true });
+  return {
+    grados,
+    chars: (data.text ?? '').trim().length,
+    conf: data.confidence ?? 0,
+    ancho: muestra.width,
+    alto: muestra.height,
+  };
+}
+
+/**
+ * Giros que merece la pena probar segun la proporcion de la pagina.
+ *
+ * Una hoja carta escaneada derecha o al reves llega vertical; una escaneada de
+ * lado llega apaisada. Podar por la proporcion quita la mitad de las sondas y,
+ * sobre todo, evita el error caro: sin esta poda el sondeo llegaba a girar 90
+ * grados paginas verticales que estaban perfectamente derechas.
+ */
+function girosPlausibles(ancho: number, alto: number): GiroPagina[] {
+  return alto >= ancho ? [0, 180] : [0, 90, 270];
+}
+
+/** Grados que hay que girar la pagina para dejarla derecha. */
+export async function detectarOrientacion(
+  worker: Worker,
+  fuente: File | Blob
+): Promise<GiroPagina> {
+  const derecho = await sondear(worker, fuente, 0);
+  const candidatos = girosPlausibles(derecho.ancho, derecho.alto).filter((g) => g !== 0);
+
+  // Pagina vertical que se lee bien: no hay nada que corregir.
+  if (
+    candidatos.length === 1 &&
+    derecho.chars >= CARACTERES_SONDA_UTIL &&
+    derecho.conf >= CONFIANZA_ORIENTACION_CLARA
+  ) {
+    return 0;
   }
 
-  // Fotografias de camara (WhatsApp, celular) leen mejor en escala de grises;
-  // la binarizacion Sauvola, pensada para escaneos planos, les borra el texto.
+  let mejor = derecho;
+  for (const grados of candidatos) {
+    const sonda = await sondear(worker, fuente, grados);
+    if (valorSonda(sonda) > valorSonda(mejor)) mejor = sonda;
+  }
+
+  return valorSonda(mejor) >= valorSonda(derecho) + MARGEN_ORIENTACION ? mejor.grados : 0;
+}
+
+interface Lectura {
+  texto: string;
+  confianza: number;
+  cajas: unknown;
+}
+
+/**
+ * Lee la pagina probando los dos preprocesados.
+ *
+ * Las fotografias de camara (WhatsApp, celular) leen mejor en escala de grises;
+ * la binarizacion local, pensada para escaneos planos, les borra el texto. Al
+ * reves ocurre con un escaneo con sombra, donde el gris no da nada.
+ */
+async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Lectura> {
   let gris: Blob | null = null;
   let binarizada: Blob | null = null;
   try {
-    gris = await preprocessImage(item, { binarizar: false });
+    gris = await preprocessImage(fuente, { binarizar: false });
   } catch (error) {
     console.warn('Preprocesamiento en escala de grises omitido:', error);
   }
   try {
-    binarizada = await preprocessImage(item, { binarizar: true });
+    binarizada = await preprocessImage(fuente, { binarizar: true });
   } catch (error) {
     console.warn('Preprocesamiento binarizado omitido:', error);
   }
 
-  const primera = gris ?? binarizada ?? item;
+  const primera = gris ?? binarizada ?? fuente;
   const resGris = await worker.recognize(primera, {}, { blocks: true, text: true });
+  const textoGris = resGris.data.text ?? '';
+  const confGris = (resGris.data.confidence ?? 0) / 100;
 
-  // La lectura en grises es legible: usar la primera y no gastar otro OCR.
-  if (esLegible(resGris.data.text ?? '', (resGris.data.confidence ?? 0) / 100)) {
-    return {
-      texto: resGris.data.text ?? '',
-      confianza: resGris.data.confidence ?? 0,
-      cajas: resGris.data.blocks,
-    };
-  }
+  const lecturaGris: Lectura = {
+    texto: textoGris,
+    confianza: resGris.data.confidence ?? 0,
+    cajas: resGris.data.blocks,
+  };
 
-  // En grises no se leyo bien: probar la binarizada y quedarse con la mejor.
+  // La lectura en grises es solida: no se gasta un segundo OCR.
+  if (lecturaSolida(textoGris, confGris)) return lecturaGris;
+
+  // Hay duda: se lee tambien la binarizada y gana la que reconocio mas texto.
   if (binarizada && binarizada !== primera) {
     const resBin = await worker.recognize(binarizada, {}, { blocks: true, text: true });
-    const confGris = esLegible(resGris.data.text ?? '', 0.4)
-      ? (resGris.data.confidence ?? 0) / 100
-      : 0;
-    const binLegible = esLegible(resBin.data.text ?? '', (resBin.data.confidence ?? 0) / 100);
-    const mejorBin = binLegible || (resBin.data.confidence ?? 0) > confGris * 100;
-    if (mejorBin) {
+    const textoBin = resBin.data.text ?? '';
+    const confBin = (resBin.data.confidence ?? 0) / 100;
+
+    if (puntajeLectura(textoBin, confBin) > puntajeLectura(textoGris, confGris)) {
       return {
-        texto: resBin.data.text ?? '',
+        texto: textoBin,
         confianza: resBin.data.confidence ?? 0,
         cajas: resBin.data.blocks,
       };
     }
   }
 
-  return {
-    texto: resGris.data.text ?? '',
-    confianza: resGris.data.confidence ?? 0,
-    cajas: resGris.data.blocks,
-  };
+  return lecturaGris;
+}
+
+/** Proporciones de la imagen, sin pasar por OCR. */
+async function esApaisada(fuente: File | Blob): Promise<boolean> {
+  const bitmap = await createImageBitmap(fuente);
+  const apaisada = bitmap.width > bitmap.height;
+  bitmap.close?.();
+  return apaisada;
+}
+
+/** Reconoce un elemento de imagen corrigiendo antes su orientacion. */
+async function reconocerElemento(
+  worker: Worker,
+  item: File | Blob | HTMLCanvasElement
+): Promise<Lectura> {
+  // En Node (pruebas) no hay Canvas: se manda el archivo tal cual.
+  if (typeof window === 'undefined' || !(item instanceof File || item instanceof Blob)) {
+    const { data } = await worker.recognize(item as HTMLCanvasElement, {}, { blocks: true, text: true });
+    return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
+  }
+
+  // Una pagina apaisada es sospechosa de venir escaneada de lado, asi que se
+  // sondea ANTES de leerla: leerla de lado no cuesta menos y no sirve de nada.
+  let apaisada = false;
+  try {
+    apaisada = await esApaisada(item);
+  } catch (error) {
+    console.warn('No se pudo medir la pagina:', error);
+  }
+
+  if (apaisada) {
+    try {
+      const giro = await detectarOrientacion(worker, item);
+      if (giro !== 0) return leerConVariantes(worker, await girarImagen(item, giro));
+    } catch (error) {
+      console.warn('Deteccion de orientacion omitida:', error);
+    }
+    return leerConVariantes(worker, item);
+  }
+
+  // Pagina vertical: se lee primero y solo se sondea la orientacion si salio
+  // mal. Es el caso corriente, y asi no paga ninguna sonda.
+  const lectura = await leerConVariantes(worker, item);
+  if (lecturaSolida(lectura.texto, lectura.confianza / 100)) return lectura;
+
+  try {
+    const giro = await detectarOrientacion(worker, item);
+    if (giro !== 0) {
+      const reintento = await leerConVariantes(worker, await girarImagen(item, giro));
+      if (
+        puntajeLectura(reintento.texto, reintento.confianza / 100) >
+        puntajeLectura(lectura.texto, lectura.confianza / 100)
+      ) {
+        return reintento;
+      }
+    }
+  } catch (error) {
+    console.warn('Deteccion de orientacion omitida:', error);
+  }
+
+  return lectura;
 }
 
 /** Ejecuta OCR sobre uno o varios archivos, blobs o canvas. */

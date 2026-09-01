@@ -1,0 +1,57 @@
+name: CI
+
+# Comprueba en cada cambio lo mismo que corre un colaborador en su maquina.
+# El repositorio no tenia ninguna comprobacion automatica, y en dos ocasiones un
+# cambio rompio algo que nadie noto hasta mucho despues: la interfaz entera se
+# quedo invisible, y la clasificacion de hojas de vida se cayo de 73,9% a 19,6%
+# con las pruebas en verde.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Un solo trabajo en vuelo por rama: al empujar de nuevo se cancela el anterior.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, lint, pruebas y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # `npm run typecheck` usa `tsc -b`, que es lo que comprueba de verdad el
+      # proyecto: el tsconfig raiz solo tiene referencias, asi que `tsc --noEmit`
+      # a secas no revisaba ni un archivo.
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Build de produccion
+        run: npm run build
+
+# El banco de precision del lector (`npm run bench:ocr`) no entra aqui: tarda
+# unos ocho minutos y necesita Chromium en el runner. Se corre a mano antes de
+# tocar el motor. Como hacerlo, en docs/MEDICION_LECTOR.md.

@@ -87,6 +87,16 @@ function notaDocumento(documento) {
 }
 
 function reportar(resultados) {
+  const tipos = new Map();
+  for (const doc of resultados) {
+    tipos.set(doc.tipoDetectado, (tipos.get(doc.tipoDetectado) ?? 0) + 1);
+  }
+  tabla(
+    'TIPO DE DOCUMENTO DETECTADO (los 40 son hojas de vida)',
+    [...tipos.entries()].map(([tipo, n]) => [tipo, String(n), porcentaje(n / resultados.length)]),
+    ['Tipo detectado', 'Docs', '% del banco']
+  );
+
   const campos = new Map();
   for (const doc of resultados) {
     for (const campo of doc.campos) {

@@ -298,16 +298,14 @@ export function normalizarFecha(valor: string): string {
   return '';
 }
 
-function mesValido(m: string): boolean {
-  const n = Number(m);
-  return !isNaN(n) && n >= 1 && n <= 12;
+// Reciben numeros: quien las llama ya convirtio el texto con Number().
+function mesValido(m: number): boolean {
+  return !isNaN(m) && m >= 1 && m <= 12;
 }
-function diaValido(d: string, m: string, y: number): boolean {
-  const dn = Number(d);
-  if (isNaN(dn) || dn < 1 || dn > 31) return false;
-  const mn = Number(m);
-  const maxDias = new Date(y, mn, 0).getDate();
-  return dn <= maxDias;
+function diaValido(d: number, m: number, y: number): boolean {
+  if (isNaN(d) || d < 1 || d > 31) return false;
+  const maxDias = new Date(y, m, 0).getDate();
+  return d <= maxDias;
 }
 
 function numeroEnTexto(palabra: string): number | null {

@@ -33,6 +33,9 @@ export interface ResultadoDocumento {
   plantilla: string;
   perfil: string;
   metodo: ExtractedDocumentData['method'];
+  /** Que creyo el motor que era el documento. Sin esto, un fallo de
+   *  clasificacion se ve identico a un fallo de extraccion. */
+  tipoDetectado: ExtractedDocumentData['detectedType'];
   confianzaMotor: number;
   ms: number;
   caracteres: number;
@@ -199,6 +202,7 @@ async function medirDocumento(registro: {
     plantilla: registro.plantilla,
     perfil: registro.perfil,
     metodo: datos.method,
+    tipoDetectado: datos.detectedType,
     confianzaMotor: datos.confidenceScore,
     ms,
     caracteres: datos.extractedText.length,

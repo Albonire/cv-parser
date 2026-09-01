@@ -346,7 +346,7 @@ export const EmployeesView: React.FC<EmployeesViewProps> = ({
               </button>
               <button
                 onClick={handleReingresar}
-                className="px-4 py-1.5 bg-signal-blue hover:bg-signal-blue text-white rounded text-xs font-semibold"
+                className="px-4 py-1.5 bg-signal-blue hover:bg-rosimar-blue-dark text-white rounded text-xs font-semibold"
               >
                 Confirmar Reingreso
               </button>

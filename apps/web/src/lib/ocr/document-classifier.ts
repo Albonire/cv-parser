@@ -16,6 +16,11 @@ import { DocumentCategory } from '../../types/employee-document';
  * parcialmente degradadas (p. ej. "TÉRMINOACONTRATO", "NIT€D", "MPILEADOR").
  */
 
+/**
+ * Cuenta claves por subcadena a proposito: en las fotos de WhatsApp el OCR pega
+ * las palabras ("TERMINOACONTRATO", "MPILEADOR") y exigir frontera de palabra
+ * aqui hacia que un contrato degradado dejara de reconocerse.
+ */
 function contar(texto: string, claves: string[], pesos?: number[]): number {
   let total = 0;
   for (let i = 0; i < claves.length; i++) {
@@ -25,6 +30,40 @@ function contar(texto: string, claves: string[], pesos?: number[]): number {
   }
   return total;
 }
+
+/**
+ * La prima de servicios, como palabra suelta y no como trozo de otra.
+ *
+ * "Primaria" es el nivel educativo que aparece en casi cualquier hoja de vida
+ * colombiana y contiene "prima", que puntuaba 3 hacia liquidacion. Es la unica
+ * clave del clasificador con esa ambiguedad, asi que se trata aparte en vez de
+ * exigir frontera de palabra en todas: el resto tiene que seguir tolerando las
+ * palabras pegadas del OCR de fotos.
+ */
+const PRIMA_DE_SERVICIOS = /\bprima(?!ria|rio)/;
+
+/**
+ * Senales inequivocas de curriculum. Se calcula ANTES que el resto porque una
+ * hoja de vida menciona de forma natural contratos, primas y funciones, y sin
+ * esta prioridad terminaba clasificada como contrato o como documento suelto.
+ */
+function puntajeHojaDeVida(lower: string): number {
+  return (
+    (lower.includes('hoja de vida') ? 4 : 0) +
+    (lower.includes('curriculum') ? 4 : 0) +
+    (lower.includes('experiencia laboral') ? 3 : 0) +
+    (lower.includes('perfil profesional') ? 3 : 0) +
+    (lower.includes('formacion academica') ? 3 : 0) +
+    (lower.includes('nombres y apellidos') ? 2 : 0) +
+    (lower.includes('datos personales') ? 2 : 0) +
+    (lower.includes('habilidades') ? 2 : 0) +
+    (lower.includes('referencias') ? 1 : 0) +
+    (lower.includes('informacion personal') ? 1 : 0)
+  );
+}
+
+/** Con dos senales fuertes ya no hay duda de que es una hoja de vida. */
+const CV_INEQUIVOCO = 6;
 
 /** Minusculas y sin diacriticos: hace robusta la busqueda ante mayusculas y
  *  acentos del OCR (p. ej. "ATENCIÓN" == "atencion"). */
@@ -43,6 +82,12 @@ function normalizar(texto: string): string {
  */
 export function clasificarHistorial(texto: string): DocumentCategory {
   const lower = normalizar(texto);
+  const cv = puntajeHojaDeVida(lower);
+
+  // Dos o mas encabezados propios de curriculum: es una hoja de vida y no hay
+  // que seguir mirando. Una hoja de vida real dice "contrato a termino fijo" en
+  // su experiencia y "funciones propias del cargo" en cada empleo.
+  if (cv >= CV_INEQUIVOCO) return 'hoja_de_vida';
 
   // Consultas de Seguridad Social / EPS / ARL / pensiones (formulario tipo EPS).
   const salud =
@@ -96,7 +141,7 @@ export function clasificarHistorial(texto: string): DocumentCategory {
     (lower.includes('liquidacion') ? 4 : 0) +
     (lower.includes('liquidacion final') ? 4 : 0) +
     (lower.includes('cesantias') ? 4 : 0) +
-    (lower.includes('prima') ? 3 : 0) +
+    (PRIMA_DE_SERVICIOS.test(lower) ? 3 : 0) +
     (lower.includes('vacaciones') ? 2 : 0) +
     (lower.includes('indemnizacion') ? 3 : 0) +
     (lower.includes('intereses de cesantias') ? 4 : 0) +
@@ -124,22 +169,23 @@ export function clasificarHistorial(texto: string): DocumentCategory {
   if (contrato >= 4) return 'contrato';
 
   // Funciones de cargo: listado de responsabilidades de un puesto.
-  if (lower.includes('funciones') || lower.includes(' punto de venta') || lower.includes('punto de venta')) {
+  //
+  // Tiene que ser un encabezado, no la palabra suelta: "Responsable de las
+  // funciones propias del cargo" aparece en la experiencia de practicamente
+  // cualquier hoja de vida, y con la comprobacion anterior TODAS esas hojas de
+  // vida se clasificaban como documento de funciones y llegaban al formulario
+  // vacias.
+  if (
+    lower.includes('manual de funciones') ||
+    lower.includes('funciones del cargo') ||
+    lower.includes('descripcion de funciones') ||
+    lower.includes('perfil del cargo') ||
+    lower.includes('punto de venta')
+  ) {
     return 'funciones';
   }
 
-  // Hoja de vida / curriculum.
-  const cv =
-    (lower.includes('hoja de vida') ? 4 : 0) +
-    (lower.includes('curriculum') ? 4 : 0) +
-    (lower.includes('experiencia laboral') ? 3 : 0) +
-    (lower.includes('perfil profesional') ? 3 : 0) +
-    (lower.includes('formacion academica') ? 3 : 0) +
-    (lower.includes('nombres y apellidos') ? 2 : 0) +
-    (lower.includes('datos personales') ? 2 : 0) +
-    (lower.includes('habilidades') ? 2 : 0) +
-    (lower.includes('referencias') ? 1 : 0) +
-    (lower.includes('informacion personal') ? 1 : 0);
+  // Hoja de vida con una sola senal.
   if (cv >= 3) return 'hoja_de_vida';
 
   return 'desconocido';

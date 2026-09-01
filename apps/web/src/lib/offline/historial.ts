@@ -44,7 +44,7 @@ export interface HistorialEmpleadoConLineaTiempo extends HistorialEmpleado {
  */
 export async function obtenerHistorialEmpleado(
   cedula: string
-): Promise<HistorialEmpleado | null> {
+): Promise<HistorialEmpleadoConLineaTiempo | null> {
   const limpia = normalizarDocumento(cedula);
   if (!limpia) return null;
 

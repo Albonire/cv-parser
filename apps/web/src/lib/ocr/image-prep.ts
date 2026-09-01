@@ -36,6 +36,73 @@ export interface OpcionesPreproceso {
   corregirInclinacion?: boolean;
 }
 
+/** Giros gruesos que se prueban para detectar la orientacion de la pagina. */
+export type GiroPagina = 0 | 90 | 180 | 270;
+
+/**
+ * Devuelve la imagen girada, en escala de grises y reducida al ancho pedido.
+ *
+ * Se usa para sondear la orientacion: el giro grueso no se puede estimar con el
+ * perfil de proyeccion de `estimarInclinacion()`, que solo cubre mas o menos
+ * cinco grados, y sondear la pagina a resolucion completa costaria mas que el
+ * propio OCR.
+ */
+export async function muestraGirada(
+  fuente: File | Blob | HTMLCanvasElement,
+  grados: GiroPagina,
+  anchoObjetivo: number
+): Promise<HTMLCanvasElement> {
+  const bitmap =
+    fuente instanceof HTMLCanvasElement
+      ? fuente
+      : await cargarImagen(fuente);
+
+  const trasponer = grados === 90 || grados === 270;
+  const anchoOrigen = trasponer ? bitmap.height : bitmap.width;
+  const escala = Math.min(1, anchoObjetivo / anchoOrigen);
+
+  const ancho = Math.round((trasponer ? bitmap.height : bitmap.width) * escala);
+  const alto = Math.round((trasponer ? bitmap.width : bitmap.height) * escala);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = ancho;
+  canvas.height = alto;
+
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return canvas;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, ancho, alto);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.translate(ancho / 2, alto / 2);
+  ctx.rotate((grados * Math.PI) / 180);
+  ctx.drawImage(
+    bitmap,
+    (-bitmap.width * escala) / 2,
+    (-bitmap.height * escala) / 2,
+    bitmap.width * escala,
+    bitmap.height * escala
+  );
+
+  return canvas;
+}
+
+/**
+ * Aplica un giro grueso a la imagen completa, sin reducirla. Devuelve siempre un
+ * Blob para que el resto del preprocesado tenga un solo tipo de entrada.
+ */
+export async function girarImagen(
+  fuente: File | Blob,
+  grados: GiroPagina
+): Promise<File | Blob> {
+  if (grados === 0) return fuente;
+
+  const canvas = await muestraGirada(fuente, grados, Number.MAX_SAFE_INTEGER);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), 'image/png'));
+  return blob ?? fuente;
+}
+
 export async function preprocessImage(
   imageFile: File | Blob,
   opciones: OpcionesPreproceso = {}
@@ -75,7 +142,9 @@ export async function preprocessImage(
   return blob ?? imageFile;
 }
 
-async function cargarImagen(file: File | Blob): Promise<CanvasImageSource & { width: number; height: number }> {
+async function cargarImagen(
+  file: File | Blob
+): Promise<CanvasImageSource & { width: number; height: number }> {
   if (typeof createImageBitmap === 'function') {
     return createImageBitmap(file);
   }

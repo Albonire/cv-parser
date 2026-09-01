@@ -267,8 +267,12 @@ function extraerTelefono(encabezado: LayoutLine[], todas: LayoutLine[], document
   }
 
   for (const linea of encabezado) {
-    if (LABEL_DOCUMENTO.test(linea.text)) continue;
     for (const fragmento of linea.text.split(/[|•·]/)) {
+      // El descarte va por FRAGMENTO, no por renglon. En una hoja de vida el
+      // contacto suele ir todo en una linea, "C.C. 1098234567 | Tel. 318 456
+      // 7821 | correo@...", y descartar el renglon entero por empezar en "C.C."
+      // dejaba sin telefono a la mitad del banco de escaneos.
+      if (LABEL_DOCUMENTO.test(fragmento)) continue;
       const encontrado = buscarTelefono(fragmento, documento);
       if (encontrado) return encontrado;
     }

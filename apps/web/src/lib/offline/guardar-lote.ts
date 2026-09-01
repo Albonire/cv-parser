@@ -7,9 +7,9 @@ import { IdCardFormData } from '../../types/id-card';
 import { HealthFormData } from '../../types/health';
 import { MemorandumItem, MemorandumType } from '../../types/memorandum';
 import { AlertItem } from '../../types/alert';
-import { EmployeeDocumentRecord } from '../../types/employee-document';
+import { DocumentCategory, EmployeeDocumentRecord } from '../../types/employee-document';
 import { guardarLiquidacionDesdeOcr, vincularLiquidacionAlEmpleado } from './liquidacion';
-import { guardarDocumentoExpediente, normalizarDocumento } from './expediente';
+import { construirExpediente, guardarDocumentoExpediente, normalizarDocumento } from './expediente';
 import { clasificarHistorial } from '../ocr/document-classifier';
 import { writeAudit } from '../audit';
 
@@ -28,6 +28,31 @@ import { writeAudit } from '../audit';
  * - El empleado ya debe existir en db.employees (creado previamente).
  * - Cada file en files[] debe corresponder al orden de results[].
  */
+/**
+ * Registra el documento en el expediente del empleado.
+ *
+ * Reusa `construirExpediente`, que es quien sabe rellenar la ficha completa
+ * (nombre y cedula del trabajador, texto, archivo de origen, fecha, confianza,
+ * metodo y la imagen realzada en base64). Las llamadas de este modulo pasaban
+ * un objeto suelto con `file` y `rawData`, campos que la ficha no tiene, y por
+ * eso el proyecto no compilaba.
+ */
+async function registrarEnExpediente(
+  result: ExtractedDocumentData,
+  categoria: DocumentCategory,
+  file: File | undefined,
+  employeeId: string,
+  cedula: string
+): Promise<void> {
+  if (!file) return;
+
+  await guardarDocumentoExpediente({
+    ...(await construirExpediente(result, categoria, file)),
+    employeeId,
+    workerDocumentNumber: cedula,
+  });
+}
+
 export async function guardarLoteEmpleado(input: {
   employee: EmployeeItem;
   cedula: string;
@@ -102,16 +127,7 @@ export async function guardarLoteEmpleado(input: {
         }
 
         // Guardar documento en expediente.
-        if (file) {
-          await guardarDocumentoExpediente({
-            employeeId: employee.id,
-            workerDocumentNumber: limpia,
-            category: 'memorando',
-            file,
-            extractedText: result.extractedText,
-            rawData: memoData,
-          });
-        }
+        await registrarEnExpediente(result, 'memorando', file, employee.id, limpia);
       }
 
       // --- LIQUIDACION ---
@@ -125,16 +141,7 @@ export async function guardarLoteEmpleado(input: {
         }
 
         // Guardar documento en expediente.
-        if (file) {
-          await guardarDocumentoExpediente({
-            employeeId: employee.id,
-            workerDocumentNumber: limpia,
-            category: 'liquidacion',
-            file,
-            extractedText: result.extractedText,
-            rawData: liquidacionData,
-          });
-        }
+        await registrarEnExpediente(result, 'liquidacion', file, employee.id, limpia);
       }
 
       // --- CONTRATO ---
@@ -147,23 +154,19 @@ export async function guardarLoteEmpleado(input: {
             employeeId: employee.id,
           };
           await db.contracts.put(contract);
-          await queueMutation('create', 'contracts', contract.id!, contract);
+          await queueMutation(
+            'create',
+            'contracts',
+            contract.id!,
+            contract as unknown as Record<string, unknown>
+          );
 
-          // Actualizar empleado: activeContract.
-          empleadoActualizado.activeContract = contract.id;
+          // Actualizar empleado: activeContract guarda el contrato, no su id.
+          empleadoActualizado.activeContract = contract;
           hayCambios = true;
 
           // Guardar documento en expediente.
-          if (file) {
-            await guardarDocumentoExpediente({
-              employeeId: employee.id,
-              workerDocumentNumber: limpia,
-              category: 'contrato',
-              file,
-              extractedText: result.extractedText,
-              rawData: contractData,
-            });
-          }
+          await registrarEnExpediente(result, 'contrato', file, employee.id, limpia);
         }
       }
 
@@ -176,24 +179,15 @@ export async function guardarLoteEmpleado(input: {
             id: `idcard-${Date.now()}-${i}`,
           };
           await db.idCards.put(idCard);
-          await queueMutation('create', 'idCards', idCard.id, idCard as unknown as Record<string, unknown>);
+          await queueMutation('create', 'idCards', idCard.id ?? '', idCard as unknown as Record<string, unknown>);
 
           // Guardar documento en expediente.
-          if (file) {
-            await guardarDocumentoExpediente({
-              employeeId: employee.id,
-              workerDocumentNumber: limpia,
-              category: 'cedula',
-              file,
-              extractedText: result.extractedText,
-              rawData: idCardData,
-            });
-          }
+          await registrarEnExpediente(result, 'cedula', file, employee.id, limpia);
         }
       }
 
       // --- EPS / SALUD ---
-      if (result.healthData || categoria === 'eps') {
+      if (result.healthData || categoria === 'salud') {
         const healthData = result.healthData;
         if (healthData) {
           const health: HealthFormData = {
@@ -201,23 +195,19 @@ export async function guardarLoteEmpleado(input: {
             id: `health-${Date.now()}-${i}`,
           };
           await db.healthAffiliations.put(health);
-          await queueMutation('create', 'healthAffiliations', health.id, health as unknown as Record<string, unknown>);
+          await queueMutation(
+            'create',
+            'healthAffiliations',
+            health.id ?? '',
+            health as unknown as Record<string, unknown>
+          );
 
           // Actualizar empleado: healthData.
           empleadoActualizado.healthData = health;
           hayCambios = true;
 
           // Guardar documento en expediente.
-          if (file) {
-            await guardarDocumentoExpediente({
-              employeeId: employee.id,
-              workerDocumentNumber: limpia,
-              category: 'eps',
-              file,
-              extractedText: result.extractedText,
-              rawData: healthData,
-            });
-          }
+          await registrarEnExpediente(result, 'salud', file, employee.id, limpia);
         }
       }
 
@@ -257,20 +247,11 @@ export async function guardarLoteEmpleado(input: {
         }
 
         // Guardar documento en expediente.
-        if (file) {
-          await guardarDocumentoExpediente({
-            employeeId: employee.id,
-            workerDocumentNumber: limpia,
-            category: 'funciones',
-            file,
-            extractedText: result.extractedText,
-            rawData: funcionesData,
-          });
-        }
+        await registrarEnExpediente(result, 'funciones', file, employee.id, limpia);
       }
     } catch (err) {
       console.error(`Error procesando documento ${i} (${result.fileName}):`, err);
-      await writeAudit('error', 'guardar_lote', employee.id, `Fallo al procesar ${result.fileName}: ${err}`);
+      await writeAudit('other', 'guardar_lote', employee.id, `Fallo al procesar ${result.fileName}: ${err}`);
       // Continua con el siguiente documento en lugar de abortar.
     }
   }
