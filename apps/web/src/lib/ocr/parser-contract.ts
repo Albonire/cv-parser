@@ -624,9 +624,8 @@ export function normalizarFecha(valor: string): string {
     if (ddmm[3].length === 2) y += 2000;
     const m = Number(ddmm[2]);
     const d = Number(ddmm[1]);
-    if (mesValido(m) && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    }
+    const iso = fechaIso(y, m, d);
+    if (iso) return iso;
   }
 
   // YYYY/MM/DD o YYYY-MM-DD (solo cuando el bloque de 4 digitos va primero).
@@ -635,9 +634,8 @@ export function normalizarFecha(valor: string): string {
     const y = Number(ymd[1]);
     const m = Number(ymd[2]);
     const d = Number(ymd[3]);
-    if (mesValido(m) && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    }
+    const iso = fechaIso(y, m, d);
+    if (iso) return iso;
   }
 
   // "primero de septiembre de 2023" / "1 de septiembre de 2023"
@@ -648,8 +646,9 @@ export function normalizarFecha(valor: string): string {
     const dia = numeroEnTexto(textual[1]);
     const mes = indiceMes(textual[2]);
     const y = Number(textual[3]);
-    if (dia && mes && diaValido(dia, mes, y)) {
-      return `${y}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    if (dia && mes) {
+      const iso = fechaIso(y, mes, dia);
+      if (iso) return iso;
     }
   }
 
@@ -662,12 +661,41 @@ export function normalizarFecha(valor: string): string {
     const d = Number(ddmmyyyy[1]);
     const m = indiceMes(ddmmyyyy[2]);
     const y = Number(ddmmyyyy[3]);
-    if (m && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (m) {
+      const iso = fechaIso(y, m, d);
+      if (iso) return iso;
     }
   }
 
   return '';
+}
+
+/** Un contrato laboral no puede estar fechado fuera de este rango. */
+const ANIO_MINIMO = 1900;
+const ANIO_MAXIMO = 2100;
+
+/**
+ * Corrige el digito de las milesimas cuando el OCR lo ha leido mal: en CT_04 la
+ * fecha de inicio salia como "7025-01-02" porque el 2 se leyo como 7. De las
+ * dos correcciones posibles (1xxx y 2xxx) solo una puede caer dentro del rango,
+ * porque los tramos no se solapan, asi que no hay ambiguedad que resolver. Si
+ * ninguna cabe se devuelve null y el campo se queda vacio, que es preferible a
+ * guardar una fecha inventada.
+ */
+function corregirAnio(anio: number): number | null {
+  if (anio >= ANIO_MINIMO && anio <= ANIO_MAXIMO) return anio;
+  if (!Number.isInteger(anio) || anio < 1000 || anio > 9999) return null;
+  const posibles = [1000 + (anio % 1000), 2000 + (anio % 1000)].filter(
+    (candidato) => candidato >= ANIO_MINIMO && candidato <= ANIO_MAXIMO
+  );
+  return posibles.length === 1 ? posibles[0] : null;
+}
+
+/** Compone la fecha ISO validando anio, mes y dia. Cadena vacia si no cuadra. */
+function fechaIso(anio: number, mes: number, dia: number): string {
+  const y = corregirAnio(anio);
+  if (y === null || !mesValido(mes) || !diaValido(dia, mes, y)) return '';
+  return `${y}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 }
 
 // Reciben numeros: quien las llama ya convirtio el texto con Number().
