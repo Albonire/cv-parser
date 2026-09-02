@@ -1,4 +1,5 @@
 import { ContractFormData, ContractType, PaymentFrequency } from '../../types/contract';
+import { reconstruirCorreoOcr } from './correo-ocr';
 import { DocumentLayout, layoutFromPlainText } from './layout';
 import {
   findLabeledValue,
@@ -196,7 +197,9 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     limpiarValor(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_DOMICILIO_TRABAJADOR, { useFuzzy: false }))
       ?? '';
   const workerEmail =
-    limpiarValor(extraerCorreo(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CORREO_TRABAJADOR))) ?? '';
+    limpiarValor(extraerCorreo(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CORREO_TRABAJADOR))) ??
+    correoEnBloque(bloqueTrabajador, employerEmail) ??
+    '';
 
   // 4. Cargo / Posicion
   const position =
@@ -831,16 +834,34 @@ function limpiarNit(valor: string | null): string | undefined {
     .trim();
 }
 
+/**
+ * Respaldo cuando la etiqueta no se reconoce. El OCR de un escaneo se come una
+ * tilde y "Correo electronico del trabajador" pasa a "Correo electrenico del
+ * trabajador", que ya no casa con ninguna etiqueta. La direccion, en cambio,
+ * sigue ahi: se busca en el bloque de la persona, descartando la del empleador
+ * para no repetirla cuando el acotado por bloques no ha podido separar los dos.
+ */
+function correoEnBloque(bloque: DocumentLayout, excluir: string): string | null {
+  // Renglon a renglon, no de una vez: la del empleador suele aparecer antes que
+  // la del trabajador, y parar en la primera dejaria el campo vacio.
+  for (const linea of bloque.lines) {
+    const directo = linea.text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i)?.[0];
+    // Sin etiqueta que la respalde, la reconstruccion va en modo estricto.
+    const candidato = directo ?? reconstruirCorreoOcr(linea.text, { estricto: true });
+    if (!candidato) continue;
+    if (candidato.toLowerCase() !== excluir.toLowerCase()) return candidato;
+  }
+  return null;
+}
+
 /** Extrae una direccion de correo del valor etiquetado (null si no hay correo). */
 function extraerCorreo(valor: string | null): string | null {
   if (!valor) return null;
   const match = valor.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i);
   if (match) return match[0];
-  // El OCR de fotos lee "@" como "Q" cuando la resolucion es baja.
-  const corregido = valor.replace(/\b(\w+)\s+Q\s*/i, '$1@');
-  const matchCorregido = corregido.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i);
-  if (matchCorregido) return matchCorregido[0];
-  return valor.trim().includes('@') ? valor.trim() : null;
+  // Sin arroba legible: el OCR la habra leido como otro glifo. La
+  // reconstruccion es la misma que usa la ruta de hojas de vida.
+  return reconstruirCorreoOcr(valor) || null;
 }
 
 /** Cantidad de meses completos entre dos fechas ISO (minimo 1 si hay espacios). */
