@@ -174,7 +174,10 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     limpiarValor(extraerCorreo(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_CORREO_EMPLEADOR))) ?? '';
 
   // 2. Trabajador, Documento y datos personales del trabajador
-  const workerName = extraerNombre(documento, ETIQUETAS_TRABAJADOR, documento) ?? '';
+  const workerName =
+    extraerNombre(documento, ETIQUETAS_TRABAJADOR, documento) ??
+    nombreSobreLosDatos(documento, ANCLAS_TRABAJADOR) ??
+    '';
   const workerDocumentRaw = extraerCedulaTrabajador(bloqueTrabajador, documento);
   let workerDocumentNumber = workerDocumentRaw
     ? workerDocumentRaw.replace(/[.\s-]/g, '').replace(/\D/g, '')
@@ -757,6 +760,69 @@ function esValorPreaviso(valor: string): boolean {
 }
 
 /**
+ * Una direccion colombiana, para no confundirla con un nombre. En CT_12 el
+ * respaldo devolvia "AV 68 x 40-15" como nombre del trabajador: tiene letras y
+ * no lleva ninguna palabra de etiqueta, asi que pasaba todos los filtros.
+ */
+function pareceDireccion(valor: string): boolean {
+  return (
+    /#/.test(valor) ||
+    /^(?:cl|cll|calle|cra|kra|carrera|av|avenida|dg|diagonal|tv|transversal|mz|manzana)\b/i.test(
+      valor.trim()
+    )
+  );
+}
+
+/**
+ * Rotulos que solo pueden pertenecer al trabajador. Sirven de ancla cuando su
+ * propia etiqueta ("Trabajador:") no se ha leido.
+ */
+const ANCLAS_TRABAJADOR = [
+  ...ETIQUETAS_NACIMIENTO,
+  ...ETIQUETAS_DOMICILIO_TRABAJADOR,
+  ...ETIQUETAS_CORREO_TRABAJADOR,
+].map(normalize);
+
+/** Un nombre de persona: dos o mas palabras de letras, sin cifras ni rotulos. */
+function pareceNombreDePersona(valor: string): boolean {
+  const limpio = valor.trim();
+  if (limpio.length < 5 || limpio.length > 60) return false;
+  if (/\d/.test(limpio) || /[:;#]/.test(limpio) || pareceDireccion(limpio)) return false;
+  const palabras = limpio.split(/\s+/);
+  const deLetras = palabras.filter((p) => /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.'-]{2,}$/.test(p));
+  return deLetras.length >= 2 && deLetras.length === palabras.length;
+}
+
+/**
+ * En una tabla el rotulo puede no leerse y dejar el valor huerfano: en CT_06 el
+ * renglon del trabajador salio solo como "MARTHA LUCIA CAICEDO BERMUDEZ", sin
+ * la etiqueta "Trabajador:", y la unica linea que contenia esa palabra era la
+ * del preaviso ("Trabajador: 30 dias. Empleador: 30 dias").
+ *
+ * Cuando eso pasa, el nombre es el renglon sin etiqueta que esta justo encima
+ * de los datos de esa persona, que si conservan su rotulo. Se mira solo dos
+ * renglones hacia arriba para no cruzar a los datos del empleador.
+ */
+function nombreSobreLosDatos(documento: DocumentLayout, anclas: string[]): string | null {
+  const lines = documento.lines;
+  // La coincidencia exige frontera de palabra: sin ella, "domicilio del
+  // empleado" casaria con el renglon "Domicilio del empleador" y el ancla se
+  // iria al bloque de la empresa.
+  const casaAncla = (texto: string, ancla: string): boolean => {
+    const norm = normalize(texto);
+    return norm.startsWith(ancla) && !/[a-z0-9]/.test(norm.charAt(ancla.length));
+  };
+  const indice = lines.findIndex((l) => anclas.some((a) => casaAncla(l.text, a)));
+  if (indice <= 0) return null;
+
+  for (let i = indice - 1; i >= 0 && i >= indice - 2; i--) {
+    const valor = limpiarValor(lines[i].text);
+    if (valor && pareceNombreDePersona(valor)) return valor;
+  }
+  return null;
+}
+
+/**
  * Extrae un nombre de persona o empresa evitando la fila de preaviso. Usa el
  * mismo `valorDeEtiqueta` pero, si lo que arroja es un valor de duracion de la
  * fila de preaviso, espera a la ETIQUETA como renglon propio y toma el renglon
@@ -769,7 +835,9 @@ function extraerNombre(
   bloque: DocumentLayout
 ): string | null {
   const habitual = limpiarValor(valorDeEtiqueta(bloque, etiquetas));
-  if (habitual && !esValorPreaviso(habitual)) return habitual;
+  const utilizable = (valor: string | null | undefined): valor is string =>
+    !!valor && !esValorPreaviso(valor) && !pareceDireccion(valor);
+  if (utilizable(habitual)) return habitual;
 
   // Respaldo: etiqueta en un renglon propio y el nombre en el siguiente.
   const wanted = etiquetas.map(normalize).filter((e) => e.length >= 3);
@@ -789,11 +857,15 @@ function extraerNombre(
       // que no toca.
       if (!/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,}/.test(valor)) continue;
       if (/\b(?:fecha|correo|domicilio|identificacion|cargo|salario|forma|tipo|periodo|preaviso|lugar)\b/i.test(valor)) continue;
+      if (pareceDireccion(valor)) continue;
       return valor;
     }
   }
 
-  return habitual || null;
+  // Si lo unico que habia era la fila de preaviso o un domicilio, no se
+  // devuelve: un nombre de trabajador que dice "30 dias. Empleador: 30 dias" es
+  // un dato falso, y quien revisa un lote puede no verlo. Vacio se ve.
+  return utilizable(habitual) ? habitual : null;
 }
 
 /**
