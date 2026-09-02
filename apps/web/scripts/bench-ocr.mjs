@@ -19,8 +19,18 @@ import { cargarPlaywright, rutaChromium } from './navegador.mjs';
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..');
 const ESCANEOS = path.join(RAIZ, 'test-scans');
-const VERDAD = path.join(RAIZ, 'src', 'lib', 'ocr', '__fixtures__', 'ground-truth-escaneados.json');
-const INFORME = path.join(ESCANEOS, 'resultados-bench.json');
+/** Banco a medir: hojas de vida por defecto, contratos con `--banco=contratos`. */
+const BANCO = (process.argv.find((a) => a.startsWith('--banco=')) ?? '').split('=')[1] || 'escaneados';
+const VERDAD = path.join(
+  RAIZ,
+  'src',
+  'lib',
+  'ocr',
+  '__fixtures__',
+  `ground-truth-${BANCO === 'contratos' ? 'contratos' : 'escaneados'}.json`
+);
+
+const INFORME = path.join(ESCANEOS, `resultados-bench-${BANCO}.json`);
 const PUERTO = 5199;
 /** Un escaneo de dos paginas con OCR puede tardar bastante mas que uno de una. */
 const TIEMPO_MAXIMO_DOCUMENTO = 240_000;
@@ -182,7 +192,7 @@ async function main() {
   }
 
   const verdad = JSON.parse(fs.readFileSync(VERDAD, 'utf8'));
-  const filtro = process.argv[2];
+  const filtro = process.argv.slice(2).find((a) => !a.startsWith('--'));
   const documentos = filtro
     ? verdad.documentos.filter((d) => d.archivo.includes(filtro))
     : verdad.documentos;

@@ -14,6 +14,8 @@
     "gen:scans": "node scripts/generar-cv-escaneados.mjs",
     "gen:scans:fotos": "node scripts/generar-cv-fotos-usuario.mjs",
     "bench:ocr": "npm run copy:ocr && node scripts/bench-ocr.mjs",
+    "gen:contratos": "node scripts/generar-contratos-escaneados.mjs",
+    "bench:contratos": "npm run copy:ocr && node scripts/bench-ocr.mjs --banco=contratos",
     "predev": "npm run copy:ocr",
     "prebuild": "npm run copy:ocr",
     "pretest": "npm run copy:ocr"

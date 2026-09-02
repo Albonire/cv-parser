@@ -85,6 +85,71 @@ const ETIQUETAS_NACIMIENTO = [
   'birth date', 'date of birth',
 ];
 
+/**
+ * Etiquetas que abren el bloque del trabajador. En el contrato en papel de
+ * Rosimar la tabla repite "Identificación:" y "Domicilio:" para el empleador y
+ * para el trabajador, asi que sin acotar el ambito el parser se queda siempre
+ * con el primero, que es el de la empresa: la cedula del trabajador salia con
+ * el NIT y su correo con el corporativo.
+ */
+const MARCADORES_TRABAJADOR = ['trabajador', 'empleado', 'contratista', 'worker', 'employee'];
+
+/**
+ * Parte la maquetacion en el bloque del empleador y el del trabajador por el
+ * renglon que abre los datos del trabajador. Si no hay marcador, los dos
+ * ambitos son el documento entero y se comporta como antes.
+ */
+function ambitos(documento: DocumentLayout): {
+  empleador: DocumentLayout;
+  trabajador: DocumentLayout;
+} {
+  const marcador = documento.lines.find((linea) => {
+    const norm = normalize(linea.text.replace(/[:.]\s*$/, '').trim());
+    return MARCADORES_TRABAJADOR.some((m) => norm === m || norm.startsWith(`${m} `));
+  });
+
+  if (!marcador) return { empleador: documento, trabajador: documento };
+
+  // El corte va por GEOMETRIA, no por posicion en el array: cuando se detectan
+  // dos columnas, los renglones vienen ordenados columna por columna, asi que
+  // partir por indice dejaria todos los valores de la derecha fuera del bloque
+  // del empleador.
+  const recortar = (lines: typeof documento.lines): DocumentLayout => ({
+    ...documento,
+    lines,
+    text: lines.map((l) => l.text).join('\n'),
+  });
+
+  const antes = documento.lines.filter(
+    (l) => l.page < marcador.page || (l.page === marcador.page && l.y < marcador.y)
+  );
+  const desde = documento.lines.filter(
+    (l) => l.page > marcador.page || (l.page === marcador.page && l.y >= marcador.y)
+  );
+
+  // Si el marcador esta al principio no hay bloque de empleador util.
+  return {
+    empleador: antes.length >= 2 ? recortar(antes) : documento,
+    trabajador: desde.length >= 2 ? recortar(desde) : documento,
+  };
+}
+
+
+/**
+ * Busca la etiqueta primero en su bloque (empleador o trabajador) y, si no
+ * aparece, en el documento entero. Acotar solo desempata cuando la misma
+ * etiqueta se repite; nunca puede hacer que se pierda un campo que antes se
+ * encontraba.
+ */
+function valorEnBloque(
+  bloque: DocumentLayout,
+  documento: DocumentLayout,
+  etiquetas: string[],
+  opciones?: { useFuzzy?: boolean }
+): string | null {
+  return valorDeEtiqueta(bloque, etiquetas, opciones) ?? valorDeEtiqueta(documento, etiquetas, opciones);
+}
+
 export function parseContractText(text: string, layout?: DocumentLayout): ContractFormData {
   const documento = layout ?? layoutFromPlainText(text);
   const lineas = documento.lines.map((l) => l.text);
@@ -93,24 +158,25 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
   // deteccion de tipo/pago (que son de barrido) y se usan las etiquetas para
   // los campos etiquetados (con valor en la misma linea).
   const todas = lineas.join('\n');
+  const { empleador: bloqueEmpleador, trabajador: bloqueTrabajador } = ambitos(documento);
 
   // 1. Empleador
-  const employerName = limpiarValor(valorDeEtiqueta(documento, ETIQUETAS_EMPLEADOR)) ?? '';
-  const employerNit = limpiarNit(valorDeEtiqueta(documento, ETIQUETAS_NIT)) ?? '';
+  const employerName = limpiarValor(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_EMPLEADOR)) ?? '';
+  const employerNit = limpiarNit(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_NIT)) ?? '';
   const employerAddress =
-    limpiarValor(valorDeEtiqueta(documento, ETIQUETAS_DOMICILIO_EMPLEADOR, { useFuzzy: false })) ?? '';
+    limpiarValor(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_DOMICILIO_EMPLEADOR, { useFuzzy: false })) ?? '';
   const employerEmail =
-    limpiarValor(extraerCorreo(valorDeEtiqueta(documento, ETIQUETAS_CORREO_EMPLEADOR))) ?? '';
+    limpiarValor(extraerCorreo(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_CORREO_EMPLEADOR))) ?? '';
 
   // 2. Trabajador, Documento y datos personales del trabajador
   const workerName = limpiarValor(valorDeEtiqueta(documento, ETIQUETAS_TRABAJADOR)) ?? '';
-  const workerDocumentRaw = valorDeEtiqueta(documento, ETIQUETAS_CEDULA);
+  const workerDocumentRaw = valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CEDULA);
   let workerDocumentNumber = workerDocumentRaw
     ? workerDocumentRaw.replace(/[.\s-]/g, '').replace(/\D/g, '')
     : '';
   if (!workerDocumentNumber) workerDocumentNumber = buscarCedulaGenerica(todas) ?? '';
   const workerDateOfBirth = limpiarValor(
-    valorDeEtiqueta(documento, ETIQUETAS_NACIMIENTO, { useFuzzy: false })
+    valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_NACIMIENTO, { useFuzzy: false })
   )?.trim();
   const workerDateOfBirthIso = workerDateOfBirth
     ? normalizarFecha(workerDateOfBirth)
@@ -123,10 +189,10 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
         return enProsa ? normalizarFecha(enProsa[1]) : '';
       })();
   const workerAddress =
-    limpiarValor(valorDeEtiqueta(documento, ETIQUETAS_DOMICILIO_TRABAJADOR, { useFuzzy: false }))
+    limpiarValor(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_DOMICILIO_TRABAJADOR, { useFuzzy: false }))
       ?? '';
   const workerEmail =
-    limpiarValor(extraerCorreo(valorDeEtiqueta(documento, ETIQUETAS_CORREO_TRABAJADOR))) ?? '';
+    limpiarValor(extraerCorreo(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CORREO_TRABAJADOR))) ?? '';
 
   // 4. Cargo / Posicion
   const position =
@@ -223,12 +289,10 @@ function valorDeEtiqueta(
   const directo = findLabeledValue(lineas, etiquetas);
   if (directo) return directo;
 
-  // El valor puede ocupar el renglon siguiente a la etiqueta (escaneos que
-  // parten el par "CARGO" / "AUXILIAR DE ASEO" en dos lineas).
-  const continua = findLabeledValueOrNextLine(lineas, etiquetas, { maxValueWords: 12 });
-  if (continua) return continua;
-
-  // Fallback para tablas de dos columnas: etiqueta y valor en lineas distintas.
+  // Tabla de dos columnas: la GEOMETRIA va antes que el heuristico de renglon
+  // siguiente. Cuando hay columnas, los renglones vienen ordenados columna por
+  // columna, asi que "el siguiente" es la etiqueta de la fila de abajo y no el
+  // valor: preguntando primero por la contraparte geometrica se acierta.
   const wanted = etiquetas.map(normalize);
   for (const linea of documento.lines) {
     if (linea.column < 0 || !lineaCoincideEtiqueta(linea.text, wanted)) continue;
@@ -237,6 +301,11 @@ function valorDeEtiqueta(
       return par.text;
     }
   }
+
+  // El valor puede ocupar el renglon siguiente a la etiqueta (escaneos que
+  // parten el par "CARGO" / "AUXILIAR DE ASEO" en dos lineas).
+  const continua = findLabeledValueOrNextLine(lineas, etiquetas, { maxValueWords: 12 });
+  if (continua) return continua;
 
   // Etiqueta degradada por el OCR de fotos de WhatsApp.
   if (opciones?.useFuzzy !== false) {

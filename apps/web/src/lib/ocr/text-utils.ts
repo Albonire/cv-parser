@@ -146,11 +146,13 @@ export function findLabeledValueOrNextLine(
 
   for (let i = 0; i < lines.length; i++) {
     const rotulo = stripBullets(lines[i]).replace(/[:.]$/, '').trim();
-    if (wordCount(rotulo) > 4) continue;
+    if (wordCount(rotulo) > 6) continue;
     const norm = normalize(rotulo);
-    const esEtiqueta = wanted.some(
-      (w) => norm === w || norm.startsWith(`${w} `) || norm.endsWith(` ${w}`) || norm.includes(` ${w} `)
-    );
+    // El renglon tiene que ser SOLO la etiqueta. Con `startsWith` a secas,
+    // "NIT No. 901.167.955-4" pasaba por ser la etiqueta "nit" y el parser se
+    // llevaba como valor el renglon siguiente, que es la etiqueta de la fila de
+    // abajo. Es el desplazamiento de una fila que se veia en los contratos.
+    const esEtiqueta = wanted.some((w) => norm === w);
     if (!esEtiqueta) continue;
 
     for (let j = i + 1; j < lines.length && j < i + 3; j++) {
@@ -159,6 +161,11 @@ export function findLabeledValueOrNextLine(
       // Si la linea siguiente es otra etiqueta ("Etiqueta: valor"), no es el
       // valor y se corta la busqueda de esa etiqueta.
       if (splitLabeledPairs(valor).length > 0) continue;
+      // Tampoco vale si el renglon siguiente es a su vez una etiqueta suelta
+      // ("Domicilio del empleador", "TRABAJADOR:"): en una tabla de dos columnas
+      // el renglon de al lado suele ser la etiqueta de la fila siguiente, no el
+      // valor de esta.
+      if (/[:;]\s*$/.test(valor)) continue;
       const valorNorm = normalize(valor);
       if (wanted.some((w) => valorNorm.includes(w))) continue;
       if (wordCount(valor) > maxWords) continue;
@@ -203,6 +210,11 @@ export function findLabeledValueFuzzy(
       const valor = lines[j].trim();
       if (!valor || valor.length < 2 || valor.length > 90) continue;
       if (splitLabeledPairs(valor).length > 0) continue;
+      // Tampoco vale si el renglon siguiente es a su vez una etiqueta suelta
+      // ("Domicilio del empleador", "TRABAJADOR:"): en una tabla de dos columnas
+      // el renglon de al lado suele ser la etiqueta de la fila siguiente, no el
+      // valor de esta.
+      if (/[:;]\s*$/.test(valor)) continue;
       const valorNorm = normalize(valor);
       if (wanted.some((w) => valorNorm.includes(w))) continue;
       if (wordCount(valor) > maxWords) continue;

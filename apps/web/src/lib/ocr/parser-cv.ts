@@ -6,7 +6,6 @@ import { extraerExperiencia } from './fields/experience';
 import { extraerEducacion } from './fields/education';
 import { extraerCertificaciones, extraerIdiomas, extraerReferencias, extraerResumen } from './fields/extras';
 import { extractSkillsFromText } from './skills-taxonomy';
-import { validarDatosPersonales, validarExperiencia, validarEducacion } from './fields/field-validation';
 
 /**
  * Parser determinista de hojas de vida.

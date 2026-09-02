@@ -11,12 +11,22 @@ const SESSION_KEY = 'rosimar-session';
 const CLAVE_HASH_KEY = 'rosimar-clave-admin-hash';
 
 /**
- * Contraseña inicial del administrador. El sistema funciona 100% en el
- * navegador (costo $0, sin servidor), así que la autenticación también es
- * local: la contraseña se guarda como hash (SHA-256) en localStorage y se
- * cambia desde Configuracion.
+ * Aviso importante sobre esta "autenticación".
+ *
+ * El sistema corre 100% en el navegador, sin servidor, así que esto NO es un
+ * control de seguridad: es un seguro contra ediciones accidentales. Quien abra
+ * las herramientas del navegador puede reescribir el hash de `localStorage` y
+ * entrar igual. No protege los datos frente a alguien que quiera saltárselo.
+ *
+ * La autorización de verdad llega cuando se conecte Supabase Auth: las
+ * políticas RLS por rol ya están escritas en
+ * `supabase/migrations/002_sync_schema.sql` y se aplican en la base de datos,
+ * que es donde no se pueden burlar.
+ *
+ * Antes había aquí una contraseña por defecto, que además se imprimía en la
+ * pantalla de acceso. Ahora la define el administrador en el primer arranque.
  */
-export const CLAVE_ADMIN_DEFAULT = 'Rosimar2026';
+export const HAY_CLAVE_DEFINIDA_KEY = CLAVE_HASH_KEY;
 
 function hashPlano(texto: string): string {
   let h = 5381;
@@ -50,11 +60,18 @@ export function hashClaveGuardada(): string | null {
   }
 }
 
+/** Si aun no se ha definido ninguna clave, el primer acceso la establece. */
+export function requiereDefinirClave(): boolean {
+  return hashClaveGuardada() === null;
+}
+
 export async function verificarClaveAdmin(clave: string): Promise<boolean> {
   if (!clave) return false;
   const guardada = hashClaveGuardada();
-  const esperado = guardada ?? (await hashDeClave(CLAVE_ADMIN_DEFAULT));
-  return (await hashDeClave(clave)) === esperado;
+  // Sin clave definida no se puede verificar nada: la interfaz debe pedir que
+  // se establezca en vez de aceptar una por defecto conocida.
+  if (guardada === null) return false;
+  return (await hashDeClave(clave)) === guardada;
 }
 
 export async function cambiarClaveAdmin(nueva: string): Promise<void> {

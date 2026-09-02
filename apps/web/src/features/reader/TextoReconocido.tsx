@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { normalize } from '../../lib/ocr/text-utils';
 
 /**
  * Bloque de texto reconocido por el OCR.
@@ -60,8 +61,13 @@ export const TextoReconocido: React.FC<TextoReconocidoProps> = ({
     if (!contenido) return [];
     return contenido.split('\n').map((raw, i) => {
       const linea = raw.replace(/\s+$/, '');
+      // Se compara sin tildes: los patrones estan escritos sin diacriticos y
+      // "FORMACIÓN ACADÉMICA" -- que es como se escribe de verdad y como llega
+      // de un PDF o un Word -- no casaba, mientras que la version sin tildes del
+      // OCR si. `normalize` es la misma funcion que usa el motor.
+      const comparable = normalize(linea);
       const coincidencia = PATRONES_ENCABEZADOS.find(
-        (p) => p.regex.test(linea) && linea.length <= 60
+        (p) => p.regex.test(comparable) && linea.length <= 60
       );
       return {
         n: i + 1,

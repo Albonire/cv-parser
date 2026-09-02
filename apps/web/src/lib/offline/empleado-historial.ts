@@ -381,9 +381,14 @@ export async function recalcularEstadosEmpleados(): Promise<void> {
       continue;
     }
 
-    // Activo: si hay liquidacion o renuncia registrada, deja de serlo.
+    // Activo: si hay liquidacion o renuncia registrada, deja de serlo, PERO solo
+    // si esa salida es anterior a la fecha de ingreso vigente. Sin esta
+    // comprobacion, un empleado readmitido volvia a `inactivo` en CADA arranque,
+    // pisando la correccion manual del administrador.
     if (salidas.length > 0 || evidenciaDocs.length > 0) {
       const salida = derivarSalida(salidas, evidenciaDocs);
+
+      if (esReingresoPosterior(emp.hireDate, salida.fecha)) continue;
       const actualizado: EmployeeItem = {
         ...emp,
         status: 'inactivo',
@@ -399,7 +404,8 @@ export async function recalcularEstadosEmpleados(): Promise<void> {
 
 interface SalidaInferida {
   fecha?: string;
-  razon: TerminationReason;
+  /** Ausente cuando la evidencia no dice POR QUE salio: lo confirma una persona. */
+  razon?: TerminationReason;
 }
 
 /** Deriva fecha y razon de salida desde la liquidacion o renuncia mas reciente. */
@@ -413,10 +419,10 @@ function derivarSalida(
       (a, b) =>
         new Date(b.fechaRetiro || 0).getTime() - new Date(a.fechaRetiro || 0).getTime()
     )[0];
-    return {
-      fecha: ultima.fechaRetiro || undefined,
-      razon: 'terminacion_unilateral_empleador',
-    };
+    // La razon NO se deduce de que exista una liquidacion: tambien se liquida
+    // cuando la persona renuncia, y en Colombia esa distincion tiene efectos
+    // legales. Si no consta, se deja vacia para que la confirme una persona.
+    return { fecha: ultima.fechaRetiro || undefined, razon: undefined };
   }
 
   // Siguiente: renuncia mas reciente, con la fecha del texto del documento.
@@ -427,5 +433,17 @@ function derivarSalida(
     return { fecha: fechaEnTexto(renuncias[0].extractedText), razon: 'renuncia' };
   }
 
-  return { razon: 'terminacion_unilateral_empleador' };
+  return { razon: undefined };
+}
+
+/**
+ * La ficha se readmitio despues de la salida documentada: la evidencia de
+ * salida es historica y no debe volver a marcar al empleado como inactivo.
+ */
+function esReingresoPosterior(hireDate: string | undefined, fechaSalida?: string): boolean {
+  if (!hireDate || !fechaSalida) return false;
+  const ingreso = new Date(hireDate).getTime();
+  const salida = new Date(fechaSalida).getTime();
+  if (Number.isNaN(ingreso) || Number.isNaN(salida)) return false;
+  return ingreso > salida;
 }
