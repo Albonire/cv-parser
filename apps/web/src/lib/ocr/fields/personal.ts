@@ -7,6 +7,7 @@ import { findLabeledValueOrNextLine } from '../text-utils';
 import { FECHA_SUELTA } from './dates';
 import { buscarTelefono } from './phone';
 import { repartirNombre } from './nombres';
+import { DOMINIOS_CONOCIDOS, reconstruirCorreoOcr } from '../correo-ocr';
 
 const ETIQUETAS = {
   nombres: ['nombres', 'nombre', 'nombre completo', 'first name', 'name', 'given names'],
@@ -208,40 +209,6 @@ const PATRON_CORREO = /[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[a-zA-Z]/;
 const PATRON_EMAIL_ALTERNATIVO =
   /[a-zA-Z0-9_.+-]+[\s\.@-]+[a-zA-Z0-9-]+[\s\.]+[a-zA-Z0-9-.]+\.[a-zA-Z]{2,}/i;
 
-/**
- * Glifos con los que el OCR confunde la arroba. Medido sobre el banco de
- * escaneos: de 40 documentos, 20 se quedaban sin correo y en todos los casos
- * revisados la arroba se habia leido como otra cosa
- * (`martha.caicedoOQ correo.com`, `monica.salazarO correo.com`,
- * `demurilloGhotmail.com`, `ferando.medinaElogistica.co`).
- *
- * El repuesto es deterministico y esta acotado: solo se acepta cuando alrededor
- * hay la forma inconfundible de una direccion, usuario y dominio con extension.
- */
-const PATRON_CORREO_ROTO =
-  /([a-zA-Z0-9_.+-]{2,})[\s]?[@aeocgqCGOQ0©()]{1,2}[\s]?([a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})?)\b/;
-
-/** Dominios frecuentes: si el texto trae uno, la reconstruccion es casi segura. */
-const DOMINIOS_CONOCIDOS =
-  /(gmail|hotmail|outlook|yahoo|correo|live|icloud|protonmail)\.[a-z]{2,}/i;
-
-function reconstruirCorreo(texto: string): string {
-  const roto = texto.match(PATRON_CORREO_ROTO);
-  if (!roto) return '';
-
-  const usuario = roto[1].replace(/[\s]/g, '');
-  const dominio = roto[2].replace(/[\s]/g, '');
-
-  // El usuario tiene que parecer un usuario y no el final de una frase.
-  if (!/[a-zA-Z]/.test(usuario) || usuario.length < 2) return '';
-  // Se exige o bien un dominio conocido o bien un punto en el usuario, que es
-  // la forma habitual `nombre.apellido@`. Sin esto, cualquier `palabra o otra.co`
-  // se convertiria en correo.
-  if (!DOMINIOS_CONOCIDOS.test(dominio) && !usuario.includes('.')) return '';
-
-  return `${usuario}@${dominio}`.toLowerCase();
-}
-
 function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   const textoEncabezado = textos(encabezado).join('\n');
   const enEncabezado = textoEncabezado.match(PATRON_CORREO);
@@ -252,7 +219,7 @@ function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   if (enDocumento) return enDocumento[0].toLowerCase();
 
   // Ninguna arroba legible: se intenta reconstruir la direccion.
-  const reconstruido = reconstruirCorreo(textoEncabezado) || reconstruirCorreo(textoDocumento);
+  const reconstruido = reconstruirCorreoOcr(textoEncabezado) || reconstruirCorreoOcr(textoDocumento);
   if (reconstruido) return reconstruido;
 
   // Ultimo recurso: patrones alternos cuando el OCR confunde caracteres

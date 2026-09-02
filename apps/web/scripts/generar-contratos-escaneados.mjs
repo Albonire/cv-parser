@@ -55,7 +55,7 @@ function verdadDe(contrato, archivo, plantilla, perfil) {
       employerNit: soloDigitos(contrato.nit),
       workerName: contrato.trabajador,
       workerDocumentNumber: soloDigitos(contrato.cedula),
-      'workerEmail~': contrato.correoTrabajador.split('@')[1],
+      workerEmail: contrato.correoTrabajador,
       'position~': contrato.cargo,
       salary: String(montoDeTexto(contrato.salario)),
       'executionPlace~': contrato.lugar.split(' - ')[0],

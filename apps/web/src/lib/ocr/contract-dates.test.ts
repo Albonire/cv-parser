@@ -111,3 +111,22 @@ describe('Parser de Contrato: fechas de inicio/fin robustas', () => {
     expect(parsed.noticeDays).toBe(45);
   });
 });
+
+describe('anios imposibles por confusion de glifo', () => {
+  it('corrige el digito de las milesimas cuando solo cabe una correccion', () => {
+    // Medido en CT_04: el OCR leyo el 2 del anio como 7.
+    expect(normalizarFecha('02/01/7025')).toBe('2025-01-02');
+    expect(normalizarFecha('04 ENERO 7025')).toBe('2025-01-04');
+    expect(normalizarFecha('15 de marzo de 8999')).toBe('1999-03-15');
+  });
+
+  it('deja el campo vacio cuando ninguna correccion cabe', () => {
+    expect(normalizarFecha('02/01/7525')).toBe('');
+    expect(normalizarFecha('02/01/0000')).toBe('');
+  });
+
+  it('no toca un anio que ya es valido', () => {
+    expect(normalizarFecha('02/01/2025')).toBe('2025-01-02');
+    expect(normalizarFecha('15 de marzo de 1999')).toBe('1999-03-15');
+  });
+});

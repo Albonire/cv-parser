@@ -170,7 +170,10 @@ export function groupWordsIntoRows(words: Word[]): Word[][] {
   let current: Word[] = [sorted[0]];
   let top = sorted[0].y;
   let bottom = sorted[0].y + sorted[0].height;
-  const refHeight = sorted[0].height;
+  // Altura de referencia del renglon EN CURSO, que se reinicia al abrir uno
+  // nuevo. Fijarla una sola vez para toda la pagina hace que el agrupado dependa
+  // de que palabra caiga primero al ordenar, que es arbitrario.
+  let refHeight = Math.max(1, sorted[0].height);
 
   for (let i = 1; i < sorted.length; i++) {
     const word = sorted[i];
@@ -178,7 +181,9 @@ export function groupWordsIntoRows(words: Word[]): Word[][] {
     const wordBottom = word.y + word.height;
     const overlap = Math.min(bottom, wordBottom) - Math.max(top, wordTop);
 
-    if (overlap > refHeight * 0.4) {
+    const referencia = Math.max(1, Math.min(refHeight, word.height));
+
+    if (overlap > referencia * 0.4) {
       current.push(word);
       top = Math.min(top, wordTop);
       bottom = Math.max(bottom, wordBottom);
@@ -187,6 +192,7 @@ export function groupWordsIntoRows(words: Word[]): Word[][] {
       current = [word];
       top = wordTop;
       bottom = wordBottom;
+      refHeight = Math.max(1, word.height);
     }
   }
   rows.push(current);
