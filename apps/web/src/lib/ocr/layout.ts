@@ -81,9 +81,27 @@ interface Gutter {
  * proyeccion sobre el eje X. A diferencia de partir la pagina por la mitad, esto
  * no parte formularios de una sola columna con etiqueta y valor en el mismo
  * renglon, ni manda los titulos cortos de la derecha a la columna izquierda.
+ *
+ * Si la primera pasada (con todas las palabras) no encuentra gutter porque un
+ * titulo centrado tapa el canal, se repite excluyendo las palabras de la zona
+ * superior de la pagina.
  */
-export function detectGutter(words: Word[], pageWidth: number): Gutter | null {
+export function detectGutter(words: Word[], pageWidth: number, pageHeight = 0): Gutter | null {
   if (words.length < MIN_WORDS_FOR_COLUMNS || pageWidth <= 0) return null;
+
+  const fromAll = detectGutterFrom(words, pageWidth);
+  if (fromAll) return fromAll;
+
+  // Segunda pasada: excluir palabras de la zona superior (titulos centrados
+  // que cruzan el canal vertical).
+  if (pageHeight <= 0) return null;
+  const maxY = pageHeight * TOP_BAND_RATIO;
+  const tableWords = words.filter((w) => w.y + w.height > maxY);
+  return detectGutterFrom(tableWords, pageWidth);
+}
+
+function detectGutterFrom(words: Word[], pageWidth: number): Gutter | null {
+  if (words.length < MIN_WORDS_FOR_COLUMNS) return null;
 
   const binWidth = pageWidth / BINS;
   const covered = new Array<boolean>(BINS).fill(false);
@@ -152,15 +170,15 @@ export function groupWordsIntoRows(words: Word[]): Word[][] {
   let current: Word[] = [sorted[0]];
   let top = sorted[0].y;
   let bottom = sorted[0].y + sorted[0].height;
+  const refHeight = sorted[0].height;
 
   for (let i = 1; i < sorted.length; i++) {
     const word = sorted[i];
     const wordTop = word.y;
     const wordBottom = word.y + word.height;
     const overlap = Math.min(bottom, wordBottom) - Math.max(top, wordTop);
-    const smallestHeight = Math.max(1, Math.min(bottom - top, word.height));
 
-    if (overlap > smallestHeight * 0.4) {
+    if (overlap > refHeight * 0.4) {
       current.push(word);
       top = Math.min(top, wordTop);
       bottom = Math.max(bottom, wordBottom);
@@ -246,7 +264,7 @@ function layoutPage(page: PageInput, pageIndex: number): { lines: LayoutLine[]; 
   const words = page.words.filter((w) => w.text.trim().length > 0);
   if (words.length === 0) return { lines: [], columns: 1 };
 
-  const gutter = detectGutter(words, page.width);
+  const gutter = detectGutter(words, page.width, page.height);
 
   if (!gutter) {
     const rows = groupWordsIntoRows(words);

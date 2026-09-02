@@ -256,49 +256,104 @@ interface Lectura {
  * reves ocurre con un escaneo con sombra, donde el gris no da nada.
  */
 async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Lectura> {
+  const leer = async (src: File | Blob): Promise<Lectura> => {
+    const res = await worker.recognize(src, {}, { blocks: true, text: true });
+    return {
+      texto: res.data.text ?? '',
+      confianza: res.data.confidence ?? 0,
+      cajas: res.data.blocks,
+    };
+  };
+
+  // Cuantas columnas detecta la maquetacion para esa lectura y si es solida.
+  const evaluar = (l: Lectura): { lectura: Lectura; columnas: number; solida: boolean } => {
+    const palabras = tesseractWordsToWords(extraerPalabras(l.cajas));
+    const ancho = Math.max(1, ...palabras.map((w) => w.x + w.width));
+    const alto = Math.max(1, ...palabras.map((w) => w.y + w.height));
+    const layout = buildLayout([{ words: palabras, width: ancho, height: alto }]);
+    return {
+      lectura: l,
+      columnas: Math.max(1, layout.columnsPerPage[0] ?? 1),
+      solida: lecturaSolida(l.texto, l.confianza / 100),
+    };
+  };
+  const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
+
+  // Fuente original: lee completa una tabla alineada cuyas celdas tocan el
+  // canal. La escala de grises la pierde porque Sauvola funde el fondo gris de
+  // la etiqueta con su texto. A la inversa, en una tabla desfasada la escala de
+  // grises REVELA la estructura de dos columnas que el parser aprovecha.
+  let lecturaFuente: Lectura | null = null;
+  try {
+    lecturaFuente = await leer(fuente);
+  } catch (error) {
+    console.warn('Lectura de la fuente original omitida:', error);
+  }
+
   let gris: Blob | null = null;
-  let binarizada: Blob | null = null;
   try {
     gris = await preprocessImage(fuente, { binarizar: false });
   } catch (error) {
     console.warn('Preprocesamiento en escala de grises omitido:', error);
   }
+  let lecturaGris: Lectura | null = null;
+  if (gris) {
+    try {
+      lecturaGris = await leer(gris);
+    } catch (error) {
+      console.warn('Lectura en escala de grises omitida:', error);
+    }
+  }
+
+  const conFuente = lecturaFuente ? evaluar(lecturaFuente) : null;
+  const conGris = lecturaGris ? evaluar(lecturaGris) : null;
+
+  // Una lectura con dos columnas bien formadas y solida es la que el parser
+  // de tablas aprovecha (la geometria resuelve etiqueta->valor). Se prefiere
+  // siempre, aunque la otra tenga mas texto.
+  const enDosColumnas = [conFuente, conGris].filter(
+    (c): c is NonNullable<typeof c> => !!c && c.columnas >= 2 && c.solida
+  );
+  if (enDosColumnas.length > 0) {
+    return [...enDosColumnas].sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
+  }
+
+  // Todo de una columna: se conserva la escala de grises (configuracion
+  // historica que lee bien las hojas de vida) salvo que la fuente original
+  // reconozca muchisimo mas texto, como en una tabla alineada.
+  const solidas = [conFuente, conGris].filter(
+    (c): c is NonNullable<typeof c> => !!c && c.solida
+  );
+  if (solidas.length > 0) {
+    const fuente = solidas.find((c) => c === conFuente);
+    const grisC = solidas.find((c) => c === conGris);
+    if (fuente && grisC) {
+      if (fuente.lectura.texto.length >= grisC.lectura.texto.length * 1.6) return fuente.lectura;
+      return grisC.lectura;
+    }
+    return solidas.sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
+  }
+
+  // Ninguna fue solida: respaldo binarizado (escaneo con sombra) y gana la que
+  // reconocio mas texto.
+  let binarizada: Blob | null = null;
   try {
     binarizada = await preprocessImage(fuente, { binarizar: true });
   } catch (error) {
     console.warn('Preprocesamiento binarizado omitido:', error);
   }
-
-  const primera = gris ?? binarizada ?? fuente;
-  const resGris = await worker.recognize(primera, {}, { blocks: true, text: true });
-  const textoGris = resGris.data.text ?? '';
-  const confGris = (resGris.data.confidence ?? 0) / 100;
-
-  const lecturaGris: Lectura = {
-    texto: textoGris,
-    confianza: resGris.data.confidence ?? 0,
-    cajas: resGris.data.blocks,
-  };
-
-  // La lectura en grises es solida: no se gasta un segundo OCR.
-  if (lecturaSolida(textoGris, confGris)) return lecturaGris;
-
-  // Hay duda: se lee tambien la binarizada y gana la que reconocio mas texto.
-  if (binarizada && binarizada !== primera) {
-    const resBin = await worker.recognize(binarizada, {}, { blocks: true, text: true });
-    const textoBin = resBin.data.text ?? '';
-    const confBin = (resBin.data.confidence ?? 0) / 100;
-
-    if (puntajeLectura(textoBin, confBin) > puntajeLectura(textoGris, confGris)) {
-      return {
-        texto: textoBin,
-        confianza: resBin.data.confidence ?? 0,
-        cajas: resBin.data.blocks,
-      };
+  const candidatas: { lectura: Lectura }[] = [];
+  if (conFuente) candidatas.push(conFuente);
+  if (conGris) candidatas.push(conGris);
+  if (binarizada && binarizada !== gris) {
+    try {
+      candidatas.push(evaluar(await leer(binarizada)));
+    } catch (error) {
+      console.warn('Lectura binarizada omitida:', error);
     }
   }
-
-  return lecturaGris;
+  if (candidatas.length === 0) return { texto: '', confianza: 0, cajas: [] };
+  return [...candidatas].sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
 }
 
 /** Proporciones de la imagen, sin pasar por OCR. */

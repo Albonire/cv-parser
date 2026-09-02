@@ -19,10 +19,10 @@
         "workerEmail~": "gmail.com",
         "position~": "CONDUCTOR",
         "salary": "1423500",
-        "executionPlace~": "BARRANQUILLA"
-      },
-      "derivados": {
-        "durationMonths": 3
+        "executionPlace~": "BARRANQUILLA",
+        "startDate": "2025-01-04",
+        "endDate": "2025-04-04",
+        "durationMonths": "3"
       }
     },
     {
@@ -39,10 +39,8 @@
         "workerEmail~": "correo.com",
         "position~": "AUXILIAR ADMINISTRATIVA",
         "salary": "1300000",
-        "executionPlace~": "PAMPLONA"
-      },
-      "derivados": {
-        "durationMonths": null
+        "executionPlace~": "PAMPLONA",
+        "startDate": "2024-02-15"
       }
     },
     {
@@ -59,10 +57,10 @@
         "workerEmail~": "gmail.com",
         "position~": "OPERARIO DE PRODUCCIÓN",
         "salary": "1623500",
-        "executionPlace~": "MEDELLÍN"
-      },
-      "derivados": {
-        "durationMonths": 6
+        "executionPlace~": "MEDELLÍN",
+        "startDate": "2025-08-01",
+        "endDate": "2026-01-31",
+        "durationMonths": "6"
       }
     },
     {
@@ -79,10 +77,10 @@
         "workerEmail~": "hotmail.com",
         "position~": "COORDINADORA DE TALENTO HUMANO",
         "salary": "3200000",
-        "executionPlace~": "BOGOTÁ D.C."
-      },
-      "derivados": {
-        "durationMonths": 12
+        "executionPlace~": "BOGOTÁ D.C.",
+        "startDate": "2025-01-02",
+        "endDate": "2026-01-01",
+        "durationMonths": "12"
       }
     },
     {
@@ -99,10 +97,10 @@
         "workerEmail~": "gmail.com",
         "position~": "CONDUCTOR",
         "salary": "1423500",
-        "executionPlace~": "BARRANQUILLA"
-      },
-      "derivados": {
-        "durationMonths": 3
+        "executionPlace~": "BARRANQUILLA",
+        "startDate": "2025-01-04",
+        "endDate": "2025-04-04",
+        "durationMonths": "3"
       }
     },
     {
@@ -119,10 +117,8 @@
         "workerEmail~": "correo.com",
         "position~": "AUXILIAR ADMINISTRATIVA",
         "salary": "1300000",
-        "executionPlace~": "PAMPLONA"
-      },
-      "derivados": {
-        "durationMonths": null
+        "executionPlace~": "PAMPLONA",
+        "startDate": "2024-02-15"
       }
     },
     {
@@ -139,10 +135,10 @@
         "workerEmail~": "gmail.com",
         "position~": "OPERARIO DE PRODUCCIÓN",
         "salary": "1623500",
-        "executionPlace~": "MEDELLÍN"
-      },
-      "derivados": {
-        "durationMonths": 6
+        "executionPlace~": "MEDELLÍN",
+        "startDate": "2025-08-01",
+        "endDate": "2026-01-31",
+        "durationMonths": "6"
       }
     },
     {
@@ -159,10 +155,10 @@
         "workerEmail~": "hotmail.com",
         "position~": "COORDINADORA DE TALENTO HUMANO",
         "salary": "3200000",
-        "executionPlace~": "BOGOTÁ D.C."
-      },
-      "derivados": {
-        "durationMonths": 12
+        "executionPlace~": "BOGOTÁ D.C.",
+        "startDate": "2025-01-02",
+        "endDate": "2026-01-01",
+        "durationMonths": "12"
       }
     },
     {
@@ -179,10 +175,10 @@
         "workerEmail~": "gmail.com",
         "position~": "CONDUCTOR",
         "salary": "1423500",
-        "executionPlace~": "BARRANQUILLA"
-      },
-      "derivados": {
-        "durationMonths": 3
+        "executionPlace~": "BARRANQUILLA",
+        "startDate": "2025-01-04",
+        "endDate": "2025-04-04",
+        "durationMonths": "3"
       }
     },
     {
@@ -199,10 +195,8 @@
         "workerEmail~": "correo.com",
         "position~": "AUXILIAR ADMINISTRATIVA",
         "salary": "1300000",
-        "executionPlace~": "PAMPLONA"
-      },
-      "derivados": {
-        "durationMonths": null
+        "executionPlace~": "PAMPLONA",
+        "startDate": "2024-02-15"
       }
     },
     {
@@ -219,10 +213,10 @@
         "workerEmail~": "gmail.com",
         "position~": "OPERARIO DE PRODUCCIÓN",
         "salary": "1623500",
-        "executionPlace~": "MEDELLÍN"
-      },
-      "derivados": {
-        "durationMonths": 6
+        "executionPlace~": "MEDELLÍN",
+        "startDate": "2025-08-01",
+        "endDate": "2026-01-31",
+        "durationMonths": "6"
       }
     },
     {
@@ -239,10 +233,10 @@
         "workerEmail~": "hotmail.com",
         "position~": "COORDINADORA DE TALENTO HUMANO",
         "salary": "3200000",
-        "executionPlace~": "BOGOTÁ D.C."
-      },
-      "derivados": {
-        "durationMonths": 12
+        "executionPlace~": "BOGOTÁ D.C.",
+        "startDate": "2025-01-02",
+        "endDate": "2026-01-01",
+        "durationMonths": "12"
       }
     }
   ]

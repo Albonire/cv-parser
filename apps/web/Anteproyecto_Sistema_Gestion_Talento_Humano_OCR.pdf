@@ -1,0 +1,1703 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 4113
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+0.098 g
+140.2400000000000091 672.9448818897637921 Td
+(ANTEPROYECTO DE TRABAJO DE GRADO) Tj
+ET
+BT
+/F2 13.5 Tf
+15.5249999999999986 TL
+0.098 g
+173.7000000000000171 633.2598425196849803 Td
+(Sistema de Gestión de Talento Humano y) Tj
+ET
+BT
+/F2 13.5 Tf
+15.5249999999999986 TL
+0.098 g
+156.4875000000000398 616.2519685039369506 Td
+(Análisis de Hojas de Vida con Reconocimiento) Tj
+ET
+BT
+/F2 13.5 Tf
+15.5249999999999986 TL
+0.098 g
+163.3050000000000637 599.2440944881889209 Td
+(Óptico de Caracteres \(OCR\) en el Navegador) Tj
+ET
+0.55 G
+2.2677165354330713 w
+175.748031496063021 582.2362204724408912 m
+436.2519685039370643 582.2362204724408912 l
+S
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 536.8818897637795544 Td
+(Modalidad: Desarrollo de software y sistema de información) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 519.3070866141731585 Td
+(Área del conocimiento: Ingeniería de software / Ciencia de datos aplicada) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 501.7322834645668763 Td
+(Estudio de caso: Rosimar S.A.S.) Tj
+ET
+BT
+/F1 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 484.1574803149605941 Td
+(Modalidad de grado: Anteproyecto) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.098 g
+62.3622047244094517 395.7165354330708169 Td
+(Aceptación director de la tesis:) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.098 g
+62.3622047244094517 378.7086614173227872 Td
+(NOMBRE: ______________________________________________) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.098 g
+62.3622047244094517 367.3700787401573962 Td
+(FIRMA: _______________________________________________) Tj
+ET
+BT
+/F2 13 Tf
+14.9499999999999993 TL
+0.078 g
+62.3622047244094517 259.6535433070865793 Td
+(1. GENERALIDADES DEL PROYECTO) Tj
+ET
+0.16 G
+1.7007874015748032 w
+62.3622047244094517 252.5669291338581957 m
+549.6377952755906335 252.5669291338581957 l
+S
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 236.9763779527557972 Td
+(1.1 Título) Tj
+ET
+BT
+/F2 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 218.5511811023620794 Td
+(Sistema de Gestión de Talento Humano y Análisis de Hojas de Vida con Reconocimiento Óptico) Tj
+ET
+BT
+/F2 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 203.8110236220471734 Td
+(de Caracteres \(OCR\) 100% en el navegador, aplicado al proceso de selección y contratación de) Tj
+ET
+BT
+/F2 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 189.0708661417322674 Td
+(Rosimar S.A.S.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 168.661417322834609 Td
+(1.2 Planteamiento del problema) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 150.2362204724408912 Td
+(Rosimar S.A.S. recibe a diario decenas de hojas de vida en formatos heterogéneos: PDF escaneado,) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 135.4960629921259851 Td
+(imágenes fotografiadas con el teléfono, y documentos de Word. El proceso de reclutamiento se apoya) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 120.7559055118110791 Td
+(casi por completo en la lectura manual de cada documento: un reclutador debe abrir cada hoja de vida,) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 106.0157480314961731 Td
+(leer el texto, identificar los datos del candidato \(nombre, documento, teléfono, correo, cargo deseado y) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 91.2755905511812671 Td
+(experiencia\) y luego transcribirlos a una base de datos para poder filtrarlos y compararlos. Esta tarea es) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 76.5354330708662474 Td
+(lenta, propensa a errores humanos de captura y hace que la información no esté disponible en tiempo) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 61.7952755905513413 Td
+(real durante la entrevista inicial.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.471 g
+303.5250000000000341 22.6771653543306684 Td
+(1) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 7797
+>>
+stream
+1.7007874015748032 w
+0.16 G
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.471 g
+123.3000000000000256 763.6535433070865793 Td
+(Anteproyecto de Trabajo de Grado - Sistema de Gestión de Talento Humano con OCR) Tj
+ET
+0.63 G
+0.8503937007874016 w
+62.3622047244094517 756.5669291338582525 m
+549.6377952755906335 756.5669291338582525 l
+S
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 729.6377952755905199 Td
+(El problema se agrava porque las hojas de vida no siguen un formato estandarizado: cada aspirante) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 714.8976377952756138 Td
+(organiza la información de manera distinta, la calidad de los escaneos y fotografías varía, y con) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 700.1574803149605941 Td
+(frecuencia hay texto en varias columnas que dificulta la lectura automática. Además, el proceso de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 685.4173228346456881 Td
+(contratación posterior sobre el candidato seleccionado \(estado del contrato, fechas, datos del empleador) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 670.6771653543306684 Td
+(y del trabajador\) también se gestiona de forma manual o semimanual.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 636.0944881889763565 Td
+(De esta forma, la organización no dispone de una herramienta económica que concentre la lectura, la) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 621.3543307086613368 Td
+(estructuración y la explotación de la información contenida en las hojas de vida, ni de una que acompañe) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 606.6141732283464307 Td
+(el flujo completo desde el candidato hasta el empleado contratado.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 586.2047244094487723 Td
+(1.3 Justificación) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 567.7795275590550546 Td
+(¿Por qué se desarrolla este proyecto? Porque la gestión manual de hojas de vida consume tiempo) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 553.0393700787401485 Td
+(valioso del equipo de talento humano, introduce errores de digitación y retrasa la toma de decisiones) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 538.2992125984251288 Td
+(sobre una vacante. Una herramienta que automatiza la lectura de los documentos y estructura la) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 523.5590551181101091 Td
+(información permite al reclutador dedicarse a lo que aporta valor real: evaluar candidatos y tomar) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 508.8188976377952031 Td
+(decisiones, no transcribir datos.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 474.2362204724408343 Td
+(¿Qué soluciona? Soluciona la captura desordenada de la información de los aspirantes y la falta de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 459.4960629921258715 Td
+(integración entre la lectura del documento y la gestión posterior del empleado. Al extraer) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 444.7559055118109086 Td
+(automáticamente los datos estructurados de cada hoja de vida y vincularlos con el proceso de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 430.0157480314959457 Td
+(contratación, se elimina la doble digitación y se garantiza que la información esté disponible, ordenada y) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 415.2755905511809829 Td
+(siempre editable.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 380.6929133858266709 Td
+(¿Cuál es el aporte? El aporte principal es un sistema de costo cero en infraestructura que ejecuta el) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 365.9527559055117081 Td
+(reconocimiento óptico de caracteres dentro del navegador del usuario, sin enviar documentos sensibles) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 351.2125984251968021 Td
+(\(datos personales de los candidatos\) a servidores externos. Esto, además de reducir costos, protege la) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 336.472440944881896 Td
+(confidencialidad de la información y cumple con los principios de minimización de datos. El proyecto) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 321.7322834645669332 Td
+(aporta además una metodología reproducible para segmentar documentos con columnas y extraer) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 306.9921259842520271 Td
+(campos etiquetados, que puede aplicarse a otros tipos de documento en la organización.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 286.5826771653544256 Td
+(1.4 Objetivos) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 268.1574803149607078 Td
+(Objetivo general) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 251.1496062992126781 Td
+(Desarrollar un sistema web progresivo \(PWA\) de gestión de talento humano que permita analizar hojas) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 236.4094488188977721 Td
+(de vida mediante reconocimiento óptico de caracteres ejecutado 100% en el navegador, extraer los) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 221.669291338582866 Td
+(datos estructurados de cada candidato y administrar el flujo de selección y contratación, aplicado al) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 206.9291338582678463 Td
+(proceso de Rosimar S.A.S.) Tj
+ET
+BT
+/F2 11 Tf
+12.6499999999999986 TL
+0.118 g
+62.3622047244094517 183.6850393700789255 Td
+(Objetivos específicos) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 166.6771653543308958 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 166.6771653543308958 Td
+(Diseñar una arquitectura de lectura de documentos que reconstruya el orden de lectura \(renglones y) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 151.9370078740159897 Td
+(columnas\) a partir de las palabras detectadas por OCR en formatos PDF, imagen y Word.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 132.9448818897640194 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 132.9448818897640194 Td
+(Implementar un proceso de segmentación por secciones y un extractor por campo \(nombre,) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 118.2047244094491134 Td
+(documento, teléfono, correo, cargo, salario, experiencia\) que opere sobre la estructura del) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 103.4645669291342074 Td
+(documento.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 84.4724409448822371 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 84.4724409448822371 Td
+(Construir el módulo de gestión de talento humano que administre el estado de los candidatos) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 69.7322834645673311 Td
+(\(aspirante, entrevista, seleccionado, contratado\) y el ciclo de vida del empleado, respetando las) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 54.992125984252425 Td
+(reglas de negocio de la organización.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.471 g
+303.5250000000000341 22.6771653543306684 Td
+(2) Tj
+ET
+endstream
+endobj
+7 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 8 0 R
+>>
+endobj
+8 0 obj
+<<
+/Length 7676
+>>
+stream
+0.8503937007874016 w
+0.63 G
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.471 g
+123.3000000000000256 763.6535433070865793 Td
+(Anteproyecto de Trabajo de Grado - Sistema de Gestión de Talento Humano con OCR) Tj
+ET
+0.63 G
+0.8503937007874016 w
+62.3622047244094517 756.5669291338582525 m
+549.6377952755906335 756.5669291338582525 l
+S
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 729.6377952755905199 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 729.6377952755905199 Td
+(Diseñar e implementar el almacenamiento local con soporte offline \(IndexedDB\) y la persistencia en) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 714.8976377952756138 Td
+(un backend gratuito de bajo costo \(Supabase\) con seguridad a nivel de fila \(RLS\).) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 695.9055118110236435 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 695.9055118110236435 Td
+(Evaluar la precisión del lector sobre un banco de hojas de vida escaneadas, medir su correlación con) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 681.1653543307086238 Td
+(la confianza reportada por el motor y validar la usabilidad del sistema en el caso de estudio.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 662.1732283464566535 Td
+(1.5 Alcance y acotaciones) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 643.7480314960629357 Td
+(El sistema se aplica inicialmente al proceso de selección de personal de Rosimar S.A.S. Se limita al) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 629.0078740157480297 Td
+(análisis de documentos en español \(español e inglés para el motor OCR\), a los formatos PDF, imágenes) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 614.26771653543301 Td
+(JPEG/PNG y Word. La extracción se orienta a los campos estándar de una hoja de vida: información) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 599.527559055118104 Td
+(personal, información de contacto, formación académica, experiencia laboral y habilidades.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 564.9448818897637921 Td
+(Quedan fuera del alcance: la redacción automática de hojas de vida, la verificación automática de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 550.2047244094487723 Td
+(antecedentes, la integración con bolsas de trabajo externas y el despliegue en infraestructura de pago.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 535.4645669291337526 Td
+(La ejecución del OCR se realiza en la CPU del dispositivo del usuario; no se usan servicios de pago por) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 520.7244094488188466 Td
+(documento.) Tj
+ET
+BT
+/F2 13 Tf
+14.9499999999999993 TL
+0.078 g
+62.3622047244094517 500.3149606299211882 Td
+(2. MARCO TEÓRICO Y ESTADO DEL ARTE) Tj
+ET
+0.16 G
+1.7007874015748032 w
+62.3622047244094517 493.2283464566928046 m
+549.6377952755906335 493.2283464566928046 l
+S
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 477.637795275590463 Td
+(2.1 Marco teórico) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 459.2125984251967452 Td
+(Reconocimiento Óptico de Caracteres \(OCR\). Es el proceso que convierte imágenes de texto impreso o) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 444.4724409448817823 Td
+(manuscrito en texto codificado. Se compone típicamente de etapas de preprocesamiento \(reescalado,) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 429.7322834645668195 Td
+(binarización, corrección de inclinación\), detección de regiones de texto, segmentación en palabras y) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 414.9921259842518566 Td
+(clasificación de caracteres. En este proyecto se utiliza el motor Tesseract.js, una compilación a) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 400.2519685039368937 Td
+(WebAssembly del motor Tesseract, lo que permite ejecutar el reconocimiento sin enviar el documento a) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 385.5118110236219877 Td
+(un servidor.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 359.4330708661416907 Td
+(Análisis de layout y orden de lectura. Un documento puede tener texto en varias columnas) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 344.6929133858267846 Td
+(\(encabezados, tablas, listas\). Para extraer datos de forma fiable es necesario reconstruir el orden lógico) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 329.9527559055118218 Td
+(de lectura, agrupar las palabras en renglones y detectar la estructura de columnas, en lugar de procesar) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 315.2125984251969157 Td
+(el texto plano secuencialmente. Este orden reconstruido se comparte entre los distintos formatos de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 300.4724409448820097 Td
+(origen \(PDF, imagen, Word\).) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 274.3937007874017127 Td
+(Coordenadas y geometría de página. El motor OCR entrega, junto con cada palabra, sus coordenadas) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 259.6535433070868066 Td
+(en la página. Este dato geométrico permite alineaciones verticales, detección de pares etiqueta-valor en) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 244.9133858267717869 Td
+(tablas de dos columnas y la asociación de un campo con su valor aunque el texto esté partido en varios) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 230.1732283464568809 Td
+(renglones.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 204.0944881889765838 Td
+(Aplicación web progresiva \(PWA\) y almacenamiento offline. Una PWA funciona sin conexión, se instala) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 189.3543307086616778 Td
+(en el dispositivo y sincroniza los cambios cuando hay red. El almacenamiento local en IndexedDB) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 174.6141732283467718 Td
+(permite trabajar sin conexión y acumular una cola de sincronización, mientras que un backend gratuito) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 159.8740157480318658 Td
+(provee persistencia compartida entre usuarios.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 133.7952755905515687 Td
+(Seguridad a nivel de fila \(RLS\). Mecanismo de la base de datos que restringe el acceso a los registros) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 119.0551181102366627 Td
+(según el rol y el contexto del usuario autenticado. En un sistema que maneja datos personales de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 104.314960629921643 Td
+(candidatos y empleados, es imprescindible que cada rol solo pueda leer y modificar la información para) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 89.574803149606737 Td
+(la que está autorizado.) Tj
+ET
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 69.1653543307091923 Td
+(2.2 Estado del arte) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.471 g
+303.5250000000000341 22.6771653543306684 Td
+(3) Tj
+ET
+endstream
+endobj
+9 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 10 0 R
+>>
+endobj
+10 0 obj
+<<
+/Length 8462
+>>
+stream
+1.7007874015748032 w
+0.16 G
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.471 g
+123.3000000000000256 763.6535433070865793 Td
+(Anteproyecto de Trabajo de Grado - Sistema de Gestión de Talento Humano con OCR) Tj
+ET
+0.63 G
+0.8503937007874016 w
+62.3622047244094517 756.5669291338582525 m
+549.6377952755906335 756.5669291338582525 l
+S
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 729.6377952755905199 Td
+(En el ámbito internacional existen soluciones comerciales de análisis de hojas de vida \(software de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 714.8976377952756138 Td
+(reclutamiento y sistemas de seguimiento de candidatos\) que extraen datos de los documentos mediante) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 700.1574803149605941 Td
+(servicios de procesamiento en la nube. Estas herramientas suelen tener costo por documento y envían) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 685.4173228346456881 Td
+(la información a servidores externos, lo que plantea consideraciones de costo y de privacidad para las) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 670.6771653543306684 Td
+(organizaciones.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 644.5984251968503713 Td
+(En el ámbito regional y nacional, la mayoría de las pequeñas y medianas empresas colombianas) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 629.8582677165353516 Td
+(gestionan las hojas de vida de forma manual con planillas de cálculo o sistemas genéricos de gestión) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 615.1181102362204456 Td
+(documental que no ofrecen extracción automática de datos ni una ruta integrada hacia el proceso de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 600.3779527559054259 Td
+(contratación. La literatura y los casos de aplicación coinciden en señalar que la adopción de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 585.6377952755905199 Td
+(herramientas de automatización en talento humano se ve limitada por el costo de la infraestructura y por) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 570.8976377952755001 Td
+(la necesidad de proteger los datos personales.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 544.8188976377952031 Td
+(Frente a este panorama, la propuesta se distinguen por ejecutar todo el cómputo del OCR en el) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 530.0787401574802971 Td
+(navegador del usuario \(costo de infraestructura cercano a cero y documentos que nunca salen del) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 515.3385826771652773 Td
+(dispositivo\), por reconstruir el orden de lectura para manejar documentos con columnas, y por integrar el) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 500.5984251968503145 Td
+(análisis del documento con la gestión de candidatos y empleados bajo reglas de negocio definidas.) Tj
+ET
+BT
+/F2 13 Tf
+14.9499999999999993 TL
+0.078 g
+62.3622047244094517 480.1889763779526561 Td
+(3. METODOLOGÍA Y CRONOGRAMA) Tj
+ET
+0.16 G
+1.7007874015748032 w
+62.3622047244094517 473.1023622047243293 m
+549.6377952755906335 473.1023622047243293 l
+S
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 457.5118110236219309 Td
+(3.1 Metodología) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 439.0866141732282131 Td
+(El proyecto se desarrolla con un enfoque de desarrollo iterativo e incremental, con fases que van de la) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 424.3464566929133071 Td
+(fundamentación al desarrollo y a la validación:) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 403.9370078740157055 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 403.9370078740157055 Td
+(Fase 1. Diseño de la arquitectura del lector, definición del modelo de datos y de las reglas de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 389.1968503937007426 Td
+(negocio.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 370.2047244094488292 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 370.2047244094488292 Td
+(Fase 2. Implementación del pipeline de lectura: extracción, layout \(renglones y columnas\),) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 355.4645669291338663 Td
+(segmentación por secciones y extractores por campo.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 336.4724409448819529 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 336.4724409448819529 Td
+(Fase 3. Implementación de los módulos de gestión de candidatos, empleados, contratos y alertas.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 317.4803149606300394 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 317.4803149606300394 Td
+(Fase 4. Persistencia local con soporte offline y sincronización con el backend.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 298.4881889763780691 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 298.4881889763780691 Td
+(Fase 5. Pruebas con un banco de hojas de vida escaneadas, medición de precisión y ajustes.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 279.4960629921260988 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 279.4960629921260988 Td
+(Fase 6. Validación final, documentación y entrega.) Tj
+ET
+BT
+/F2 13 Tf
+14.9499999999999993 TL
+0.078 g
+62.3622047244094517 260.5039370078742422 Td
+(4. RESULTADOS / PRODUCTOS ESPERADOS Y BENEFICIARIOS) Tj
+ET
+0.16 G
+1.7007874015748032 w
+62.3622047244094517 253.4173228346458586 m
+549.6377952755906335 253.4173228346458586 l
+S
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 237.8267716535434602 Td
+(4.1 Resultados y productos esperados) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 219.4015748031497424 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 219.4015748031497424 Td
+(Un sistema web progresivo \(PWA\) funcional que lee hojas de vida en PDF, imagen y Word, extrae los) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 204.6614173228348363 Td
+(campos del candidato y muestra un formulario editable antes de guardar.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 185.669291338582866 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 185.669291338582866 Td
+(Un banco de pruebas con hojas de vida escaneadas y un conjunto de métricas de precisión del lector) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 170.92913385826796 Td
+(por campo.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 151.9370078740161034 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 151.9370078740161034 Td
+(El módulo de gestión de talento humano que administra el estado del candidato y el ciclo de vida del) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 137.1968503937010837 Td
+(empleado, con sus reglas de negocio y alertas.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 118.2047244094492271 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 118.2047244094492271 Td
+(El módulo de reportes y gráficos estadísticos del proceso de selección, y la exportación de listados a) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 103.4645669291342074 Td
+(Excel y a PDF.) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 84.4724409448823508 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 84.4724409448823508 Td
+(La documentación técnica del sistema \(arquitectura, modelo de datos, sistema de diseño\) y la guía) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 69.7322834645673311 Td
+(de despliegue en infraestructura gratuita.) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.471 g
+303.5250000000000341 22.6771653543306684 Td
+(4) Tj
+ET
+endstream
+endobj
+11 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 612. 792.]
+/Contents 12 0 R
+>>
+endobj
+12 0 obj
+<<
+/Length 4406
+>>
+stream
+1.7007874015748032 w
+0.16 G
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+0.471 g
+123.3000000000000256 763.6535433070865793 Td
+(Anteproyecto de Trabajo de Grado - Sistema de Gestión de Talento Humano con OCR) Tj
+ET
+0.63 G
+0.8503937007874016 w
+62.3622047244094517 756.5669291338582525 m
+549.6377952755906335 756.5669291338582525 l
+S
+BT
+/F2 11.5 Tf
+13.2249999999999996 TL
+0.118 g
+62.3622047244094517 729.6377952755905199 Td
+(4.2 Potenciales beneficiarios) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 711.2125984251968021 Td
+(El beneficiario directo es el área de talento humano de Rosimar S.A.S., que reduce el tiempo de captura) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 696.472440944881896 Td
+(de hojas de vida, disminuye los errores de digitación y concentra la información del candidato y del) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 681.7322834645668763 Td
+(empleado en un solo lugar. Como beneficiarios indirectos se encuentran los aspirantes, que ven un) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 666.9921259842519703 Td
+(proceso de selección más ágil, y la compañía en general, al contar con información confiable y) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 652.2519685039369506 Td
+(disponible para la toma de decisiones.) Tj
+ET
+BT
+/F2 13 Tf
+14.9499999999999993 TL
+0.078 g
+62.3622047244094517 631.8425196850392922 Td
+(5. REFERENCIAS BIBLIOGRÁFICAS) Tj
+ET
+0.16 G
+1.7007874015748032 w
+62.3622047244094517 624.7559055118110791 m
+549.6377952755906335 624.7559055118110791 l
+S
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.392 g
+62.3622047244094517 609.1653543307086238 Td
+(Relacione aquí únicamente las referencias citadas en el texto; utilice las normas ICONTEC para la) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.392 g
+62.3622047244094517 594.4251968503936041 Td
+(relación y cita de las referencias.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.118 g
+62.3622047244094517 559.8425196850392922 Td
+(Referencias sugeridas para iniciar la revisión bibliográfica \(a completar y formatear según normas ICONTEC\):) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 525.2598425196849803 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 525.2598425196849803 Td
+(Smith, R. \(2007\). An Overview of the Tesseract OCR Engine. Proceedings of the International) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 510.5196850393699606 Td
+(Conference on Document Analysis and Recognition \(ICDAR\).) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 491.5275590551179903 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 491.5275590551179903 Td
+(Tesseract.js Project. Documentación oficial del motor OCR en WebAssembly. Disponible en) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 476.7874015748030274 Td
+(https://tesseract.projectnaptha.com) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 457.7952755905510571 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 457.7952755905510571 Td
+(MDN Web Docs. IndexedDB API y aplicaciones web progresivas \(PWA\). Disponible en) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 443.0551181102360943 Td
+(https://developer.mozilla.org) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 424.062992125984124 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 424.062992125984124 Td
+(Supabase Documentation. Base de datos PostgreSQL, Autenticación y Políticas de Seguridad a) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 409.3228346456691611 Td
+(Nivel de Fila \(RLS\). Disponible en https://supabase.com/docs) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+62.3622047244094517 390.3307086614172476 Td
+(•) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 390.3307086614172476 Td
+(Oriol, N. \(2021\). Gestión del talento humano en las PYMES: retos y oportunidades. \(Referencia de) Tj
+ET
+BT
+/F1 10.5 Tf
+12.0749999999999993 TL
+0.118 g
+73.7007874015748143 375.5905511811022848 Td
+(contexto empresarial, a verificar y completar\).) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.471 g
+303.5250000000000341 22.6771653543306684 Td
+(5) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R 7 0 R 9 0 R 11 0 R ]
+/Count 5
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+21 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+22 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+23 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+24 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+25 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+26 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 13 0 R
+/F2 14 0 R
+/F3 15 0 R
+/F4 16 0 R
+/F5 17 0 R
+/F6 18 0 R
+/F7 19 0 R
+/F8 20 0 R
+/F9 21 0 R
+/F10 22 0 R
+/F11 23 0 R
+/F12 24 0 R
+/F13 25 0 R
+/F14 26 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+27 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260902094033-05'00')
+>>
+endobj
+28 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 29
+0000000000 65535 f 
+0000033259 00000 n 
+0000035106 00000 n 
+0000000015 00000 n 
+0000000120 00000 n 
+0000004285 00000 n 
+0000004390 00000 n 
+0000012239 00000 n 
+0000012344 00000 n 
+0000020072 00000 n 
+0000020178 00000 n 
+0000028693 00000 n 
+0000028800 00000 n 
+0000033341 00000 n 
+0000033467 00000 n 
+0000033598 00000 n 
+0000033732 00000 n 
+0000033870 00000 n 
+0000033994 00000 n 
+0000034123 00000 n 
+0000034255 00000 n 
+0000034391 00000 n 
+0000034519 00000 n 
+0000034646 00000 n 
+0000034775 00000 n 
+0000034908 00000 n 
+0000035010 00000 n 
+0000035359 00000 n 
+0000035445 00000 n 
+trailer
+<<
+/Size 29
+/Root 28 0 R
+/Info 27 0 R
+/ID [ <1127B41EB831A517323652FDC045ED5D> <1127B41EB831A517323652FDC045ED5D> ]
+>>
+startxref
+35549
+%%EOF

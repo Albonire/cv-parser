@@ -62,7 +62,7 @@ function estadoDe(similitud: number, obtenido: string): EstadoCampo {
 
 /** Compara un campo simple: normaliza tildes y mayusculas y mide similitud. */
 function compararTexto(campo: string, esperado: string, obtenido: string): ResultadoCampo {
-  const numerico = campo === 'phone' || campo === 'documentNumber';
+  const numerico = campo === 'phone' || campo === 'documentNumber' || campo === 'employerNit';
   const e = numerico ? soloDigitos(esperado) : normalize(esperado);
   const o = numerico ? soloDigitos(obtenido) : normalize(obtenido);
   const sim = e && o ? similarity(e, o) : 0;
@@ -199,7 +199,7 @@ async function medirDocumento(registro: {
   const datos = await processDocument(file);
   const ms = Math.round(performance.now() - inicio);
 
-  return {
+  const resultado: ResultadoDocumento = {
     archivo: registro.archivo,
     plantilla: registro.plantilla,
     perfil: registro.perfil,
@@ -216,13 +216,69 @@ async function medirDocumento(registro: {
         : datos.candidateData
     ),
   };
+
+  if (registro.formulario === 'contrato' && (window as any).__diagArchivo === registro.archivo) {
+    (window as any).__diagResultado = {
+      texto: datos.extractedText,
+      contractData: datos.contractData,
+      campos: resultado.campos,
+    };
+  }
+
+  return resultado;
+}
+
+async function diagnosticar(archivo: string): Promise<{
+  texto: string;
+  contrato: unknown;
+  lineasLayout: { text: string; column: number; y: number; height: number; fontSize: number }[];
+}> {
+  const respuesta = await fetch(`/test-scans/${archivo}`);
+  if (!respuesta.ok) throw new Error(`No se pudo leer ${archivo}: ${respuesta.status}`);
+  const blob = await respuesta.blob();
+  const file = new File([blob], archivo, { type: 'application/pdf' });
+
+  const pdfReaderMod = await import('../lib/ocr/pdf-reader');
+  const ocrMod = await import('../lib/ocr/tesseract-worker');
+  const layoutMod = await import('../lib/ocr/layout');
+  const parserMod = await import('../lib/ocr/parser-contract');
+
+  const extension = archivo.split('.').pop()?.toLowerCase() || '';
+  let layoutObject: any = null;
+  let texto = '';
+
+  if (extension === 'pdf') {
+    const pdfResult = await (pdfReaderMod as any).readPdfFile(file);
+    if (pdfResult.isDigitalText && pdfResult.layout) {
+      layoutObject = pdfResult.layout;
+      texto = pdfResult.text;
+    } else if (pdfResult.renderedPages) {
+      const ocrRes = await (ocrMod as any).performOcr(pdfResult.renderedPages);
+      layoutObject = ocrRes.layout;
+      texto = ocrRes.text;
+    }
+  }
+
+  const lineasLayout = layoutObject
+    ? layoutObject.lines.map((l: any) => ({
+        text: l.text, column: l.column, y: Math.round(l.y),
+        height: Math.round(l.height), fontSize: Math.round(l.fontSize * 10) / 10,
+      }))
+    : [];
+
+  const contrato = (parserMod as any).parseContractText(texto, layoutObject);
+
+  return { texto, contrato, lineasLayout };
 }
 
 declare global {
   interface Window {
-    bancoLector?: { medirDocumento: typeof medirDocumento };
+    bancoLector?: {
+      medirDocumento: typeof medirDocumento;
+      diagnosticar: typeof diagnosticar;
+    };
   }
 }
 
-window.bancoLector = { medirDocumento };
+window.bancoLector = { medirDocumento, diagnosticar };
 document.body.dataset.bancoListo = '1';

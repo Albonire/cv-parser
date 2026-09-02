@@ -121,6 +121,21 @@ export function findLabeledValue(lines: string[], labels: string[]): string | nu
     }
   }
 
+  // Etiqueta y valor en el MISMO renglon separados por dos o mas espacios y sin
+  // dos puntos ("Domicilio del empleador   CALLE 11 No. 39 37"). El OCR de
+  // tablas sin titulo suele perder el ":". Solo se acepta cuando la parte
+  // izquierda coincide exactamente con una etiqueta buscada, para no romper
+  // nombres ni valores con espacios multiples.
+  for (const line of lines) {
+    const m = line.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s./]{1,60}?)\s{2,}(\S.*)$/);
+    if (!m) continue;
+    const label = normalize(m[1]);
+    if (wanted.includes(label)) {
+      const valor = m[2].trim();
+      if (valor.length >= 2) return valor;
+    }
+  }
+
   return null;
 }
 
@@ -228,7 +243,7 @@ export function findLabeledValueFuzzy(
 /** Limpia viñetas, numeracion y puntuacion sobrante al inicio y al final. */
 export function stripBullets(line: string): string {
   return line
-    .replace(/^[\s•*•●▪\-–—+·>]+/, '')
+    .replace(/^[\s•*•●▪\-–—+·>'"`“”‘’]+/, '')
     .replace(/^\d+[.)]\s+/, '')
     .replace(/\s+$/, '')
     .trim();
