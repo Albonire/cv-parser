@@ -1,0 +1,249 @@
+{
+  "_convencion": {
+    "campo": "igualdad tras normalizar espacios, mayusculas y tildes",
+    "campo~": "el valor esperado debe estar contenido en el extraido"
+  },
+  "_origen": "Generado por scripts/generar-contratos-escaneados.mjs. No editar a mano.",
+  "documentos": [
+    {
+      "archivo": "CT_01_contrato-real_limpio.pdf",
+      "plantilla": "contrato-real",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas, título centrado y celdas desfasadas, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "GUSTAVO SEGUNDO MONTENEGRO CABALLERO",
+        "workerDocumentNumber": "9876527",
+        "workerEmail~": "gmail.com",
+        "position~": "CONDUCTOR",
+        "salary": "1423500",
+        "executionPlace~": "BARRANQUILLA"
+      },
+      "derivados": {
+        "durationMonths": 3
+      }
+    },
+    {
+      "archivo": "CT_02_contrato-real_medio.pdf",
+      "plantilla": "contrato-real",
+      "perfil": "medio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas, título centrado y celdas desfasadas, degradado medio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "MARTHA LUCÍA CAICEDO BERMÚDEZ",
+        "workerDocumentNumber": "1098234567",
+        "workerEmail~": "correo.com",
+        "position~": "AUXILIAR ADMINISTRATIVA",
+        "salary": "1300000",
+        "executionPlace~": "PAMPLONA"
+      },
+      "derivados": {
+        "durationMonths": null
+      }
+    },
+    {
+      "archivo": "CT_03_contrato-real_limpio.pdf",
+      "plantilla": "contrato-real",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas, título centrado y celdas desfasadas, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "JHON FREDY OSPINA CARDONA",
+        "workerDocumentNumber": "1045678901",
+        "workerEmail~": "gmail.com",
+        "position~": "OPERARIO DE PRODUCCIÓN",
+        "salary": "1623500",
+        "executionPlace~": "MEDELLÍN"
+      },
+      "derivados": {
+        "durationMonths": 6
+      }
+    },
+    {
+      "archivo": "CT_04_contrato-real_duro.pdf",
+      "plantilla": "contrato-real",
+      "perfil": "duro",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas, título centrado y celdas desfasadas, degradado duro",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "DIANA CAROLINA MURILLO ESCOBAR",
+        "workerDocumentNumber": "52987654",
+        "workerEmail~": "hotmail.com",
+        "position~": "COORDINADORA DE TALENTO HUMANO",
+        "salary": "3200000",
+        "executionPlace~": "BOGOTÁ D.C."
+      },
+      "derivados": {
+        "durationMonths": 12
+      }
+    },
+    {
+      "archivo": "CT_05_contrato-alineado_limpio.pdf",
+      "plantilla": "contrato-alineado",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas alineada, con título centrado, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "GUSTAVO SEGUNDO MONTENEGRO CABALLERO",
+        "workerDocumentNumber": "9876527",
+        "workerEmail~": "gmail.com",
+        "position~": "CONDUCTOR",
+        "salary": "1423500",
+        "executionPlace~": "BARRANQUILLA"
+      },
+      "derivados": {
+        "durationMonths": 3
+      }
+    },
+    {
+      "archivo": "CT_06_contrato-alineado_medio.pdf",
+      "plantilla": "contrato-alineado",
+      "perfil": "medio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas alineada, con título centrado, degradado medio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "MARTHA LUCÍA CAICEDO BERMÚDEZ",
+        "workerDocumentNumber": "1098234567",
+        "workerEmail~": "correo.com",
+        "position~": "AUXILIAR ADMINISTRATIVA",
+        "salary": "1300000",
+        "executionPlace~": "PAMPLONA"
+      },
+      "derivados": {
+        "durationMonths": null
+      }
+    },
+    {
+      "archivo": "CT_07_contrato-alineado_limpio.pdf",
+      "plantilla": "contrato-alineado",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas alineada, con título centrado, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "JHON FREDY OSPINA CARDONA",
+        "workerDocumentNumber": "1045678901",
+        "workerEmail~": "gmail.com",
+        "position~": "OPERARIO DE PRODUCCIÓN",
+        "salary": "1623500",
+        "executionPlace~": "MEDELLÍN"
+      },
+      "derivados": {
+        "durationMonths": 6
+      }
+    },
+    {
+      "archivo": "CT_08_contrato-alineado_duro.pdf",
+      "plantilla": "contrato-alineado",
+      "perfil": "duro",
+      "formulario": "contrato",
+      "nota": "Tabla de dos columnas alineada, con título centrado, degradado duro",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "DIANA CAROLINA MURILLO ESCOBAR",
+        "workerDocumentNumber": "52987654",
+        "workerEmail~": "hotmail.com",
+        "position~": "COORDINADORA DE TALENTO HUMANO",
+        "salary": "3200000",
+        "executionPlace~": "BOGOTÁ D.C."
+      },
+      "derivados": {
+        "durationMonths": 12
+      }
+    },
+    {
+      "archivo": "CT_09_contrato-sin-titulo_limpio.pdf",
+      "plantilla": "contrato-sin-titulo",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla alineada sin título que cruce el canal, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "GUSTAVO SEGUNDO MONTENEGRO CABALLERO",
+        "workerDocumentNumber": "9876527",
+        "workerEmail~": "gmail.com",
+        "position~": "CONDUCTOR",
+        "salary": "1423500",
+        "executionPlace~": "BARRANQUILLA"
+      },
+      "derivados": {
+        "durationMonths": 3
+      }
+    },
+    {
+      "archivo": "CT_10_contrato-sin-titulo_medio.pdf",
+      "plantilla": "contrato-sin-titulo",
+      "perfil": "medio",
+      "formulario": "contrato",
+      "nota": "Tabla alineada sin título que cruce el canal, degradado medio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "MARTHA LUCÍA CAICEDO BERMÚDEZ",
+        "workerDocumentNumber": "1098234567",
+        "workerEmail~": "correo.com",
+        "position~": "AUXILIAR ADMINISTRATIVA",
+        "salary": "1300000",
+        "executionPlace~": "PAMPLONA"
+      },
+      "derivados": {
+        "durationMonths": null
+      }
+    },
+    {
+      "archivo": "CT_11_contrato-sin-titulo_limpio.pdf",
+      "plantilla": "contrato-sin-titulo",
+      "perfil": "limpio",
+      "formulario": "contrato",
+      "nota": "Tabla alineada sin título que cruce el canal, degradado limpio",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "JHON FREDY OSPINA CARDONA",
+        "workerDocumentNumber": "1045678901",
+        "workerEmail~": "gmail.com",
+        "position~": "OPERARIO DE PRODUCCIÓN",
+        "salary": "1623500",
+        "executionPlace~": "MEDELLÍN"
+      },
+      "derivados": {
+        "durationMonths": 6
+      }
+    },
+    {
+      "archivo": "CT_12_contrato-sin-titulo_duro.pdf",
+      "plantilla": "contrato-sin-titulo",
+      "perfil": "duro",
+      "formulario": "contrato",
+      "nota": "Tabla alineada sin título que cruce el canal, degradado duro",
+      "campos": {
+        "employerName~": "ROSIMAR",
+        "employerNit": "9011679554",
+        "workerName": "DIANA CAROLINA MURILLO ESCOBAR",
+        "workerDocumentNumber": "52987654",
+        "workerEmail~": "hotmail.com",
+        "position~": "COORDINADORA DE TALENTO HUMANO",
+        "salary": "3200000",
+        "executionPlace~": "BOGOTÁ D.C."
+      },
+      "derivados": {
+        "durationMonths": 12
+      }
+    }
+  ]
+}

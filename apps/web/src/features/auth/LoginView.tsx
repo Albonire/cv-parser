@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SquareLockPasswordIcon } from 'hugeicons-react';
 import { SessionUser } from '../../types/session';
-import { verificarClaveAdmin, CLAVE_ADMIN_DEFAULT } from '../../lib/employer';
+import { cambiarClaveAdmin, requiereDefinirClave, verificarClaveAdmin } from '../../lib/employer';
 import './LoginView.css';
 
 interface LoginViewProps {
@@ -9,9 +9,15 @@ interface LoginViewProps {
 }
 
 /**
- * Acceso de administrador. Sin Backend (costo $0, 100% en el navegador): la
- * contraseña se verifica contra un hash guardado en este dispositivo y se
- * cambia en Configuracion, seccion "Contraseña de Administrador".
+ * Acceso de administrador.
+ *
+ * Ojo con lo que esto es y lo que no: al correr 100% en el navegador, sin
+ * servidor, es un seguro contra ediciones accidentales, NO un control de
+ * seguridad. La autorización real llega con Supabase Auth y las políticas RLS
+ * por rol, que se aplican en la base de datos.
+ *
+ * En el primer acceso la contraseña la define el administrador. Antes venía una
+ * por defecto en el código, impresa además en esta misma pantalla.
  *
  * El estilo vive en LoginView.css (CSS plano con colores HEX literales), de
  * modo que la tarjeta se renderiza identica sin depender de utilidades de
@@ -22,6 +28,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [mostrar, setMostrar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verificando, setVerificando] = useState(false);
+  const [primerAcceso] = useState(() => requiereDefinirClave());
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +41,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
     setVerificando(true);
     try {
+      if (primerAcceso) {
+        try {
+          await cambiarClaveAdmin(clave);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'No se pudo guardar la contraseña.');
+          return;
+        }
+        onLogin({ role: 'admin', name: 'Administrador' });
+        return;
+      }
+
       const valida = await verificarClaveAdmin(clave);
       if (!valida) {
         setError('Contraseña incorrecta. Intentelo de nuevo.');
@@ -101,14 +119,24 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             )}
 
             <button type="submit" className="login-submit" disabled={verificando}>
-              {verificando ? 'Verificando...' : 'Ingresar'}
+              {verificando ? 'Verificando...' : primerAcceso ? 'Definir contraseña y entrar' : 'Ingresar'}
             </button>
           </form>
 
           <p className="login-info">
-            <strong>Primer acceso:</strong> la contraseña predeterminada es{' '}
-            <code>{CLAVE_ADMIN_DEFAULT}</code>. Cámbiela después desde{' '}
-            <strong>Configuración</strong>. Todo se almacena en este dispositivo.
+            {primerAcceso ? (
+              <>
+                <strong>Primer acceso:</strong> escriba la contraseña que quiere usar (mínimo 6
+                caracteres). Queda guardada en este dispositivo y se cambia desde{' '}
+                <strong>Configuración</strong>.
+              </>
+            ) : (
+              <>
+                Esta clave evita cambios accidentales en los datos de este dispositivo; no es una
+                barrera de seguridad. El control por roles se aplicará en el servidor cuando se
+                conecte la base de datos.
+              </>
+            )}
           </p>
         </div>
 

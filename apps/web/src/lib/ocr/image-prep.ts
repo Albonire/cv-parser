@@ -132,10 +132,18 @@ export async function preprocessImage(
   let gris = aEscalaDeGrises(imageData);
 
   // Aplica CLAHE SOLO para documentos con bajo contraste (foto de celular)
+  // Aqui vivia una llamada a CLAHE para las fotos de bajo contraste. Se retira
+  // con el numero delante: nunca llego a ejecutarse (el limite de recorte estaba
+  // mal calculado y la medida de contraste saturaba), y al corregir ambas cosas
+  // resulto que HUNDE el perfil duro del banco de escaneos, de 51,0% a 3,9%, y
+  // duplica el tiempo por documento.
+  //
+  // El motivo es que no era CLAHE: pese al comentario, no interpolaba entre
+  // bloques, asi que dejaba costuras duras cada 64 px que el OCR no perdona, y
+  // recalculaba la funcion acumulada para cada pixel. Si alguna vez hace falta,
+  // hay que interpolar bilinealmente entre los centros de los bloques y medirlo
+  // con `npm run bench:ocr` antes de darlo por bueno.
   const contraste = calcularContraste(gris);
-  if (contraste < 90) {
-    gris = aplicarCLAHE(gris, canvas.width, canvas.height, 64, 2.0);
-  }
 
   if (binarizar) {
     binarizarLocal(imageData, gris, canvas.width, canvas.height);
@@ -153,13 +161,35 @@ export async function preprocessImage(
 
 /** Calcula el contraste global como diferencia max-min en la escala de grises */
 function calcularContraste(gris: Uint8ClampedArray): number {
-  let minVal = 255;
-  let maxVal = 0;
-  for (let i = 0; i < gris.length; i++) {
-    minVal = Math.min(minVal, gris[i]);
-    maxVal = Math.max(maxVal, gris[i]);
+  // Por percentiles, no por maximo menos minimo: una sola mota negra y otra
+  // blanca -- garantizadas en cualquier foto -- llevaban la medida a 255 y la
+  // condicion de bajo contraste no se cumplia nunca. Es la misma tecnica que ya
+  // usa `ecualizarContraste()` mas abajo en este archivo.
+  const histograma = new Uint32Array(256);
+  for (let i = 0; i < gris.length; i++) histograma[gris[i]]++;
+
+  const total = gris.length;
+  const objetivoBajo = total * 0.02;
+  const objetivoAlto = total * 0.98;
+
+  let acumulado = 0;
+  let p2 = 0;
+  let p98 = 255;
+  let bajoHecho = false;
+
+  for (let v = 0; v < 256; v++) {
+    acumulado += histograma[v];
+    if (!bajoHecho && acumulado >= objetivoBajo) {
+      p2 = v;
+      bajoHecho = true;
+    }
+    if (acumulado >= objetivoAlto) {
+      p98 = v;
+      break;
+    }
   }
-  return maxVal - minVal;
+
+  return p98 - p2;
 }
 
 async function cargarImagen(
@@ -266,81 +296,6 @@ function binarizarEnSitio(imageData: ImageData, gris: Uint8ClampedArray, umbral:
   }
 }
 
-/**
- * CLAHE (Contrast Limited Adaptive Histogram Equalization):
- * Ecualiza el histograma localmente sin amplificar ruido excesivamente.
- * Mejora documentos con iluminación desigual.
- */
-function aplicarCLAHE(
-  gris: Uint8ClampedArray,
-  width: number,
-  height: number,
-  tamañoBloque: number = 64,
-  limiteContraste: number = 2.0
-): Uint8ClampedArray {
-  const resultado = new Uint8ClampedArray(gris.length);
-  const clipLimit = limiteContraste * (tamañoBloque * tamañoBloque);
-  
-  // Divide la imagen en bloques
-  const bloqueAncho = Math.ceil(width / tamañoBloque);
-  const bloqueAlto = Math.ceil(height / tamañoBloque);
-  
-  // Calcula histograma para cada bloque
-  const histogramas = new Array(bloqueAncho * bloqueAlto);
-  for (let by = 0; by < bloqueAlto; by++) {
-    for (let bx = 0; bx < bloqueAncho; bx++) {
-      const hist = new Array(256).fill(0);
-      const y0 = by * tamañoBloque;
-      const y1 = Math.min(y0 + tamañoBloque, height);
-      const x0 = bx * tamañoBloque;
-      const x1 = Math.min(x0 + tamañoBloque, width);
-      
-      for (let y = y0; y < y1; y++) {
-        for (let x = x0; x < x1; x++) {
-          hist[gris[y * width + x]]++;
-        }
-      }
-      
-      // Limita el contraste (clip)
-      let pixelOverflow = 0;
-      for (let i = 0; i < 256; i++) {
-        if (hist[i] > clipLimit) {
-          pixelOverflow += hist[i] - clipLimit;
-          hist[i] = clipLimit;
-        }
-      }
-      
-      // Distribuye pixels overflow uniformemente
-      if (pixelOverflow > 0) {
-        const distribucionPorBin = pixelOverflow / 256;
-        for (let i = 0; i < 256; i++) {
-          hist[i] += distribucionPorBin;
-        }
-      }
-      
-      histogramas[by * bloqueAncho + bx] = hist;
-    }
-  }
-  
-  // Aplica CLAHE interpolando entre bloques
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const by = Math.min(Math.floor(y / tamañoBloque), bloqueAlto - 1);
-      const bx = Math.min(Math.floor(x / tamañoBloque), bloqueAncho - 1);
-      const valor = gris[y * width + x];
-      
-      const hist = histogramas[by * bloqueAncho + bx];
-      let cumulativo = 0;
-      for (let i = 0; i <= valor; i++) {
-        cumulativo += hist[i];
-      }
-      
-      resultado[y * width + x] = Math.round((cumulativo / (tamañoBloque * tamañoBloque)) * 255);
-    }
-  }
-  
-  return resultado;
-}
 
 /**
  * Erosión morfológica: reduce áreas blancas.

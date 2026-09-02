@@ -36,3 +36,4 @@ test-scans/
 
 # Fotos personales del usuario (cedulas, documentos) - NO deben versionarse
 fotos-usuario/
+resultados-bench-*.json

@@ -185,6 +185,8 @@ async function medirDocumento(registro: {
   archivo: string;
   plantilla: string;
   perfil: string;
+  /** Formulario contra el que se compara. Por defecto, hoja de vida. */
+  formulario?: 'cv' | 'contrato';
   campos: Record<string, unknown>;
 }): Promise<ResultadoDocumento> {
   const respuesta = await fetch(`/test-scans/${registro.archivo}`);
@@ -207,7 +209,12 @@ async function medirDocumento(registro: {
     ms,
     caracteres: datos.extractedText.length,
     avisos: datos.warnings ?? [],
-    campos: compararCampos(registro.campos, datos.candidateData),
+    campos: compararCampos(
+      registro.campos,
+      registro.formulario === 'contrato'
+        ? (datos.contractData as unknown as CandidateFormData | undefined)
+        : datos.candidateData
+    ),
   };
 }
 

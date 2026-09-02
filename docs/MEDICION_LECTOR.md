@@ -266,6 +266,59 @@ mantiene en 165 de 165.
    `admin` desde el navegador. No es un asunto de interfaz sino de autenticacion,
    y va con la conversacion de roles que quedo pendiente.
 
+## Banco de contratos
+
+El contrato en papel de Rosimar es una tabla de dos columnas con la etiqueta a la
+izquierda y el valor a la derecha, titulo centrado a todo el ancho y las celdas de
+las dos columnas desfasadas media fila. `npm run gen:contratos` reproduce ese
+documento como escaneo y `npm run bench:contratos` lo mide.
+
+Habia una prueba anterior de "tabla de dos columnas" que pasaba, pero su fixture
+estaba moldeado al algoritmo: variaba el tamano de fuente 0,001 pt por palabra
+para forzar a pdf.js a separar los items, acortaba el titulo para que no cruzara
+el canal entre columnas, alineaba las filas perfectamente y era un PDF digital en
+vez de un escaneo. Se conserva (cubre la ruta `pdf_text`) y al lado esta ahora la
+del documento real.
+
+Primera medicion sobre el formato real:
+
+| | Precision |
+|---|---|
+| Antes de tocar nada | 16,1% |
+| Corrigiendo el emparejamiento etiqueta/valor | **18,1%** |
+| Solo la variante que copia el documento real | 26,2% -> **32,9%** |
+
+Dos defectos corregidos, los dos generales:
+
+- **`findLabeledValueOrNextLine` tomaba como valor el renglon siguiente aunque el
+  renglon actual YA trajera el valor.** "NIT No. 901.167.955-4" pasaba por ser la
+  etiqueta "nit" y el parser se llevaba la etiqueta de la fila de abajo. Ahora el
+  renglon tiene que ser exactamente la etiqueta.
+- **La geometria manda sobre el heuristico de renglon siguiente.** Cuando se
+  detectan dos columnas los renglones vienen ordenados columna por columna, asi
+  que "el siguiente" es la etiqueta de la fila de abajo y no el valor.
+
+Ademas, los campos del trabajador se buscan primero en su bloque de la tabla: el
+contrato repite "Identificacion:" y "Domicilio:" para la empresa y para la
+persona, y sin acotar se tomaba siempre el primero (la cedula salia con el NIT y
+el correo con el corporativo). El acotado es una preferencia, no un filtro: si no
+encuentra, reintenta en el documento entero.
+
+Lo que queda: **la maquetacion de la tabla**. Cuando las celdas de las dos
+columnas estan alineadas, el agrupador de renglones funde la tabla entera en dos
+o tres lineas ilegibles; la variante desfasada se lee mejor justamente porque el
+desfase separa las filas. Es trabajo sobre `layout.ts` y ahora esta medido.
+
+## CLAHE: por que no esta
+
+Hubo una llamada a CLAHE para las fotos de bajo contraste. Se retiro con el numero
+delante: nunca llego a ejecutarse (el limite de recorte se calculaba por bloque
+entero, 8.192 sobre bloques de 4.096 pixeles, y la medida de contraste era maximo
+menos minimo global, que satura a 255 con una sola mota). Al corregir las dos
+cosas resulto que **hunde el perfil duro de 51,0% a 3,9%** y duplica el tiempo por
+documento: pese al comentario no interpolaba entre bloques, dejando costuras duras
+cada 64 px, y recalculaba la funcion acumulada para cada pixel.
+
 ## Como reproducirlo
 
 ```bash
