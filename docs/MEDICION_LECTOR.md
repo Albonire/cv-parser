@@ -309,6 +309,98 @@ columnas estan alineadas, el agrupador de renglones funde la tabla entera en dos
 o tres lineas ilegibles; la variante desfasada se lee mejor justamente porque el
 desfase separa las filas. Es trabajo sobre `layout.ts` y ahora esta medido.
 
+## Segunda tanda: la regresion de `4ae4dce` y los contratos
+
+Septiembre de 2026. Un commit directo a `main` subio mucho el banco de contratos y a cambio bajo el
+de hojas de vida, con el CI en verde: `npm test` no incluye los bancos, asi que las pruebas
+unitarias no ven el motor. Todas las cifras de aqui son la precision global que reporta el banco
+(media por documento).
+
+| | Hojas de vida | Contratos | Tiempo/doc |
+|---|---|---|---|
+| Antes de `4ae4dce` | 77,3% | 18,1% | 6,3 s |
+| Despues de `4ae4dce` | 69,1% | 66,5% | 8,9 s |
+| Tras esta tanda | **76,0%** | **72,5%** | **6,0 s** |
+
+### La altura de referencia del agrupado tiene que ser del renglon
+
+`groupWordsIntoRows` paso a calcular la altura del umbral de solapamiento una sola vez por pagina,
+tomada de la primera palabra del orden. En un contrato funciona porque todas las celdas miden igual.
+En una hoja de vida la primera palabra es el titulo: con 24 pt el umbral queda en 9,6 px y dos
+palabras de la misma linea con cajas distintas ("Telefono:" con ascendentes, "3184567821" sin ellas)
+se solapan menos que eso y acaban en renglones separados. Medido en la prueba: el cuerpo de dos
+lineas salia partido en cinco renglones, uno por palabra.
+
+### La segunda lectura de OCR solo se paga cuando puede servir
+
+Leer siempre la fuente original ademas de la escala de grises cuesta un OCR entero por pagina y en
+una hoja de vida de una columna no aporta nada: las dos lecturas dan el mismo texto exacto (CV_01,
+1.526 caracteres las dos).
+
+No se puede decidir con la confianza, porque Tesseract la devuelve alta aunque no haya encontrado
+casi nada: en CT_07 la lectura en gris da 319 caracteres con confianza 94 frente a los 2.206 de la
+fuente. La señal que si separa los dos casos es cuantos renglones trae la lectura:
+
+  hay que leer la fuente:  CT_09 3, CT_07 6, CT_11 8, CT_05 9 renglones
+  se basta el gris:        CT_10 19, CT_06 23, CV_01 31, CV_02 34, CT_01 43
+
+El umbral queda en 15. Precision intacta en los dos bancos y 18% menos de tiempo.
+
+### La arroba es el caracter que peor lee Tesseract
+
+`workerEmail` salia vacio en 10 de los 12 contratos, tambien en los limpios. El OCR no pierde la
+arroba: la lee como otro glifo, y de tres formas distintas.
+
+    gerencia Qrosimar.com.co     el glifo pegado al dominio
+    jhon.ospinaQ gmail.com       el glifo pegado al usuario
+    demurilloGhotmail.com        el glifo dentro de una sola palabra
+
+Lo que permite desambiguar es que el glifo que suplanta a la arroba sale siempre en mayuscula o como
+simbolo dentro de una direccion en minusculas, asi que la "g" de "gmail" no se confunde con una
+arroba mal leida. `correo-ocr.ts` es comun a las dos rutas. Contratos 66,5% -> 71,2%, `workerEmail`
+de 17% a 67%; en hojas de vida los correos exactos pasan de 26/40 a 27/40.
+
+### Vacio antes que inventado
+
+Tres campos devolvian datos falsos en vez de quedarse vacios, y en un lote un hueco se ve pero un
+dato equivocado no:
+
+- El **nombre del trabajador** salia como "30 dias. Empleador: 30 dias" en tres documentos. La fila
+  de preaviso empieza literalmente por "Trabajador:", asi que la etiqueta casa con ella.
+- La **fecha de inicio** salia como "7025-01-02" en CT_04: el OCR leyo el 2 del anio como 7. De las
+  dos correcciones posibles del digito de las milesimas solo una puede caer en 1900-2100, porque los
+  tramos no se solapan, asi que no hay ambiguedad.
+- El **salario** llegaba al formulario como 0 cuando no se encontraba.
+
+Conviene tener presente al leer las cifras que **cambiar un dato falso por un campo vacio BAJA la
+medida**: la similitud da credito parcial a una cadena equivocada que comparte caracteres con la
+esperada, y cero a la vacia. Solo el descarte del preaviso y del domicilio costaba medio punto. Si
+la medida y no inventar entran en conflicto, manda no inventar.
+
+### Lo que no se pudo arreglar, y por que
+
+`position` se queda en 50% y falla incluso en escaneos limpios (CT_03, CT_05). No es un fallo del
+analizador: **los rotulos "Cargo" y "Salario" no estan en la salida del OCR**. Comprobado sobre
+CT_03 con las tres variantes de preprocesado (fuente, gris y binarizada) y con los cinco modos de
+segmentacion de Tesseract:
+
+| Modo | fuente | gris |
+|---|---|---|
+| AUTO (el actual) | 865 | **1.090** |
+| AUTO_OSD | 1 | 1 |
+| SPARSE_TEXT | 429 | 435 |
+| SINGLE_BLOCK | 293 | 287 |
+| SINGLE_COLUMN | 482 | 515 |
+
+AUTO es el mejor con diferencia y ninguno recupera los rotulos. La via del modo de segmentacion
+queda cerrada. Recuperar el cargo exigiria suponer el orden de las filas de esta plantilla, que es
+justo lo que no se quiere: seria una regla pegada a un documento concreto.
+
+Aviso para quien retome esto: `scripts/experimento-ocr.mjs` prueba modos de segmentacion pasandolos
+en el tercer argumento de `worker.recognize`, que en tesseract.js es `OutputFormats` (que salidas
+devolver), no parametros. Por eso sus doce variantes daban exactamente el mismo numero de
+caracteres. El modo se cambia con `worker.setParameters({ tessedit_pageseg_mode })`.
+
 ## CLAHE: por que no esta
 
 Hubo una llamada a CLAHE para las fotos de bajo contraste. Se retiro con el numero
