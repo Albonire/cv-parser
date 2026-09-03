@@ -97,7 +97,7 @@ export function parsearMonto(txt: string): number | undefined {
   if (!txt) return undefined;
   const limpio = txt
     .replace(/[^\d,.]/g, '')
-    .replace(/,/g, (_, __, offset, s) => (/,/.test(s.slice(offset - 3, offset)) ? '' : _))
+    .replace(/,/g, (_, offset, s) => (/,/.test(s.slice(offset - 3, offset)) ? '' : _))
     .replace(/,/g, '.');
   // 1.234.567 -> 1234567  (punto separador de miles)
   if (/^\d{1,3}(\.\d{3})+$/.test(limpio)) {
