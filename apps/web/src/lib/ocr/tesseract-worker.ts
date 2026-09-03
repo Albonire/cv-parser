@@ -249,11 +249,52 @@ interface Lectura {
 }
 
 /**
- * Lee la pagina probando los dos preprocesados.
+ * Renglones minimos para dar por hecho que una lectura cubre la pagina entera.
+ * Medido sobre los dos bancos: cuando el preprocesado destruye una tabla, la
+ * lectura en gris se queda en 3 a 9 renglones (CT_07 seis, CT_09 tres, CT_05
+ * nueve) mientras que una lectura completa da de 19 a 43. El hueco entre las
+ * dos poblaciones es lo bastante ancho para separarlas con un solo numero.
+ */
+const RENGLONES_PAGINA_COMPLETA = 15;
+
+/** Renglones no vacios de una lectura. */
+function renglonesUtiles(texto: string): number {
+  return texto.split('\n').filter((l) => l.trim().length > 0).length;
+}
+
+/** Un renglon con forma de "Etiqueta: valor" o de rotulo suelto ("Cargo:"). */
+const RENGLON_ETIQUETADO = /^[^:\n]{2,35}:(?:\s*$|\s+\S)/;
+
+/**
+ * Proporcion de renglones etiquetados a partir de la cual la pagina se trata
+ * como tabla de datos. Medido: las hojas de vida se quedan en 0,03 y los
+ * contratos completos van de 0,23 a 0,38.
+ */
+const PROPORCION_TABLA = 0.15;
+
+/**
+ * En una tabla de datos cada preparado de la imagen captura una columna
+ * distinta, asi que compensa leer las dos aunque la primera parezca completa.
+ * En una hoja de vida, que es prosa, no.
+ */
+function pareceTablaEtiquetada(texto: string): boolean {
+  const renglones = texto.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  if (renglones.length === 0) return false;
+  const etiquetados = renglones.filter((l) => RENGLON_ETIQUETADO.test(l)).length;
+  return etiquetados / renglones.length >= PROPORCION_TABLA;
+}
+
+/**
+ * Lee la pagina probando los preprocesados que le pueden servir.
  *
  * Las fotografias de camara (WhatsApp, celular) leen mejor en escala de grises;
  * la binarizacion local, pensada para escaneos planos, les borra el texto. Al
- * reves ocurre con un escaneo con sombra, donde el gris no da nada.
+ * reves ocurre con un escaneo con sombra, donde el gris no da nada. Y una tabla
+ * de dos columnas puede necesitar la fuente sin preprocesar.
+ *
+ * La escala de grises se lee siempre. Las demas variantes cuestan un OCR entero
+ * cada una, asi que solo se leen cuando la forma del documento dice que pueden
+ * cambiar el resultado.
  */
 async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Lectura> {
   const leer = async (src: File | Blob): Promise<Lectura> => {
@@ -279,6 +320,60 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   };
   const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
 
+  const preprocesar = async (binarizar: boolean, igualarLuz = true): Promise<Blob | null> => {
+    try {
+      return await preprocessImage(fuente, { binarizar, igualarLuz });
+    } catch (error) {
+      console.warn(`Preprocesamiento ${binarizar ? 'binarizado' : 'en escala de grises'} omitido:`, error);
+      return null;
+    }
+  };
+
+  const leerVariante = async (src: Blob | null, nombre: string) => {
+    if (!src) return null;
+    try {
+      return evaluar(await leer(src));
+    } catch (error) {
+      console.warn(`Lectura ${nombre} omitida:`, error);
+      return null;
+    }
+  };
+
+  const gris = await preprocesar(false);
+  let conGris = await leerVariante(gris, 'en escala de grises');
+
+  /** La lectura cubre la pagina y no hay nada mas que buscar. */
+  const cubreLaPagina = (c: typeof conGris) =>
+    !!c && c.solida && renglonesUtiles(c.lectura.texto) >= RENGLONES_PAGINA_COMPLETA;
+
+  // La igualacion de luz levanta mucho las fotos con vineta o sombra y estorba
+  // en los escaneos muy degradados, donde emborrona el texto en vez de igualar
+  // el papel. No hay forma barata de distinguirlos mirando la imagen: se probo
+  // con la energia de borde y no separa los dos casos, asi que se lee tambien
+  // sin igualar y gana la que mas texto reconoce.
+  //
+  // Se paga cuando la lectura igualada no cubre la pagina, y tambien cuando
+  // tiene forma de tabla de datos: ahi cada preparado captura una columna
+  // distinta y la que parece completa puede estar dejandose la mitad de los
+  // campos. En una hoja de vida, que es prosa, no se paga.
+  if (!cubreLaPagina(conGris) || (conGris && pareceTablaEtiquetada(conGris.lectura.texto))) {
+    const conGrisPlano = await leerVariante(await preprocesar(false, false), 'en gris sin igualar');
+    if (conGrisPlano && (!conGris || score(conGrisPlano.lectura) > score(conGris.lectura))) {
+      conGris = conGrisPlano;
+    }
+  }
+
+  // Si la lectura en gris cubre la pagina no hay nada que la fuente original
+  // pueda anadir, y leerla cuesta un OCR entero. Solo se paga cuando el gris se
+  // queda corto, que es justo cuando el preprocesado ha borrado una tabla:
+  // Tesseract devuelve confianza alta aunque no haya encontrado casi nada, asi
+  // que "solida" por si sola no basta para decidirlo.
+  // La condicion de tabla ya se ha cobrado arriba: si la ganadora cubre la
+  // pagina, no hay por que pagar ademas la fuente original.
+  if (cubreLaPagina(conGris)) {
+    return conGris!.lectura;
+  }
+
   // Fuente original: lee completa una tabla alineada cuyas celdas tocan el
   // canal. La escala de grises la pierde porque Sauvola funde el fondo gris de
   // la etiqueta con su texto. A la inversa, en una tabla desfasada la escala de
@@ -289,24 +384,7 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   } catch (error) {
     console.warn('Lectura de la fuente original omitida:', error);
   }
-
-  let gris: Blob | null = null;
-  try {
-    gris = await preprocessImage(fuente, { binarizar: false });
-  } catch (error) {
-    console.warn('Preprocesamiento en escala de grises omitido:', error);
-  }
-  let lecturaGris: Lectura | null = null;
-  if (gris) {
-    try {
-      lecturaGris = await leer(gris);
-    } catch (error) {
-      console.warn('Lectura en escala de grises omitida:', error);
-    }
-  }
-
   const conFuente = lecturaFuente ? evaluar(lecturaFuente) : null;
-  const conGris = lecturaGris ? evaluar(lecturaGris) : null;
 
   // Una lectura con dos columnas bien formadas y solida es la que el parser
   // de tablas aprovecha (la geometria resuelve etiqueta->valor). Se prefiere
@@ -325,23 +403,20 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
     (c): c is NonNullable<typeof c> => !!c && c.solida
   );
   if (solidas.length > 0) {
-    const fuente = solidas.find((c) => c === conFuente);
-    const grisC = solidas.find((c) => c === conGris);
-    if (fuente && grisC) {
-      if (fuente.lectura.texto.length >= grisC.lectura.texto.length * 1.6) return fuente.lectura;
-      return grisC.lectura;
+    const conLaFuente = solidas.find((c) => c === conFuente);
+    const conElGris = solidas.find((c) => c === conGris);
+    if (conLaFuente && conElGris) {
+      if (conLaFuente.lectura.texto.length >= conElGris.lectura.texto.length * 1.6) {
+        return conLaFuente.lectura;
+      }
+      return conElGris.lectura;
     }
     return solidas.sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
   }
 
   // Ninguna fue solida: respaldo binarizado (escaneo con sombra) y gana la que
   // reconocio mas texto.
-  let binarizada: Blob | null = null;
-  try {
-    binarizada = await preprocessImage(fuente, { binarizar: true });
-  } catch (error) {
-    console.warn('Preprocesamiento binarizado omitido:', error);
-  }
+  const binarizada = await preprocesar(true);
   const candidatas: { lectura: Lectura }[] = [];
   if (conFuente) candidatas.push(conFuente);
   if (conGris) candidatas.push(conGris);

@@ -1,4 +1,5 @@
 import { ContractFormData, ContractType, PaymentFrequency } from '../../types/contract';
+import { reconstruirCorreoOcr } from './correo-ocr';
 import { DocumentLayout, layoutFromPlainText } from './layout';
 import {
   findLabeledValue,
@@ -173,7 +174,10 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     limpiarValor(extraerCorreo(valorEnBloque(bloqueEmpleador, documento, ETIQUETAS_CORREO_EMPLEADOR))) ?? '';
 
   // 2. Trabajador, Documento y datos personales del trabajador
-  const workerName = extraerNombre(documento, ETIQUETAS_TRABAJADOR, documento) ?? '';
+  const workerName =
+    extraerNombre(documento, ETIQUETAS_TRABAJADOR, documento) ??
+    nombreSobreLosDatos(documento, ANCLAS_TRABAJADOR) ??
+    '';
   const workerDocumentRaw = extraerCedulaTrabajador(bloqueTrabajador, documento);
   let workerDocumentNumber = workerDocumentRaw
     ? workerDocumentRaw.replace(/[.\s-]/g, '').replace(/\D/g, '')
@@ -196,7 +200,9 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     limpiarValor(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_DOMICILIO_TRABAJADOR, { useFuzzy: false }))
       ?? '';
   const workerEmail =
-    limpiarValor(extraerCorreo(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CORREO_TRABAJADOR))) ?? '';
+    limpiarValor(extraerCorreo(valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_CORREO_TRABAJADOR))) ??
+    correoEnBloque(bloqueTrabajador, employerEmail) ??
+    '';
 
   // 4. Cargo / Posicion
   const position =
@@ -621,9 +627,8 @@ export function normalizarFecha(valor: string): string {
     if (ddmm[3].length === 2) y += 2000;
     const m = Number(ddmm[2]);
     const d = Number(ddmm[1]);
-    if (mesValido(m) && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    }
+    const iso = fechaIso(y, m, d);
+    if (iso) return iso;
   }
 
   // YYYY/MM/DD o YYYY-MM-DD (solo cuando el bloque de 4 digitos va primero).
@@ -632,9 +637,8 @@ export function normalizarFecha(valor: string): string {
     const y = Number(ymd[1]);
     const m = Number(ymd[2]);
     const d = Number(ymd[3]);
-    if (mesValido(m) && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    }
+    const iso = fechaIso(y, m, d);
+    if (iso) return iso;
   }
 
   // "primero de septiembre de 2023" / "1 de septiembre de 2023"
@@ -645,8 +649,9 @@ export function normalizarFecha(valor: string): string {
     const dia = numeroEnTexto(textual[1]);
     const mes = indiceMes(textual[2]);
     const y = Number(textual[3]);
-    if (dia && mes && diaValido(dia, mes, y)) {
-      return `${y}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    if (dia && mes) {
+      const iso = fechaIso(y, mes, dia);
+      if (iso) return iso;
     }
   }
 
@@ -659,12 +664,41 @@ export function normalizarFecha(valor: string): string {
     const d = Number(ddmmyyyy[1]);
     const m = indiceMes(ddmmyyyy[2]);
     const y = Number(ddmmyyyy[3]);
-    if (m && diaValido(d, m, y)) {
-      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    if (m) {
+      const iso = fechaIso(y, m, d);
+      if (iso) return iso;
     }
   }
 
   return '';
+}
+
+/** Un contrato laboral no puede estar fechado fuera de este rango. */
+const ANIO_MINIMO = 1900;
+const ANIO_MAXIMO = 2100;
+
+/**
+ * Corrige el digito de las milesimas cuando el OCR lo ha leido mal: en CT_04 la
+ * fecha de inicio salia como "7025-01-02" porque el 2 se leyo como 7. De las
+ * dos correcciones posibles (1xxx y 2xxx) solo una puede caer dentro del rango,
+ * porque los tramos no se solapan, asi que no hay ambiguedad que resolver. Si
+ * ninguna cabe se devuelve null y el campo se queda vacio, que es preferible a
+ * guardar una fecha inventada.
+ */
+function corregirAnio(anio: number): number | null {
+  if (anio >= ANIO_MINIMO && anio <= ANIO_MAXIMO) return anio;
+  if (!Number.isInteger(anio) || anio < 1000 || anio > 9999) return null;
+  const posibles = [1000 + (anio % 1000), 2000 + (anio % 1000)].filter(
+    (candidato) => candidato >= ANIO_MINIMO && candidato <= ANIO_MAXIMO
+  );
+  return posibles.length === 1 ? posibles[0] : null;
+}
+
+/** Compone la fecha ISO validando anio, mes y dia. Cadena vacia si no cuadra. */
+function fechaIso(anio: number, mes: number, dia: number): string {
+  const y = corregirAnio(anio);
+  if (y === null || !mesValido(mes) || !diaValido(dia, mes, y)) return '';
+  return `${y}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 }
 
 // Reciben numeros: quien las llama ya convirtio el texto con Number().
@@ -726,6 +760,69 @@ function esValorPreaviso(valor: string): boolean {
 }
 
 /**
+ * Una direccion colombiana, para no confundirla con un nombre. En CT_12 el
+ * respaldo devolvia "AV 68 x 40-15" como nombre del trabajador: tiene letras y
+ * no lleva ninguna palabra de etiqueta, asi que pasaba todos los filtros.
+ */
+function pareceDireccion(valor: string): boolean {
+  return (
+    /#/.test(valor) ||
+    /^(?:cl|cll|calle|cra|kra|carrera|av|avenida|dg|diagonal|tv|transversal|mz|manzana)\b/i.test(
+      valor.trim()
+    )
+  );
+}
+
+/**
+ * Rotulos que solo pueden pertenecer al trabajador. Sirven de ancla cuando su
+ * propia etiqueta ("Trabajador:") no se ha leido.
+ */
+const ANCLAS_TRABAJADOR = [
+  ...ETIQUETAS_NACIMIENTO,
+  ...ETIQUETAS_DOMICILIO_TRABAJADOR,
+  ...ETIQUETAS_CORREO_TRABAJADOR,
+].map(normalize);
+
+/** Un nombre de persona: dos o mas palabras de letras, sin cifras ni rotulos. */
+function pareceNombreDePersona(valor: string): boolean {
+  const limpio = valor.trim();
+  if (limpio.length < 5 || limpio.length > 60) return false;
+  if (/\d/.test(limpio) || /[:;#]/.test(limpio) || pareceDireccion(limpio)) return false;
+  const palabras = limpio.split(/\s+/);
+  const deLetras = palabras.filter((p) => /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.'-]{2,}$/.test(p));
+  return deLetras.length >= 2 && deLetras.length === palabras.length;
+}
+
+/**
+ * En una tabla el rotulo puede no leerse y dejar el valor huerfano: en CT_06 el
+ * renglon del trabajador salio solo como "MARTHA LUCIA CAICEDO BERMUDEZ", sin
+ * la etiqueta "Trabajador:", y la unica linea que contenia esa palabra era la
+ * del preaviso ("Trabajador: 30 dias. Empleador: 30 dias").
+ *
+ * Cuando eso pasa, el nombre es el renglon sin etiqueta que esta justo encima
+ * de los datos de esa persona, que si conservan su rotulo. Se mira solo dos
+ * renglones hacia arriba para no cruzar a los datos del empleador.
+ */
+function nombreSobreLosDatos(documento: DocumentLayout, anclas: string[]): string | null {
+  const lines = documento.lines;
+  // La coincidencia exige frontera de palabra: sin ella, "domicilio del
+  // empleado" casaria con el renglon "Domicilio del empleador" y el ancla se
+  // iria al bloque de la empresa.
+  const casaAncla = (texto: string, ancla: string): boolean => {
+    const norm = normalize(texto);
+    return norm.startsWith(ancla) && !/[a-z0-9]/.test(norm.charAt(ancla.length));
+  };
+  const indice = lines.findIndex((l) => anclas.some((a) => casaAncla(l.text, a)));
+  if (indice <= 0) return null;
+
+  for (let i = indice - 1; i >= 0 && i >= indice - 2; i--) {
+    const valor = limpiarValor(lines[i].text);
+    if (valor && pareceNombreDePersona(valor)) return valor;
+  }
+  return null;
+}
+
+/**
  * Extrae un nombre de persona o empresa evitando la fila de preaviso. Usa el
  * mismo `valorDeEtiqueta` pero, si lo que arroja es un valor de duracion de la
  * fila de preaviso, espera a la ETIQUETA como renglon propio y toma el renglon
@@ -738,7 +835,9 @@ function extraerNombre(
   bloque: DocumentLayout
 ): string | null {
   const habitual = limpiarValor(valorDeEtiqueta(bloque, etiquetas));
-  if (habitual && !esValorPreaviso(habitual)) return habitual;
+  const utilizable = (valor: string | null | undefined): valor is string =>
+    !!valor && !esValorPreaviso(valor) && !pareceDireccion(valor);
+  if (utilizable(habitual)) return habitual;
 
   // Respaldo: etiqueta en un renglon propio y el nombre en el siguiente.
   const wanted = etiquetas.map(normalize).filter((e) => e.length >= 3);
@@ -758,11 +857,15 @@ function extraerNombre(
       // que no toca.
       if (!/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,}/.test(valor)) continue;
       if (/\b(?:fecha|correo|domicilio|identificacion|cargo|salario|forma|tipo|periodo|preaviso|lugar)\b/i.test(valor)) continue;
+      if (pareceDireccion(valor)) continue;
       return valor;
     }
   }
 
-  return habitual || null;
+  // Si lo unico que habia era la fila de preaviso o un domicilio, no se
+  // devuelve: un nombre de trabajador que dice "30 dias. Empleador: 30 dias" es
+  // un dato falso, y quien revisa un lote puede no verlo. Vacio se ve.
+  return utilizable(habitual) ? habitual : null;
 }
 
 /**
@@ -831,16 +934,34 @@ function limpiarNit(valor: string | null): string | undefined {
     .trim();
 }
 
+/**
+ * Respaldo cuando la etiqueta no se reconoce. El OCR de un escaneo se come una
+ * tilde y "Correo electronico del trabajador" pasa a "Correo electrenico del
+ * trabajador", que ya no casa con ninguna etiqueta. La direccion, en cambio,
+ * sigue ahi: se busca en el bloque de la persona, descartando la del empleador
+ * para no repetirla cuando el acotado por bloques no ha podido separar los dos.
+ */
+function correoEnBloque(bloque: DocumentLayout, excluir: string): string | null {
+  // Renglon a renglon, no de una vez: la del empleador suele aparecer antes que
+  // la del trabajador, y parar en la primera dejaria el campo vacio.
+  for (const linea of bloque.lines) {
+    const directo = linea.text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i)?.[0];
+    // Sin etiqueta que la respalde, la reconstruccion va en modo estricto.
+    const candidato = directo ?? reconstruirCorreoOcr(linea.text, { estricto: true });
+    if (!candidato) continue;
+    if (candidato.toLowerCase() !== excluir.toLowerCase()) return candidato;
+  }
+  return null;
+}
+
 /** Extrae una direccion de correo del valor etiquetado (null si no hay correo). */
 function extraerCorreo(valor: string | null): string | null {
   if (!valor) return null;
   const match = valor.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i);
   if (match) return match[0];
-  // El OCR de fotos lee "@" como "Q" cuando la resolucion es baja.
-  const corregido = valor.replace(/\b(\w+)\s+Q\s*/i, '$1@');
-  const matchCorregido = corregido.match(/[\w.+-]+@[\w.-]+\.\w{2,}/i);
-  if (matchCorregido) return matchCorregido[0];
-  return valor.trim().includes('@') ? valor.trim() : null;
+  // Sin arroba legible: el OCR la habra leido como otro glifo. La
+  // reconstruccion es la misma que usa la ruta de hojas de vida.
+  return reconstruirCorreoOcr(valor) || null;
 }
 
 /** Cantidad de meses completos entre dos fechas ISO (minimo 1 si hay espacios). */

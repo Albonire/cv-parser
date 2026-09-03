@@ -160,17 +160,43 @@ function isValidColumnSplit(words: Word[], center: number): boolean {
   return true;
 }
 
+/**
+ * Cuanto puede crecer la banda de un renglon por encima de su propia altura de
+ * linea. El OCR devuelve de vez en cuando una caja que abarca casi dos lineas
+ * (medido en CV_05: cajas de 37 px donde el texto mide 21), y sin tope esa caja
+ * estira la banda, la banda estirada se solapa con la linea siguiente y el
+ * renglon se traga la pagina entera en cascada: en ese documento el renglon del
+ * nombre acababa con altura 81, tragandose titular, cedula, telefono y correo.
+ */
+const HOLGURA_BANDA = 2.0;
+
+/** Altura mediana de las cajas: estimacion robusta del alto de linea. */
+function alturaTipica(words: Word[]): number {
+  const alturas = words.map((w) => w.height).sort((a, b) => a - b);
+  return Math.max(1, alturas[Math.floor(alturas.length / 2)]);
+}
+
 /** Agrupa palabras en renglones por solapamiento vertical real de sus cajas. */
 export function groupWordsIntoRows(words: Word[]): Word[][] {
   if (words.length === 0) return [];
 
   const sorted = [...words].sort((a, b) => a.y - b.y || a.x - b.x);
   const rows: Word[][] = [];
+  // La altura tipica de la pagina es el suelo del tope: por debajo de ella el
+  // tope estrangularia los renglones de cuerpo con cajas algo desiguales.
+  const tipica = alturaTipica(sorted);
+  // El tope se mide contra la altura del renglon en curso, no contra la de la
+  // pagina: asi un titular grande conserva su banda y un renglon de cuerpo no
+  // puede estirarse hasta el siguiente.
+  const topeDeBanda = () => tipica * HOLGURA_BANDA;
 
   let current: Word[] = [sorted[0]];
   let top = sorted[0].y;
-  let bottom = sorted[0].y + sorted[0].height;
-  const refHeight = sorted[0].height;
+  let bottom = sorted[0].y + Math.min(sorted[0].height, topeDeBanda());
+  // Altura de referencia del renglon EN CURSO, que se reinicia al abrir uno
+  // nuevo. Fijarla una sola vez para toda la pagina hace que el agrupado dependa
+  // de que palabra caiga primero al ordenar, que es arbitrario.
+  let refHeight = Math.max(1, sorted[0].height);
 
   for (let i = 1; i < sorted.length; i++) {
     const word = sorted[i];
@@ -178,15 +204,20 @@ export function groupWordsIntoRows(words: Word[]): Word[][] {
     const wordBottom = word.y + word.height;
     const overlap = Math.min(bottom, wordBottom) - Math.max(top, wordTop);
 
-    if (overlap > refHeight * 0.4) {
+    const referencia = Math.max(1, Math.min(refHeight, word.height));
+
+    if (overlap > referencia * 0.4) {
       current.push(word);
       top = Math.min(top, wordTop);
-      bottom = Math.max(bottom, wordBottom);
+      // La caja aporta a la banda como mucho una linea y pico: si es mas alta,
+      // es ruido de reconocimiento y no prueba de que el renglon mida eso.
+      bottom = Math.max(bottom, wordTop + Math.min(word.height, topeDeBanda()));
     } else {
       rows.push(current);
       current = [word];
       top = wordTop;
-      bottom = wordBottom;
+      bottom = wordTop + Math.min(word.height, topeDeBanda());
+      refHeight = Math.max(1, word.height);
     }
   }
   rows.push(current);

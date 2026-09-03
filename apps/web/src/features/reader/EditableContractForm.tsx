@@ -157,10 +157,17 @@ export const EditableContractForm: React.FC<EditableContractFormProps> = ({
               <label className="block text-xs font-medium text-ink mb-1">Salario (Monto)</label>
               <input
                 type="number"
-                value={formData.salary}
+                /* Cuando el lector no encuentra el salario devuelve 0, y un 0 en
+                   la casilla es un dato falso que se puede guardar sin mirar.
+                   Vacio se ve, y quien revisa lo teclea. */
+                value={formData.salary || ''}
                 onChange={(e) => handleFieldChange('salary', parseFloat(e.target.value) || 0)}
+                placeholder="Ej. 1300000"
                 className="w-full px-3 py-1.5 border border-fog rounded text-sm"
               />
+              {!formData.salary && (
+                <p className="text-[11px] text-warning mt-1">No se pudo leer del documento</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-ink mb-1">Forma de Pago</label>
