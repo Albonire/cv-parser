@@ -262,6 +262,28 @@ function renglonesUtiles(texto: string): number {
   return texto.split('\n').filter((l) => l.trim().length > 0).length;
 }
 
+/** Un renglon con forma de "Etiqueta: valor" o de rotulo suelto ("Cargo:"). */
+const RENGLON_ETIQUETADO = /^[^:\n]{2,35}:(?:\s*$|\s+\S)/;
+
+/**
+ * Proporcion de renglones etiquetados a partir de la cual la pagina se trata
+ * como tabla de datos. Medido: las hojas de vida se quedan en 0,03 y los
+ * contratos completos van de 0,23 a 0,38.
+ */
+const PROPORCION_TABLA = 0.15;
+
+/**
+ * En una tabla de datos cada preparado de la imagen captura una columna
+ * distinta, asi que compensa leer las dos aunque la primera parezca completa.
+ * En una hoja de vida, que es prosa, no.
+ */
+function pareceTablaEtiquetada(texto: string): boolean {
+  const renglones = texto.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+  if (renglones.length === 0) return false;
+  const etiquetados = renglones.filter((l) => RENGLON_ETIQUETADO.test(l)).length;
+  return etiquetados / renglones.length >= PROPORCION_TABLA;
+}
+
 /**
  * Lee la pagina probando los preprocesados que le pueden servir.
  *
@@ -298,33 +320,58 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   };
   const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
 
-  const preprocesar = async (binarizar: boolean): Promise<Blob | null> => {
+  const preprocesar = async (binarizar: boolean, igualarLuz = true): Promise<Blob | null> => {
     try {
-      return await preprocessImage(fuente, { binarizar });
+      return await preprocessImage(fuente, { binarizar, igualarLuz });
     } catch (error) {
       console.warn(`Preprocesamiento ${binarizar ? 'binarizado' : 'en escala de grises'} omitido:`, error);
       return null;
     }
   };
 
-  const gris = await preprocesar(false);
-  let lecturaGris: Lectura | null = null;
-  if (gris) {
+  const leerVariante = async (src: Blob | null, nombre: string) => {
+    if (!src) return null;
     try {
-      lecturaGris = await leer(gris);
+      return evaluar(await leer(src));
     } catch (error) {
-      console.warn('Lectura en escala de grises omitida:', error);
+      console.warn(`Lectura ${nombre} omitida:`, error);
+      return null;
+    }
+  };
+
+  const gris = await preprocesar(false);
+  let conGris = await leerVariante(gris, 'en escala de grises');
+
+  /** La lectura cubre la pagina y no hay nada mas que buscar. */
+  const cubreLaPagina = (c: typeof conGris) =>
+    !!c && c.solida && renglonesUtiles(c.lectura.texto) >= RENGLONES_PAGINA_COMPLETA;
+
+  // La igualacion de luz levanta mucho las fotos con vineta o sombra y estorba
+  // en los escaneos muy degradados, donde emborrona el texto en vez de igualar
+  // el papel. No hay forma barata de distinguirlos mirando la imagen: se probo
+  // con la energia de borde y no separa los dos casos, asi que se lee tambien
+  // sin igualar y gana la que mas texto reconoce.
+  //
+  // Se paga cuando la lectura igualada no cubre la pagina, y tambien cuando
+  // tiene forma de tabla de datos: ahi cada preparado captura una columna
+  // distinta y la que parece completa puede estar dejandose la mitad de los
+  // campos. En una hoja de vida, que es prosa, no se paga.
+  if (!cubreLaPagina(conGris) || (conGris && pareceTablaEtiquetada(conGris.lectura.texto))) {
+    const conGrisPlano = await leerVariante(await preprocesar(false, false), 'en gris sin igualar');
+    if (conGrisPlano && (!conGris || score(conGrisPlano.lectura) > score(conGris.lectura))) {
+      conGris = conGrisPlano;
     }
   }
-  const conGris = lecturaGris ? evaluar(lecturaGris) : null;
 
   // Si la lectura en gris cubre la pagina no hay nada que la fuente original
   // pueda anadir, y leerla cuesta un OCR entero. Solo se paga cuando el gris se
   // queda corto, que es justo cuando el preprocesado ha borrado una tabla:
   // Tesseract devuelve confianza alta aunque no haya encontrado casi nada, asi
   // que "solida" por si sola no basta para decidirlo.
-  if (conGris && conGris.solida && renglonesUtiles(conGris.lectura.texto) >= RENGLONES_PAGINA_COMPLETA) {
-    return conGris.lectura;
+  // La condicion de tabla ya se ha cobrado arriba: si la ganadora cubre la
+  // pagina, no hay por que pagar ademas la fuente original.
+  if (cubreLaPagina(conGris)) {
+    return conGris!.lectura;
   }
 
   // Fuente original: lee completa una tabla alineada cuyas celdas tocan el

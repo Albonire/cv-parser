@@ -24,9 +24,22 @@ const VENTANA_MINIMA = 15;
  * Valores: 0.15-0.35. Usamos adaptativo basado en contraste.
  */
 const K_SAUVOLA = 0.22;
-const K_SAUVOLA_BAJO_CONTRASTE = 0.28;  // Más agresivo para documentos oscuros
+/**
+ * k de Sauvola para documentos de poca luz. Va HACIA ABAJO, no hacia arriba:
+ * una k mayor baja el umbral y adelgaza el trazo, que es lo ultimo que quiere
+ * una foto palida. Estaba en 0,28 y no llegaba a aplicarse nunca porque el
+ * contraste se media por maximo menos minimo y saturaba; al conectarlo bien, el
+ * perfil duro del banco caia de 51,3% a 37,7%. Con 0,15 sube a 52,0%.
+ */
+const K_SAUVOLA_BAJO_CONTRASTE = 0.15;
 /** Dinamica de la desviacion tipica en la formula de Sauvola. */
 const R_SAUVOLA = 128;
+
+/**
+ * Por debajo de este contraste (p98 - p2 de la escala de grises) el documento
+ * se trata como foto de poca luz y Sauvola usa la k agresiva.
+ */
+const UMBRAL_BAJO_CONTRASTE = 100;
 /**
  * Media local por debajo de la cual la vecindad se considera invertida: fondo
  * oscuro con letra clara, como la barra lateral de color o la cabecera a sangre
@@ -37,6 +50,12 @@ const MEDIA_REGION_OSCURA = 110;
 export interface OpcionesPreproceso {
   binarizar?: boolean;
   corregirInclinacion?: boolean;
+  /**
+   * Iguala la iluminacion de la pagina restando el fondo estimado. Sirve para
+   * las fotos con vineta o sombra, pero en un escaneo muy degradado empeora la
+   * lectura, asi que el lector la ofrece como variante y elige por resultado.
+   */
+  igualarLuz?: boolean;
 }
 
 /** Giros gruesos que se prueban para detectar la orientacion de la pagina. */
@@ -110,7 +129,7 @@ export async function preprocessImage(
   imageFile: File | Blob,
   opciones: OpcionesPreproceso = {}
 ): Promise<Blob> {
-  const { binarizar = true, corregirInclinacion = true } = opciones;
+  const { binarizar = true, corregirInclinacion = true, igualarLuz = true } = opciones;
 
   const bitmap = await cargarImagen(imageFile);
   const escala = escalaDeTrabajo(bitmap.width, bitmap.height);
@@ -143,10 +162,11 @@ export async function preprocessImage(
   // recalculaba la funcion acumulada para cada pixel. Si alguna vez hace falta,
   // hay que interpolar bilinealmente entre los centros de los bloques y medirlo
   // con `npm run bench:ocr` antes de darlo por bueno.
+  if (igualarLuz) corregirIluminacion(gris, canvas.width, canvas.height);
   const contraste = calcularContraste(gris);
 
   if (binarizar) {
-    binarizarLocal(imageData, gris, canvas.width, canvas.height);
+    binarizarLocal(imageData, gris, canvas.width, canvas.height, contraste);
   } else {
     escribirGris(imageData, gris);
   }
@@ -157,6 +177,90 @@ export async function preprocessImage(
 
   const blob = await new Promise<Blob | null>((res) => listo.toBlob((b) => res(b), 'image/png'));
   return blob ?? imageFile;
+}
+
+/**
+ * Fraccion de pixeles oscuros a partir de la cual la pagina deja de parecer
+ * papel con tinta encima. La tinta de una pagina de texto no llega a esto ni de
+ * lejos, asi que superarlo significa que hay una mancha grande: una cabecera a
+ * sangre, una fotografia o un bloque de fondo.
+ */
+const FRACCION_OSCURA_MAXIMA = 0.08;
+
+/** Proporcion de pixeles por debajo del umbral de region oscura. */
+function fraccionOscura(gris: Uint8ClampedArray): number {
+  let oscuros = 0;
+  for (let i = 0; i < gris.length; i++) if (gris[i] < MEDIA_REGION_OSCURA) oscuros++;
+  return oscuros / gris.length;
+}
+
+/**
+ * Fraccion del ancho que mide la ventana con la que se estima el fondo. Tiene
+ * que ser mucho mayor que una letra para que el texto no contamine la
+ * estimacion, y bastante menor que la pagina para que siga los cambios de luz.
+ */
+const FRACCION_VENTANA_FONDO = 1 / 6;
+
+/**
+ * Corrige la iluminacion desigual restando el fondo estimado.
+ *
+ * Una foto de celular llega con vineta y franjas de sombra: el mismo papel vale
+ * 230 en el centro y 150 en una esquina. Tesseract no lo perdona, y hasta ahora
+ * el camino de OCR en escala de grises no hacia nada al respecto: redimensionar,
+ * pasar a gris y enderezar, y nada mas.
+ *
+ * El fondo se estima con la media de una ventana grande, calculada con imagen
+ * integral para que el coste no dependa del tamano de la ventana. Cada zona se
+ * desplaza hasta el nivel medio de la pagina, que iguala la luz sin tocar el
+ * contraste entre el trazo y su papel: forzar el papel a blanco puro se lleva
+ * por delante los trazos palidos (medido: el perfil duro cae a 28,8%).
+ *
+ * No se toca donde el fondo ya es oscuro: ahi no hay papel mal iluminado sino un
+ * bloque de fondo oscuro con texto claro, y aclararlo borraria el texto. De eso
+ * se ocupa despues la inversion de polaridad, que usa este mismo umbral.
+ */
+function corregirIluminacion(gris: Uint8ClampedArray, width: number, height: number): void {
+  const radio = Math.max(VENTANA_MINIMA, Math.round(width * FRACCION_VENTANA_FONDO));
+  if (width < radio || height < radio) return;
+  // Igualar la luz da por supuesto que la pagina es papel con tinta encima. Una
+  // hoja con una cabecera oscura a sangre no cumple eso: la banda arrastra el
+  // nivel medio, la correccion oscurece el papel y el documento se vuelve
+  // ilegible (medido: de 86,2% a 0,0%). De esas paginas se ocupa la inversion de
+  // polaridad, que trabaja por regiones.
+  if (fraccionOscura(gris) > FRACCION_OSCURA_MAXIMA) return;
+
+  const ancho = width + 1;
+  const suma = new Float64Array(ancho * (height + 1));
+  for (let y = 1; y <= height; y++) {
+    for (let x = 1; x <= width; x++) {
+      const i = y * ancho + x;
+      suma[i] = gris[(y - 1) * width + (x - 1)] + suma[i - 1] + suma[i - ancho] - suma[i - ancho - 1];
+    }
+  }
+
+  // Nivel al que se lleva cada zona: la media de la pagina.
+  const objetivo = suma[ancho * (height + 1) - 1] / (width * height);
+
+  for (let y = 0; y < height; y++) {
+    const y0 = Math.max(0, y - radio);
+    const y1 = Math.min(height - 1, y + radio);
+    const arriba = y0 * ancho;
+    const abajo = (y1 + 1) * ancho;
+
+    for (let x = 0; x < width; x++) {
+      const x0 = Math.max(0, x - radio);
+      const x1 = Math.min(width - 1, x + radio);
+      const n = (y1 - y0 + 1) * (x1 - x0 + 1);
+      const total =
+        suma[abajo + x1 + 1] - suma[arriba + x1 + 1] - suma[abajo + x0] + suma[arriba + x0];
+      const fondo = total / n;
+      if (fondo < MEDIA_REGION_OSCURA) continue;
+
+      const i = y * width + x;
+      const valor = gris[i] + (objetivo - fondo);
+      gris[i] = valor < 0 ? 0 : valor > 255 ? 255 : valor;
+    }
+  }
 }
 
 /** Calcula el contraste global como diferencia max-min en la escala de grises */
@@ -380,7 +484,8 @@ export function binarizarLocal(
   imageData: ImageData,
   gris: Uint8ClampedArray,
   width: number,
-  height: number
+  height: number,
+  contraste = calcularContraste(gris)
 ): void {
   const ventana = Math.max(VENTANA_MINIMA, Math.round(width * FRACCION_VENTANA) | 1);
 
@@ -389,15 +494,11 @@ export function binarizarLocal(
     return;
   }
 
-  // Detecta contraste global para adaptar sensibilidad
-  let minVal = 255;
-  let maxVal = 0;
-  for (let i = 0; i < gris.length; i++) {
-    minVal = Math.min(minVal, gris[i]);
-    maxVal = Math.max(maxVal, gris[i]);
-  }
-  const contraste = maxVal - minVal;
-  const kAdaptativo = contraste < 100 ? K_SAUVOLA_BAJO_CONTRASTE : K_SAUVOLA;
+  // El contraste llega medido por percentiles. Calcularlo aqui como maximo
+  // menos minimo, que es lo que se hacia, lo satura a 255 con una sola mota
+  // negra y otra blanca -- garantizadas en cualquier foto --, de modo que la k
+  // agresiva para documentos de bajo contraste no se activaba casi nunca.
+  const kAdaptativo = contraste < UMBRAL_BAJO_CONTRASTE ? K_SAUVOLA_BAJO_CONTRASTE : K_SAUVOLA;
 
   const radio = Math.floor(ventana / 2);
   const ancho = width + 1;
