@@ -68,3 +68,42 @@ describe('groupWordsIntoRows', () => {
     expect(renglones[1].map((w) => w.text)).toEqual(['Cargo:', 'CONDUCTOR']);
   });
 });
+
+describe('cajas de altura anomala', () => {
+  it('una caja mucho mas alta que la linea no arrastra al renglon siguiente', () => {
+    // El OCR devuelve de vez en cuando una caja que abarca varias lineas.
+    // Medido en CV_05: el renglon del nombre acababa con altura 81 y se tragaba
+    // titular, cedula, telefono y correo, porque la banda estirada se solapaba
+    // con la linea de abajo y esta a su vez estiraba mas la banda.
+    const palabras = [
+      palabra('SANDRA', 0, 100, 20),
+      palabra('MILENA', 90, 100, 70), // caja de ruido, tres lineas y media de alta
+      palabra('Auxiliar', 0, 145, 20),
+      palabra('Contable', 90, 145, 20),
+    ];
+
+    const renglones = groupWordsIntoRows(palabras);
+
+    expect(renglones).toHaveLength(2);
+    expect(renglones[0].map((w) => w.text)).toEqual(['SANDRA', 'MILENA']);
+    expect(renglones[1].map((w) => w.text)).toEqual(['Auxiliar', 'Contable']);
+  });
+
+  it('respeta un titular que de verdad es mas alto que el cuerpo', () => {
+    // Cuatro palabras de cuerpo fijan la altura tipica de la pagina; el titular
+    // mide el doble y tiene que seguir siendo su propio renglon completo.
+    const palabras = [
+      palabra('CURRICULUM', 0, 10, 40),
+      palabra('VITAE', 130, 10, 40),
+      palabra('Ingeniero', 0, 90, 20),
+      palabra('industrial', 60, 90, 20),
+      palabra('Bogota', 0, 120, 20),
+      palabra('Colombia', 60, 120, 20),
+    ];
+
+    const renglones = groupWordsIntoRows(palabras);
+
+    expect(renglones).toHaveLength(3);
+    expect(renglones[0].map((w) => w.text)).toEqual(['CURRICULUM', 'VITAE']);
+  });
+});
