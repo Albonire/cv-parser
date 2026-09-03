@@ -1,4 +1,6 @@
 import { ContractFormData, ContractType, PaymentFrequency } from '../../types/contract';
+import { contieneCargo } from '../contexto/diccionario';
+import { findKnownPlace } from '../contexto/lugares';
 import { reconstruirCorreoOcr } from './correo-ocr';
 import { DocumentLayout, layoutFromPlainText } from './layout';
 import {
@@ -155,6 +157,98 @@ function valorEnBloque(
   return valorDeEtiqueta(bloque, etiquetas, opciones) ?? valorDeEtiqueta(documento, etiquetas, opciones);
 }
 
+/** Formas juridicas con las que se reconoce el nombre de una empresa. */
+const FORMA_JURIDICA = /\b(?:s\.?a\.?s\.?|ltda\.?|s\.?a\.?|e\.?u\.?|s\.?c\.?a\.?)\b/i;
+
+/**
+ * Palabras del propio documento: rotulos, formulas y el titulo. Ninguna aparece
+ * en el nombre de una persona ni en el de un municipio, asi que sirven para
+ * descartar las lineas que son plantilla y no dato.
+ */
+const VOCABULARIO_DOCUMENTO =
+  /\b(?:contrato|trabajo|laboral|empleador|trabajador|empleado|individual|termino|indefinido|clausul\w*|condiciones|presente|identificad\w*|salario|sueldo|cargo|domicilio|correo|electronico|fecha|nacimiento|periodo|preaviso|lugar|ejecucion|duracion|tipo|forma|pago|prueba|vencimiento|iniciacion|nit|cedula|identificacion|dias|meses)\b/i;
+
+function esPlantilla(linea: string): boolean {
+  return VOCABULARIO_DOCUMENTO.test(normalize(linea));
+}
+
+/** Una cedula colombiana escrita con su prefijo. */
+const CEDULA_CON_PREFIJO = /\b(?:c\.?\s?c\.?|cc)\s*(\d[\d.\s-]{5,}\d)/i;
+
+/**
+ * Rescate para cuando la columna de rotulos no se leyo.
+ *
+ * En un contrato en dos columnas puede pasar que el OCR lea la columna de
+ * valores y pierda entera la de etiquetas: las celdas de rotulo suelen llevar
+ * fondo gris y el preprocesado se las come. Medido en CT_04, la lectura traia
+ * el nombre, la cedula, el domicilio, el correo, el cargo, el salario y las
+ * fechas, y el analizador solo sacaba dos campos porque busca por etiqueta.
+ *
+ * Aqui cada renglon huerfano se identifica por su propia forma, que es como lo
+ * leeria una persona con la plantilla borrada. Solo se rellenan los campos que
+ * quedaron vacios, asi que no puede pisar nada que la via de etiquetas haya
+ * encontrado, y no se supone en ningun momento el orden de las filas: eso seria
+ * una regla pegada a una plantilla concreta.
+ */
+function completarSinRotulos(documento: DocumentLayout, actual: ContractFormData): ContractFormData {
+  const huerfanos = documento.lines
+    .map((l) => limpiarValor(l.text))
+    .filter((t): t is string => !!t && !/[:;]\s*$/.test(t) && t.length <= 80);
+  if (huerfanos.length === 0) return actual;
+
+  const primero = (predicado: (linea: string) => boolean): string | undefined =>
+    huerfanos.find(predicado);
+
+  const completado = { ...actual };
+
+  if (!completado.employerName) {
+    completado.employerName = primero((l) => FORMA_JURIDICA.test(l)) ?? '';
+  }
+  if (!completado.workerName) {
+    // Un nombre de persona no lleva vocabulario del documento ni es un cargo:
+    // sin esos dos filtros el rescate tomaba "CONTRATO INDIVIDUAL DE TRABAJO" o
+    // "COORDINADORA DE TALENTO HUMANO" por el nombre del trabajador.
+    const nombre = primero(
+      (l) =>
+        pareceNombreDePersona(l) && !FORMA_JURIDICA.test(l) && !esPlantilla(l) && !contieneCargo(l)
+    );
+    completado.workerName = nombre ?? '';
+  }
+  if (!completado.workerDocumentNumber) {
+    const conPrefijo = huerfanos.map((l) => l.match(CEDULA_CON_PREFIJO)).find((m) => m);
+    completado.workerDocumentNumber = conPrefijo ? conPrefijo[1].replace(/\D/g, '') : '';
+  }
+  if (!completado.workerAddress) {
+    completado.workerAddress = primero((l) => pareceDireccion(l)) ?? '';
+  }
+  if (!completado.workerEmail) {
+    const correo = huerfanos.map((l) => reconstruirCorreoOcr(l, { estricto: true })).find((c) => c);
+    completado.workerEmail = correo ?? '';
+  }
+  if (!completado.position) {
+    // El cargo va solo en su celda: una linea corta que el diccionario reconoce
+    // y que no es el nombre de la empresa ni una frase del cuerpo del contrato.
+    completado.position =
+      primero(
+        (l) =>
+          contieneCargo(l) &&
+          !FORMA_JURIDICA.test(l) &&
+          !esPlantilla(l) &&
+          l.split(/\s+/).length <= 6 &&
+          l === l.toUpperCase()
+      ) ?? '';
+  }
+  if (!completado.executionPlace) {
+    const lugar = huerfanos
+      .filter((l) => l.split(/\s+/).length <= 5 && !esPlantilla(l))
+      .map((l) => findKnownPlace(l))
+      .find((l) => l);
+    completado.executionPlace = lugar ?? '';
+  }
+
+  return completado;
+}
+
 export function parseContractText(text: string, layout?: DocumentLayout): ContractFormData {
   const documento = layout ?? layoutFromPlainText(text);
   const lineas = documento.lines.map((l) => l.text);
@@ -254,7 +348,7 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
   const executionPlace = limpiarValor(valorDeEtiqueta(documento, ETIQUETAS_LUGAR)) ?? '';
   const noticeDays = extraerPreaviso(todas);
 
-  return {
+  return completarSinRotulos(documento, {
     employerName,
     employerNit,
     employerAddress,
@@ -276,7 +370,7 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     noticeDays,
     executionPlace,
     status: 'vigente',
-  };
+  });
 }
 
 /**
