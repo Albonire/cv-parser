@@ -83,6 +83,12 @@ export interface OcrExecutionResult {
 const CARACTERES_LECTURA_SOLIDA = 400;
 const CONFIANZA_LECTURA_SOLIDA = 0.8;
 
+interface Lectura {
+  texto: string;
+  confianza: number;
+  cajas: unknown;
+}
+
 function lecturaSolida(texto: string, confianza: number): boolean {
   return texto.trim().length >= CARACTERES_LECTURA_SOLIDA && confianza >= CONFIANZA_LECTURA_SOLIDA;
 }
@@ -94,6 +100,49 @@ function lecturaSolida(texto: string, confianza: number): boolean {
  */
 function puntajeLectura(texto: string, confianza: number): number {
   return texto.trim().length * (0.5 + confianza / 2);
+}
+
+/**
+ * Datos que los formularios piden: correo, telefono, cedula o NIT, fecha y
+ * monto. Son los mismos para una hoja de vida y para un contrato, asi que
+ * sirven de medida neutral de lo util que trae una lectura.
+ */
+const PATRONES_DATO: RegExp[] = [
+  /[\w.+-]+@[\w.-]+\.\w{2,}/g,
+  /\b\d{3}[\s.-]?\d{3}[\s.-]?\d{4}\b/g,
+  /\b\d{1,3}(?:[.\s]\d{3}){2,}\b/g,
+  /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g,
+  /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?\d{4}\b/gi,
+  /\$\s*\d{1,3}(?:[.,]\d{3})+/g,
+];
+
+/**
+ * Cuantos datos aprovechables trae la lectura.
+ *
+ * Hace falta porque el volumen de texto no mide lo que interesa: en una tabla
+ * de dos columnas cada preparado de la imagen captura una columna distinta, y
+ * la que trae los rotulos y los titulos tiene mas caracteres que la que trae la
+ * columna de valores. Medido en CT_04: la lectura ganadora por volumen (656
+ * caracteres de titulos) daba peor resultado que la perdedora (345 caracteres
+ * con la cedula, el domicilio y el cargo).
+ */
+function datosUtiles(texto: string): number {
+  const vistos = new Set<string>();
+  for (const patron of PATRONES_DATO) {
+    for (const encontrado of texto.matchAll(patron)) vistos.add(encontrado[0].replace(/\s+/g, ''));
+  }
+  return vistos.size;
+}
+
+/**
+ * Cual de dos lecturas conviene. Manda la cantidad de datos aprovechables y el
+ * volumen de texto solo desempata: una lectura que trae dos campos mas es mejor
+ * aunque tenga la mitad de caracteres.
+ */
+function comparaLecturas(a: Lectura, b: Lectura): number {
+  const datos = datosUtiles(b.texto) - datosUtiles(a.texto);
+  if (datos !== 0) return datos;
+  return puntajeLectura(b.texto, b.confianza / 100) - puntajeLectura(a.texto, a.confianza / 100);
 }
 
 interface CajaTesseract {
@@ -242,12 +291,6 @@ export async function detectarOrientacion(
   return valorSonda(mejor) >= valorSonda(derecho) + MARGEN_ORIENTACION ? mejor.grados : 0;
 }
 
-interface Lectura {
-  texto: string;
-  confianza: number;
-  cajas: unknown;
-}
-
 /**
  * Renglones minimos para dar por hecho que una lectura cubre la pagina entera.
  * Medido sobre los dos bancos: cuando el preprocesado destruye una tabla, la
@@ -358,7 +401,7 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   // campos. En una hoja de vida, que es prosa, no se paga.
   if (!cubreLaPagina(conGris) || (conGris && pareceTablaEtiquetada(conGris.lectura.texto))) {
     const conGrisPlano = await leerVariante(await preprocesar(false, false), 'en gris sin igualar');
-    if (conGrisPlano && (!conGris || score(conGrisPlano.lectura) > score(conGris.lectura))) {
+    if (conGrisPlano && (!conGris || comparaLecturas(conGrisPlano.lectura, conGris.lectura) < 0)) {
       conGris = conGrisPlano;
     }
   }
@@ -369,7 +412,9 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   // Tesseract devuelve confianza alta aunque no haya encontrado casi nada, asi
   // que "solida" por si sola no basta para decidirlo.
   // La condicion de tabla ya se ha cobrado arriba: si la ganadora cubre la
-  // pagina, no hay por que pagar ademas la fuente original.
+  // pagina, no hay por que pagar ademas la fuente original. Se midio lo
+  // contrario, dejar que una tabla probara siempre la fuente, y cuesta 0,8
+  // puntos y dos segundos por documento sin ganar nada.
   if (cubreLaPagina(conGris)) {
     return conGris!.lectura;
   }
@@ -393,7 +438,7 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
     (c): c is NonNullable<typeof c> => !!c && c.columnas >= 2 && c.solida
   );
   if (enDosColumnas.length > 0) {
-    return [...enDosColumnas].sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
+    return [...enDosColumnas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
   }
 
   // Todo de una columna: se conserva la escala de grises (configuracion
@@ -411,7 +456,7 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
       }
       return conElGris.lectura;
     }
-    return solidas.sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
+    return solidas.sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
   }
 
   // Ninguna fue solida: respaldo binarizado (escaneo con sombra) y gana la que
@@ -428,7 +473,7 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
     }
   }
   if (candidatas.length === 0) return { texto: '', confianza: 0, cajas: [] };
-  return [...candidatas].sort((a, b) => score(b.lectura) - score(a.lectura))[0].lectura;
+  return [...candidatas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
 }
 
 /** Proporciones de la imagen, sin pasar por OCR. */
