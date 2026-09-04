@@ -190,6 +190,31 @@ const consolidarFicha = async (j) => {
     return valor;
   };
 
+  const esBasuraOCR = (txt) => {
+    if (!txt) return true;
+    const s = String(txt).trim();
+    if (s.length < 3) return true;
+    // Firmas, roles institucionales y despedidas: nunca son datos de la persona.
+    if (/(?:atentamente|cordialmente|gerencia|firm[ao]\b|talento\s+humano|recursos\s+humanos|departamento\s+de\s+personal|direcci[oó]n\s+general|administraci[oó]n\b|reci[óo]n\s+humano)/i.test(s)) return true;
+    // Basura OCR aislada: siglas cortas sin vocales ("NRTA", "XXXX") no son un
+    // valor real. Un nombre, cargo o ciudad legible tiene al menos una vocal.
+    const soloMayus = s === s.toUpperCase();
+    if (s.length <= 6 && soloMayus && !/[aeiouáéíóú]/i.test(s)) return true;
+    if (s.length <= 3 && !/[aeiouáéíóú]/i.test(s)) return true;
+    return false;
+  };
+
+  // Versión de esBasuraOCR orientada a nombres: además de firmas/cargos, rechaza
+  // palabras del léxico de memorandos/contratos (encabezados, conectores).
+  const esBasuraNombre = (txt) => {
+    if (!txt) return true;
+    const s = String(txt).trim();
+    if (esBasuraOCR(s)) return true;
+    if (/(?:memorando|llamado\s+de\s+atencion|asunto|para\b|de\b|fecha|distribuciones|ceso\s+humano|talento|recurso|emplead|trabajad)/i.test(s)) return true;
+    if (/\b(?:el|la|los|las|sr|sra|ingenier[oa]|doctor[oa]|licenciad[oa])\b/i.test(s) && s.split(/\s+/).length < 3) return true;
+    return false;
+  };
+
   const persona = {
     nombre: j.nombre,
     trabajador: { nombres: '', apellidos: '', documento: '', nacimiento: '', direccion: '', ciudad: '', telefono: '', email: '', estadoCivil: '', profesion: '' },
@@ -212,6 +237,11 @@ const consolidarFicha = async (j) => {
 
   let candidatoMejor = null;
   let candidatoPuntaje = 0;
+  // Nombre del destinatario leido de los memorandos (etiqueta "PARA:"). Es un
+  // ancla espacial fiable: el receptor es la persona, mientras el "DE:" es el
+  // emisor (suele ser "GERENCIA" o un departamento). Se usa como respaldo de
+  // nombre cuando el OCR de la hoja de vida falla.
+  let nombreMemorando = '';
 
   // Semillas del limpiador de texto: terminos del diccionario de cargos del
   // sistema mas el vocabulario administrativo tipico de los contratos de Rosimar.
@@ -313,6 +343,16 @@ const consolidarFicha = async (j) => {
         fecha: reg.memorando.date || '',
         asunto: reg.memorando.subject || '',
       });
+      // Ancla espacial: el "PARA:" de un memorando nombra al empleado. Se exige
+      // que sea un nombre con apellido (2+ palabras) y que no sea una firma,
+      // cargo o departamento, para no captar "GERENCIA" ni ruido del OCR.
+      const mn = String(reg.memorando.workerName || '').trim();
+      const palabrasMn = mn.split(/\s+/).filter(Boolean).length;
+      if (palabrasMn >= 2 && !esBasuraNombre(mn) && !esBasuraOCR(mn)) {
+        if (!nombreMemorando || palabrasMn >= nombreMemorando.split(/\s+/).length) {
+          nombreMemorando = mn;
+        }
+      }
     }
 
     if (reg.detectedType === 'unknown' && reg.text) {
@@ -330,15 +370,21 @@ const consolidarFicha = async (j) => {
 
   if (candidatoMejor) {
     const t = persona.trabajador;
-    if (!t.nombres && candidatoMejor.firstNames) t.nombres = candidatoMejor.firstNames;
-    if (!t.apellidos && candidatoMejor.lastNames) t.apellidos = candidatoMejor.lastNames;
-    if (!t.documento && candidatoMejor.documentNumber) t.documento = candidatoMejor.documentNumber;
-    if (!t.nacimiento && candidatoMejor.birthDate) t.nacimiento = candidatoMejor.birthDate;
-    if (!t.ciudad && candidatoMejor.cityResidence) t.ciudad = candidatoMejor.cityResidence;
-    if (!t.direccion && candidatoMejor.address) t.direccion = candidatoMejor.address;
-    if (!t.telefono && candidatoMejor.phone) t.telefono = candidatoMejor.phone;
-    if (!t.email && candidatoMejor.email) t.email = candidatoMejor.email;
-    if (!t.profesion && candidatoMejor.headline) t.profesion = candidatoMejor.headline;
+    // Si el unico "nombre" leido es una firma o rol institucional, todo el
+    // candidato es un documento no-CV mal leido: no se toman sus datos.
+    const nombreLeido = `${candidatoMejor.firstNames ?? ''} ${candidatoMejor.lastNames ?? ''}`.trim();
+    const candidatoVacio = esBasuraOCR(nombreLeido);
+    if (!candidatoVacio) {
+      if (!t.nombres && candidatoMejor.firstNames) t.nombres = candidatoMejor.firstNames;
+      if (!t.apellidos && candidatoMejor.lastNames) t.apellidos = candidatoMejor.lastNames;
+      if (!t.documento && candidatoMejor.documentNumber) t.documento = candidatoMejor.documentNumber;
+      if (!t.nacimiento && candidatoMejor.birthDate) t.nacimiento = candidatoMejor.birthDate;
+      if (!t.ciudad && candidatoMejor.cityResidence && !esBasuraOCR(candidatoMejor.cityResidence)) t.ciudad = candidatoMejor.cityResidence;
+      if (!t.direccion && candidatoMejor.address && !esBasuraOCR(candidatoMejor.address)) t.direccion = candidatoMejor.address;
+      if (!t.telefono && candidatoMejor.phone && !esBasuraOCR(candidatoMejor.phone)) t.telefono = candidatoMejor.phone;
+      if (!t.email && candidatoMejor.email && !esBasuraOCR(candidatoMejor.email)) t.email = candidatoMejor.email;
+      if (!t.profesion && candidatoMejor.headline && !esBasuraOCR(candidatoMejor.headline)) t.profesion = candidatoMejor.headline;
+    }
   }
 
   // Si el OCR no reconocio un nombre creible, se usa el de la carpeta (que es

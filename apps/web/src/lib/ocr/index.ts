@@ -22,8 +22,19 @@ const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', '
  * Hay evidencia de que el documento es la hoja de vida de una persona: se leyo
  * un nombre y ademas alguna forma de identificarla o contactarla. Con menos que
  * eso se prefiere no proponer un formulario.
+ *
+ * Ademas, si el unico "nombre" que se pudo leer es una firma, un rol
+ * institucional o una despedida ("GERENCIA", "Atentamente", "Departamento de
+ * Talento Humano"), el documento no es una hoja de vida: es un memorando,
+ * llamado o carta cuya cabecera el OCR mezclo con el bloque de contacto.
  */
+const ES_FIRMA_O_ROL_INSTITUCIONAL =
+  /(?:atentamente|cordialmente|firm[ao]\b|gerencia|direcci[oó]n\s+general|administraci[oó]n\b|recursos\s+humanos|talento\s+humano|departamento\s+(?:de\s+)?(?:personal|talento|recursos)|procesos\s+disciplinarios|gerente\s+general|recursos\s+humanos|comit[eé]\s+de\s+convivencia)/i;
+
 function pareceHojaDeVida(candidato: CandidateFormData): boolean {
+  const nombreCompleto = `${candidato.firstNames ?? ''} ${candidato.lastNames ?? ''}`.trim();
+  if (ES_FIRMA_O_ROL_INSTITUCIONAL.test(nombreCompleto)) return false;
+
   const tieneNombre = Boolean(candidato.firstNames?.trim() && candidato.lastNames?.trim());
   if (!tieneNombre) return false;
 

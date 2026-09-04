@@ -62,6 +62,16 @@ const NO_ES_NOMBRE =
   /(?:curriculum|curriculo|hoja\s+de\s+vida|resume\b|^cv$|datos\s+personales|informaci[oó]n\s+personal|personal\s+information|contacto|contact|perfil|profile|summary|resumen|experiencia|experience|educaci[oó]n|education|habilidades|skills|idiomas|languages|certificaciones|referencias|references|objetivo|objective|formato\s+[uú]nico|persona\s+natural|funci[oó]n\s+p[uú]blica|universidad|university|colegio|instituto|sena|empresa|trabajo\s+en\s+equipo|liderazgo|comunicaci[oó]n|puntualidad|responsabilidad|proactividad|adaptabilidad|honestidad)/i;
 
 /**
+ * Firmas, despedidas y unidades institucionales del emisor. En memorandos,
+ * llamados y liquidaciones el OCR suele capturar la firma o el pie
+ * ("Atentamente: Gerencia", "Departamento de Talento Humano", "Firma:") y ese
+ * texto puede llegar a la zona del nombre. Ninguna de estas palabras puede
+ * formar parte del nombre de una persona.
+ */
+const ES_FIRMA_O_ROL_INSTITUCIONAL =
+  /(?:atentamente|cordialmente|firm[ao]\b|gerencia|direcci[oó]n\s+general|administraci[oó]n\b|recursos\s+humanos|talento\s+humano|departamento\s+de\s+personal|departamento\s+de\s+talento|departamento\s+de\s+recursos|recursos\s+humanos|procesos\s+disciplinarios|comit[eé]\s+de\s+convivencia|gerente\s+general|admin\b|rh\b|firma\s*del\s*empleado|firma\s*del\s*trabajador)/i;
+
+/**
  * Cargos y titulos en español e ingles. Un encabezado como "SENIOR JAVA
  * DEVELOPER" no puede tomarse por el nombre del candidato.
  */
@@ -121,6 +131,7 @@ function pareceNombre(texto: string): boolean {
   const limpio = stripBullets(texto).replace(PREFIJOS_TRATAMIENTO, '').trim();
   if (limpio.length < 4 || limpio.length > 70) return false;
   if (NO_ES_NOMBRE.test(limpio)) return false;
+  if (ES_FIRMA_O_ROL_INSTITUCIONAL.test(limpio)) return false;
   if (/[@\d]|https?:|www\./.test(limpio)) return false;
   if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'´\s.]+$/.test(limpio)) return false;
 
@@ -414,10 +425,30 @@ const MAX_LONGITUD_CIUDAD = 45;
  * hacerse pasar por "Ciudad, Estado". Se exige que el candidato sea corto y que
  * no traiga palabras funcionales.
  */
+/** Quita la etiqueta "Ciudad" o "Residencia" cuando quedo pegada al valor. */
+function discardTxt(valor: string): string {
+  return valor.replace(/^(?:ciudad|residencia|ubicaci[oó]n|location|city)\s*[:#.-]?\s*/i, '').trim();
+}
+
+/** True si un valor de ciudad parece en realidad un cargo o rol institucional. */
+function ciudadPareceCargo(valor: string): boolean {
+  if (!valor) return false;
+  const palabras = valor.split(/\s+/).filter(Boolean);
+  let cargos = 0;
+  for (const p of palabras) {
+    if (contieneCargo(p) || ES_CARGO_GENERICO.test(p) || ES_FIRMA_O_ROL_INSTITUCIONAL.test(p)) cargos++;
+  }
+  return palabras.length > 0 && cargos / palabras.length > 0.5;
+}
+
 function esCiudadPlausible(valor: string): boolean {
   if (valor.length > MAX_LONGITUD_CIUDAD) return false;
   if (wordCount(valor) > 6) return false;
-  return !PALABRA_FUNCIONAL.test(valor);
+  if (PALABRA_FUNCIONAL.test(valor)) return false;
+  // Un cargo ("CONDUCTOR") o un rol institucional ("GERENCIA") pegado a un
+  // fragmento de direccion no es una ciudad: se descarta antes de seguir.
+  if (ciudadPareceCargo(valor)) return false;
+  return true;
 }
 
 function extraerCiudad(encabezado: LayoutLine[], todas: LayoutLine[]): string {
@@ -425,7 +456,19 @@ function extraerCiudad(encabezado: LayoutLine[], todas: LayoutLine[]): string {
     findLabeledValue(textos(encabezado), [...ETIQUETAS.ciudad]) ??
     findLabeledValue(textos(todas), [...ETIQUETAS.ciudad]);
 
-  if (porEtiqueta && porEtiqueta.length > 2) return porEtiqueta.replace(/\s*[|].*$/, '').trim();
+  if (porEtiqueta && porEtiqueta.length > 2 && !ciudadPareceCargo(discardTxt(porEtiqueta))) {
+    const valorEtiqueta = discardTxt(porEtiqueta).replace(/\s*[|].*$/, '').trim();
+    // Diccionario cerrado de lugar de Colombia: si el valor de la etiqueta no
+    // contiene ningun municipio/departamento conocido, se devuelve vacio
+    // (exige revision manual) en lugar de inyectar basura del OCR como
+    // "CONDUCTOR,La". Se conserva el valor original ("Pamplona, Norte de
+    // Santander") cuando contiene un lugar valido.
+    if (findKnownPlace(valorEtiqueta)) return valorEtiqueta;
+    // Respaldo: un valor corto sin cargos ni lugares de COL recogidos por el
+    // gazetteer (extranjera o topico local) se mantiene si es plausible.
+    if (esCiudadPlausible(valorEtiqueta) && wordCount(valorEtiqueta) <= 3) return valorEtiqueta;
+    return '';
+  }
 
   const fragmentos: string[] = [];
   for (const linea of encabezado) {
@@ -481,6 +524,17 @@ function pareceTitular(candidato: string, ciudad: string): boolean {
   if (/[@]|https?:|www\./.test(candidato)) return false;
   if (/^\d/.test(candidato)) return false;
   if (ETIQUETA_SUELTA.test(candidato)) return false;
+
+  // Basura OCR aislada (siglas sin vocales o sin significado): "NRTA", "XXXX".
+  // Un titular real es una frase con sentido, casi siempre un cargo conocido.
+  // Se exige al menos una vocal y que no sea un mero fragmento cortado.
+  if (ES_FIRMA_O_ROL_INSTITUCIONAL.test(candidato)) return false;
+  const vocales = (candidato.match(/[aeiouáéíóú]/gi) || []).length;
+  const solasMayusculas = candidato === candidato.toUpperCase();
+  if (vocales === 0) return false;
+  // Siglas muy cortas sin espacio ni cargo conocido no describen un puesto.
+  if (candidato.length <= 6 && solasMayusculas && !contieneCargo(candidato)) return false;
+
   if (/\b(?:calle|carrera|avenida|diagonal|transversal|manzana|barrio|street|avenue|road|drive)\b/i.test(candidato))
     return false;
   if (/\d{3}[\s.-]?\d{3}/.test(candidato)) return false;
