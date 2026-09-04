@@ -20,6 +20,7 @@ export const FAMILIAS_CARGOS: FamiliaCargo[] = [
     sinonimos: [
       'servicios generales', 'aseo y limpieza', 'auxiliar de aseo', 'operario de aseo',
       'personal de aseo', 'aseadora', 'aseador', 'limpieza', 'toderos', 'todero',
+      'oficios varios', 'oficio varios', 'ayudante de servicios generales',
     ],
   },
   {
@@ -53,7 +54,8 @@ export const FAMILIAS_CARGOS: FamiliaCargo[] = [
     sinonimos: [
       'operario', 'operario de produccion', 'operaria', 'auxiliar de produccion',
       'operador de maquina', 'operario de planta', 'ayudante de produccion',
-      'empacador', 'auxiliar de empaque',
+      'empacador', 'auxiliar de empaque', 'operador de maquina de maiz',
+      'pilador', 'operaria de maquina', 'ayudante de produccion',
     ],
   },
   {
@@ -71,6 +73,8 @@ export const FAMILIAS_CARGOS: FamiliaCargo[] = [
       'auxiliar de bodega', 'bodeguero', 'auxiliar logistico', 'coordinador logistico',
       'tecnico en gestion logistica', 'auxiliar de inventarios', 'almacenista',
       'auxiliar de despacho', 'operario logistico', 'montacarguista',
+      'ayudante de bodega', 'aux bodega', 'aux bodega', 'operario de bodega',
+      'auxiliar de bodega y despacho', 'auxiliar de bodega y ventas',
     ],
   },
   {
@@ -93,6 +97,8 @@ export const FAMILIAS_CARGOS: FamiliaCargo[] = [
       'asesor comercial', 'asesora comercial', 'agente de ventas', 'vendedor', 'vendedora',
       'ejecutivo de cuenta', 'representante comercial', 'promotor', 'impulsador',
       'cajero', 'cajera', 'auxiliar de punto de venta', 'jefe de ventas',
+      'vendedor externo', 'vendedora externa', 'vendedor puerta a puerta',
+      'asesor comercial y de ventas', 'auxiliar de ventas', 'distribuidor',
     ],
   },
   {
