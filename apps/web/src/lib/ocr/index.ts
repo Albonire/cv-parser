@@ -67,6 +67,36 @@ function senalesDeContrato(texto: string): boolean {
 }
 
 /**
+ * Senales de memorando / llamado de atencion en un texto callejero. En un
+ * escaneo degradado el clasificador puede no llegar a `memorando` (perdio
+ * "MEMORANDO" o la tripleta "PARA:+DE:+ASUNTO:"), y el bloque de promocion
+ * entonces propondria una hoja de vida con cabecera de memorando en el titular.
+ * Aqui se captura la cabecera de manera mas laxa, tolerante al ruido del OCR:
+ * basta con la etiqueta ASUNTO:/PARA:/DE: o con el cuerpo disciplinario.
+ */
+function senalesDeMemorando(texto: string): boolean {
+  const t = texto.toLowerCase();
+
+  // Etiquetas de cabecera de memorando/carta con su dos puntos.
+  const etiquetas =
+    (/\b(?:asunto|para|de|memorando|memorandum|llamado\s+de\s+atencion|fecha|referencia)\s*[:.]/i.test(t) ? 4 : 0) +
+    (/\basunto\s*[:./]/i.test(t) ? 2 : 0) +
+    (/\bpara\s*[:./]/i.test(t) ? 2 : 0) +
+    (/\bde\s*[:./]/i.test(t) ? 2 : 0);
+
+  // Cuerpo disciplinario, inequívoco de un memorando de sancion.
+  const cuerpo =
+    /(inasistencia\s+(?:reiterada|sin\s+justa)|sin\s+justa\s+causa|descargos|amonestaci)/i.test(t);
+
+  const esHojaDeVida =
+    t.includes('hoja de vida') || t.includes('curriculum') ||
+    t.includes('experiencia laboral') || t.includes('perfil profesional') ||
+    t.includes('datos personales');
+
+  return !esHojaDeVida && (cuerpo || etiquetas >= 6);
+}
+
+/**
  * Orquestador de lectura y extraccion de documentos. Todo corre en el navegador
  * (costo $0) y de forma determinista: sin modelos de lenguaje.
  */
@@ -140,6 +170,7 @@ export async function processDocument(
   // hoja de vida SOLO si el resultado trae datos de una persona real. Asi no se
   // fuerza nunca un formulario vacio, que es lo que el clasificador evita, pero
   // tampoco se pierde una hoja de vida por no llevar titulos.
+  let memoDetected = false;
   if (categoria === 'desconocido' && !candidateData && !contractData) {
     // Se prueban las dos lecturas. La maquetacion ayuda en los documentos con
     // columnas o encabezados, pero en una hoja sin ningun titulo el texto
@@ -157,6 +188,16 @@ export async function processDocument(
       if (contrato.employerName || contrato.workerName) {
         detectedType = 'contract';
         contractData = contrato;
+      }
+    } else if (senalesDeMemorando(extractedText)) {
+      // Un memorando degradado (perdio "MEMORANDO" o la tripleta PARA+DE+ASUNTO)
+      // no debe promoverse a hoja de vida: dejaria la cabecera en el titular
+      // ("ASUNTO:DE: DIS INASISTENCIA SIN JUSTA CAUSA"). Se estructura como
+      // memorando en su tabla (RN-2) y queda sin formulario de candidato.
+      const memorando = parseMemorandoText(extractedText);
+      if (memorando.workerName || memorando.subject) {
+        memoDetected = true;
+        detectedType = 'unknown';
       }
     } else if (pareceHojaDeVida(posible)) {
       detectedType = 'cv';
@@ -191,7 +232,7 @@ export async function processDocument(
   // propio (detectedType 'unknown') pero se estructuran para registrarlos en sus
   // tablas y en la ficha del empleado.
   const memorandoData =
-    categoria === 'memorando' || categoria === 'llamado_atencion'
+    categoria === 'memorando' || categoria === 'llamado_atencion' || memoDetected
       ? parseMemorandoText(extractedText)
       : undefined;
   const funcionesData =

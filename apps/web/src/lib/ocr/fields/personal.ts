@@ -72,6 +72,27 @@ const ES_FIRMA_O_ROL_INSTITUCIONAL =
   /(?:atentamente|cordialmente|firm[ao]\b|gerencia|direcci[oó]n\s+general|administraci[oó]n\b|recursos\s+humanos|talento\s+humano|departamento\s+de\s+personal|departamento\s+de\s+talento|departamento\s+de\s+recursos|recursos\s+humanos|procesos\s+disciplinarios|comit[eé]\s+de\s+convivencia|gerente\s+general|admin\b|rh\b|firma\s*del\s*empleado|firma\s*del\s*trabajador)/i;
 
 /**
+ * Etiquetas de cabecera de documento oficial (memorando, llamado, carta). El
+ * OCR deja estas claves pegadas al valor ("ASUNTO:DE: DIS INASISTENCIA...") y,
+ * en un escaneo degradado, el bloque de promocion llega a proponer la hoja de
+ * vida y este texto aterriza en el titular, el nombre o la ciudad. Ninguna de
+ * estas claves puede formar parte de un campo de persona ni de un cargo.
+ *
+ * Se exige el inicio de renglon (con o sin etiqueta previa pegada) seguido de
+ * una de las claves y de dos puntos, para no rechazar nombres como "Ana de la
+ * Cruz" (ahi las claves no van seguidas de ":") ni palabras sueltas.
+ */
+const ES_ETIQUETA_DOCUMENTO =
+  /(?:^|\b)(?:asunto|para|de|memorando|memorandum|llamado\s+de\s+atencion|referencia|fecha|ciudad\s*y\s+fecha)\s*:/i;
+
+/**
+ * Palabras del cuerpo de un memorando/llamado que unen varias claves y que el
+ * OCR pega en un solo renglon. "INASISTENCIA SIN JUSTA CAUSA" no es un nombre
+ * ni un cargo.
+ */
+const ES_CUERPO_DISCIPLINARIO = /(inasistencia|justa\s+causa|amonestaci[oó]n|descargos)/i;
+
+/**
  * Cargos y titulos en español e ingles. Un encabezado como "SENIOR JAVA
  * DEVELOPER" no puede tomarse por el nombre del candidato.
  */
@@ -132,6 +153,8 @@ function pareceNombre(texto: string): boolean {
   if (limpio.length < 4 || limpio.length > 70) return false;
   if (NO_ES_NOMBRE.test(limpio)) return false;
   if (ES_FIRMA_O_ROL_INSTITUCIONAL.test(limpio)) return false;
+  if (ES_ETIQUETA_DOCUMENTO.test(limpio)) return false;
+  if (ES_CUERPO_DISCIPLINARIO.test(limpio)) return false;
   if (/[@\d]|https?:|www\./.test(limpio)) return false;
   if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'´\s.]+$/.test(limpio)) return false;
 
@@ -529,6 +552,10 @@ function pareceTitular(candidato: string, ciudad: string): boolean {
   // Un titular real es una frase con sentido, casi siempre un cargo conocido.
   // Se exige al menos una vocal y que no sea un mero fragmento cortado.
   if (ES_FIRMA_O_ROL_INSTITUCIONAL.test(candidato)) return false;
+  // Cabecera de memorando/carta pegada al valor ("ASUNTO:DE: DIS INASISTENCIA")
+  // o cuerpo disciplinario: nunca es un cargo aspirado.
+  if (ES_ETIQUETA_DOCUMENTO.test(candidato)) return false;
+  if (ES_CUERPO_DISCIPLINARIO.test(candidato)) return false;
   const vocales = (candidato.match(/[aeiouáéíóú]/gi) || []).length;
   const solasMayusculas = candidato === candidato.toUpperCase();
   if (vocales === 0) return false;
