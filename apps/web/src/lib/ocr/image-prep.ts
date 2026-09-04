@@ -56,6 +56,10 @@ export interface OpcionesPreproceso {
    * lectura, asi que el lector la ofrece como variante y elige por resultado.
    */
   igualarLuz?: boolean;
+  /** Filtra ruido de sal y pimienta con mediana 3x3 antes de binarizar. */
+  desenfumar?: boolean;
+  /** Ecualizacion local por bloques (CLAHE) para documentos con bajo contraste. */
+  mejorarContraste?: boolean;
 }
 
 /** Giros gruesos que se prueban para detectar la orientacion de la pagina. */
@@ -129,7 +133,13 @@ export async function preprocessImage(
   imageFile: File | Blob,
   opciones: OpcionesPreproceso = {}
 ): Promise<Blob> {
-  const { binarizar = true, corregirInclinacion = true, igualarLuz = true } = opciones;
+  const {
+    binarizar = true,
+    corregirInclinacion = true,
+    igualarLuz = true,
+    desenfumar: aplicarDesenfumar = false,
+    mejorarContraste: aplicarMejora = false,
+  } = opciones;
 
   const bitmap = await cargarImagen(imageFile);
   const escala = escalaDeTrabajo(bitmap.width, bitmap.height);
@@ -150,20 +160,18 @@ export async function preprocessImage(
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   let gris = aEscalaDeGrises(imageData);
 
-  // Aplica CLAHE SOLO para documentos con bajo contraste (foto de celular)
-  // Aqui vivia una llamada a CLAHE para las fotos de bajo contraste. Se retira
-  // con el numero delante: nunca llego a ejecutarse (el limite de recorte estaba
-  // mal calculado y la medida de contraste saturaba), y al corregir ambas cosas
-  // resulto que HUNDE el perfil duro del banco de escaneos, de 51,0% a 3,9%, y
-  // duplica el tiempo por documento.
-  //
-  // El motivo es que no era CLAHE: pese al comentario, no interpolaba entre
-  // bloques, asi que dejaba costuras duras cada 64 px que el OCR no perdona, y
-  // recalculaba la funcion acumulada para cada pixel. Si alguna vez hace falta,
-  // hay que interpolar bilinealmente entre los centros de los bloques y medirlo
-  // con `npm run bench:ocr` antes de darlo por bueno.
+  // NUEVO: Desenfumar antes de cualquier otra operacion para eliminar ruido
+  // de sal y pimienta que confunde a Sauvola y al OCR.
+  if (aplicarDesenfumar) desenfumar(gris, canvas.width, canvas.height);
+
   if (igualarLuz) corregirIluminacion(gris, canvas.width, canvas.height);
   const contraste = calcularContraste(gris);
+
+  // NUEVO: CLAHE real con interpolacion bilineal, SOLO para documentos muy palidos.
+  // Se mide el contraste DESPUES de igualar luz para no duplicar el efecto.
+  if (aplicarMejora && contraste < 80) {
+    mejorarContraste(gris, canvas.width, canvas.height);
+  }
 
   if (binarizar) {
     binarizarLocal(imageData, gris, canvas.width, canvas.height, contraste);
@@ -337,6 +345,125 @@ function aEscalaDeGrises(imageData: ImageData): Uint8ClampedArray {
   }
 
   return gris;
+}
+
+/**
+ * Filtra ruido de sal y pimienta con mediana 3x3.
+ * Funciona directamente sobre el buffer gris (in-place) para no duplicar memoria.
+ */
+function desenfumar(gris: Uint8ClampedArray, width: number, height: number): void {
+  const copia = new Uint8ClampedArray(gris);
+  const vecinos = new Uint8ClampedArray(9);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      let k = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          vecinos[k++] = copia[(y + dy) * width + (x + dx)];
+        }
+      }
+      // Insertion sort para 9 elementos (rapido en bufferSize fijo).
+      for (let i = 1; i < 9; i++) {
+        const v = vecinos[i];
+        let j = i - 1;
+        while (j >= 0 && vecinos[j] > v) { vecinos[j + 1] = vecinos[j]; j--; }
+        vecinos[j + 1] = v;
+      }
+      gris[y * width + x] = vecinos[4];
+    }
+  }
+}
+
+/**
+ * CLAHE simplificado con interpolacion bilineal entre bloques.
+ *
+ * Ecualiza el histograma localmente para mejorar contraste en documentos muy
+ * palidos o con iluminacion desigual. Diferente al intento anterior que rompia
+ * el benchmark: este interpola bilinealmente entre centros de bloque para
+ * evitar costuras, y clipa el histograma al 40% para no amplificar ruido.
+ */
+function mejorarContraste(
+  gris: Uint8ClampedArray,
+  width: number,
+  height: number
+): void {
+  const TAM = 64;
+  const CLIP = 0.4;
+  const bloquesX = Math.ceil(width / TAM);
+  const bloquesY = Math.ceil(height / TAM);
+
+  if (bloquesX < 2 || bloquesY < 2) return;
+
+  // Histogramas por bloque.
+  const hists: Uint32Array[][] = [];
+  for (let by = 0; by < bloquesY; by++) {
+    hists[by] = [];
+    for (let bx = 0; bx < bloquesX; bx++) {
+      const h = new Uint32Array(256);
+      const y0 = by * TAM;
+      const y1 = Math.min(height, y0 + TAM);
+      const x0 = bx * TAM;
+      const x1 = Math.min(width, x0 + TAM);
+      for (let y = y0; y < y1; y++)
+        for (let x = x0; x < x1; x++) h[gris[y * width + x]]++;
+
+      // Clip histograma.
+      const total = (y1 - y0) * (x1 - x0);
+      const limite = Math.floor(total * CLIP);
+      let exceso = 0;
+      for (let i = 0; i < 256; i++) {
+        if (h[i] > limite) { exceso += h[i] - limite; h[i] = limite; }
+      }
+      const inc = Math.floor(exceso / 256);
+      for (let i = 0; i < 256; i++) h[i] = Math.min(255, h[i] + inc);
+
+      hists[by][bx] = h;
+    }
+  }
+
+  // LUTs precomputadas por bloque (funcion de distribucion acumulada).
+  const luts: Uint8ClampedArray[][] = [];
+  for (let by = 0; by < bloquesY; by++) {
+    luts[by] = [];
+    for (let bx = 0; bx < bloquesX; bx++) {
+      const h = hists[by][bx];
+      const lut = new Uint8ClampedArray(256);
+      const total = h.reduce((s, v) => s + v, 0);
+      let acum = 0;
+      for (let i = 0; i < 256; i++) {
+        acum += h[i];
+        lut[i] = Math.min(255, Math.round((acum / Math.max(1, total)) * 255));
+      }
+      luts[by][bx] = lut;
+    }
+  }
+
+  // Aplicar con interpolacion bilineal entre los 4 bloques cercanos.
+  for (let y = 0; y < height; y++) {
+    const byF = (y / TAM) - 0.5;
+    const by0 = Math.max(0, Math.min(bloquesY - 1, Math.floor(byF)));
+    const by1 = Math.min(bloquesY - 1, by0 + 1);
+    const fy = Math.max(0, Math.min(1, byF - by0 + 0.5));
+
+    for (let x = 0; x < width; x++) {
+      const bxF = (x / TAM) - 0.5;
+      const bx0 = Math.max(0, Math.min(bloquesX - 1, Math.floor(bxF)));
+      const bx1 = Math.min(bloquesX - 1, bx0 + 1);
+      const fx = Math.max(0, Math.min(1, bxF - bx0 + 0.5));
+
+      const v00 = luts[by0][bx0][gris[y * width + x]];
+      const v10 = luts[by0][bx1][gris[y * width + x]];
+      const v01 = luts[by1][bx0][gris[y * width + x]];
+      const v11 = luts[by1][bx1][gris[y * width + x]];
+
+      gris[y * width + x] = Math.min(255, Math.round(
+        (1 - fx) * (1 - fy) * v00 +
+        fx * (1 - fy) * v10 +
+        (1 - fx) * fy * v01 +
+        fx * fy * v11
+      ));
+    }
+  }
 }
 
 function escribirGris(imageData: ImageData, gris: Uint8ClampedArray): void {

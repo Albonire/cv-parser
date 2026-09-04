@@ -818,7 +818,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             }
           />
 
-          {currentResult.detectedType === 'cv' && currentResult.candidateData && (
+          {currentResult.candidateData && (
             <>
               <EditableCvForm
                 initialData={currentResult.candidateData}
@@ -873,7 +873,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             </>
           )}
 
-          {currentResult.detectedType === 'contract' && currentResult.contractData && (
+          {currentResult.contractData && (
             <EditableContractForm
               initialData={currentResult.contractData}
               confidenceScore={currentResult.confidenceScore}
@@ -882,7 +882,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             />
           )}
 
-          {currentResult.detectedType === 'id_card' && currentResult.idCardData && (
+          {currentResult.idCardData && (
             <EditableIdForm
               initialData={currentResult.idCardData}
               confidenceScore={currentResult.confidenceScore}
@@ -891,7 +891,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             />
           )}
 
-          {currentResult.detectedType === 'health' && currentResult.healthData && (
+          {currentResult.healthData && (
             <EditableHealthForm
               initialData={currentResult.healthData}
               confidenceScore={currentResult.confidenceScore}
@@ -900,7 +900,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             />
           )}
 
-          {currentResult.detectedType === 'liquidacion' && currentResult.liquidacionData && (
+          {currentResult.liquidacionData && (
             <EditableLiquidacionForm
               initialData={currentResult.liquidacionData}
               confidenceScore={currentResult.confidenceScore}
@@ -912,7 +912,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {!currentResult.candidateData &&
             !currentResult.contractData &&
             !currentResult.idCardData &&
-            !currentResult.healthData && (() => {
+            !currentResult.healthData &&
+            !currentResult.liquidacionData && (() => {
               const categoria = clasificarHistorial(currentResult.extractedText);
               const noVinculado = !currentResult.contractData && !currentResult.candidateData;
               return (

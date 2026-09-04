@@ -2,7 +2,7 @@ import { HealthFormData } from '../../types/health';
 
 const KNOWN_EPS = [
   'Sanitas', 'SURA', 'Nueva EPS', 'Famisanar', 'Salud Total', 'Compensar',
-  'Coosalud', 'Mutual Ser', 'Savia Salud', 'Asmet Salud', 'Emssanar', 'Capital Salud'
+  'Coosalud', 'Mutual Ser', 'Mutualser', 'Savia Salud', 'Asmet Salud', 'Emssanar', 'Capital Salud'
 ];
 
 const KNOWN_ARL = [
@@ -14,7 +14,7 @@ const KNOWN_PENSION = [
 ];
 
 const KNOWN_COMPENSATION = [
-  'Comfaoriente', 'Comfanorte', 'Comfenalco', 'Compensar', 'Cafam', 'Colsubsidio', 'Comfandi', 'Comfama'
+  'Comfaoriente', 'Comfanorte', 'Comfenalco', 'Compensar', 'Cafam', 'Colsubsidio', 'Comfandi', 'Comfama', 'Combarranquilla', 'Comfamiliar', 'Comfasucre'
 ];
 
 /**

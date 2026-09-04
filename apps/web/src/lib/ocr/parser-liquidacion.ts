@@ -25,10 +25,10 @@ export function parseLiquidacionText(text: string): LiquidacionFormData {
     fechaPago: normalizarFecha(capturarFecha(lower, 'pago')),
     diasTrabajados: capturarEntero(lower, /(?:dias\s+trabajados|tiempo\s+de\s+servicios?)\s*[:#.-]?\s*(\d{1,4})/),
     salarioBase: capturarMonto(lower, /salario\s*(?:base|promedio\s+pendiente)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
-    cesantias: capturarMonto(lower, /cesantias\s*(?:definitivas)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
+    cesantias: capturarMonto(lower, /cesantias\s*(?:consolidadas|definitivas|finales)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
     interesesCesantias: capturarMonto(lower, /intereses?\s*(?:sobre\s+cesantias|de\s+cesantias)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
-    prima: capturarMonto(lower, /prestaciones\/prima\s*(?:de\s+servicios?)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
-    vacaciones: capturarMonto(lower, /vacaciones\s*(?:proporcionales)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
+    prima: capturarMonto(lower, /prima\s+(?:de\s+servicios?|de\s+navidad)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
+    vacaciones: capturarMonto(lower, /vacaciones\s*(?:consolidadas|proporcionales)?\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
     indemnizacion: capturarMonto(lower, /indemnizacion\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/),
     totalLiquidacion: capturarTotal(lower),
     otrosConceptos: capturarConceptos(lower),
@@ -105,9 +105,20 @@ function capturarEntero(lower: string, re: RegExp): number | undefined {
 }
 
 function capturarTotal(lower: string): number | undefined {
-  return capturarMonto(
-    lower,
-    /total\s+(?:de\s+)?(?:a\s+pagar|a\s+liquidar|liquidacion\s+(?:a\s+pagar)?|pagar)[\s\S]{0,30}?\$?\s*([\d.,]{4,})/
+  return (
+    capturarMonto(
+      lower,
+      /total\s+(?:de\s+)?(?:a\s+pagar|a\s+liquidar|liquidacion\s+(?:a\s+pagar)?|pagar)[\s\S]{0,30}?\$?\s*([\d.,]{4,})/
+    ) ??
+    capturarMonto(
+      lower,
+      /(?:liquidacion\s+y\s+pago\s+total|total\s+por\s+concepto\s+de\s+retiro|pago\s+total)\s+(?:por\s+valor\s+de\s+|de\s+|:)\s*\$?\s*([\d.,]{4,})/i
+    ) ??
+    // Fallback: total señalado como "por valor de $X" en una liquidacion real.
+    capturarMonto(
+      lower,
+      /(?:por\s+valor\s+(?:total\s+)?de|valor\s+total)\s*\$?\s*([\d.,]{4,})/i
+    )
   );
 }
 

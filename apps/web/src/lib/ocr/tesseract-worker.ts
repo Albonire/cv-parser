@@ -145,6 +145,62 @@ function comparaLecturas(a: Lectura, b: Lectura): number {
   return puntajeLectura(b.texto, b.confianza / 100) - puntajeLectura(a.texto, a.confianza / 100);
 }
 
+/**
+ * Modos de segmentacion de pagina para reintentos.
+ * Cuando PSM.AUTO no produce una lectura solida, se prueban otros modos
+ * que pueden capturar mejor ciertos tipos de documentos:
+ * - SINGLE_BLOCK: denso, ignora columnas (bueno para formularios compactos)
+ * - SINGLE_COLUMN: fuerza una sola columna (bueno para hojas de vida simples)
+ */
+const PSM_VARIANTES: Array<{ modo: PSM; nombre: string }> = [
+  { modo: PSM.AUTO, nombre: 'automatico' },
+  { modo: PSM.SINGLE_BLOCK, nombre: 'bloque_unico' },
+  { modo: PSM.SINGLE_COLUMN, nombre: 'columna_unico' },
+];
+
+/**
+ * Intenta varios modos de segmentacion de pagina y devuelve la mejor lectura.
+ * Solo se usa como reintento cuando la primera pasada con PSM.AUTO falla.
+ */
+async function leerConPsmVariante(
+  worker: Worker,
+  fuente: File | Blob
+): Promise<Lectura> {
+  let mejorLectura: Lectura = { texto: '', confianza: 0, cajas: [] };
+
+  for (const variante of PSM_VARIANTES) {
+    try {
+      await worker.setParameters({
+        tessedit_pageseg_mode: variante.modo,
+        preserve_interword_spaces: '1',
+      });
+
+      const res = await worker.recognize(fuente, {}, { blocks: true, text: true });
+      const lectura: Lectura = {
+        texto: res.data.text ?? '',
+        confianza: res.data.confidence ?? 0,
+        cajas: res.data.blocks,
+      };
+
+      if (comparaLecturas(lectura, mejorLectura) < 0) {
+        mejorLectura = lectura;
+      }
+
+      if (lecturaSolida(lectura.texto, lectura.confianza / 100)) break;
+    } catch (error) {
+      console.warn(`PSM ${variante.nombre} fallo:`, error);
+    }
+  }
+
+  // Restaurar a PSM.AUTO para las siguientes paginas.
+  await worker.setParameters({
+    tessedit_pageseg_mode: PSM.AUTO,
+    preserve_interword_spaces: '1',
+  });
+
+  return mejorLectura;
+}
+
 interface CajaTesseract {
   x0: number;
   y0: number;
@@ -164,6 +220,7 @@ export function tesseractWordsToWords(palabras: PalabraTesseract[]): Word[] {
     .filter((p) => p.text.trim().length > 0)
     .map((p) => {
       const height = Math.max(1, p.bbox.y1 - p.bbox.y0);
+      const confianza = Math.max(0, Math.min(1, p.confidence / 100));
       return {
         text: normalizarPalabraOcr(p.text.trim()),
         x: p.bbox.x0,
@@ -171,7 +228,8 @@ export function tesseractWordsToWords(palabras: PalabraTesseract[]): Word[] {
         width: Math.max(1, p.bbox.x1 - p.bbox.x0),
         height,
         fontSize: height,
-        confidence: Math.max(0, Math.min(1, p.confidence / 100)),
+        confidence: confianza,
+        uncertain: confianza < 0.6,
       };
     });
 }
@@ -363,9 +421,14 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
   };
   const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
 
-  const preprocesar = async (binarizar: boolean, igualarLuz = true): Promise<Blob | null> => {
+  const preprocesar = async (
+    binarizar: boolean,
+    igualarLuz = true,
+    desenfumar = false,
+    mejorarContraste = false
+  ): Promise<Blob | null> => {
     try {
-      return await preprocessImage(fuente, { binarizar, igualarLuz });
+      return await preprocessImage(fuente, { binarizar, igualarLuz, desenfumar, mejorarContraste });
     } catch (error) {
       console.warn(`Preprocesamiento ${binarizar ? 'binarizado' : 'en escala de grises'} omitido:`, error);
       return null;
@@ -403,6 +466,26 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
     const conGrisPlano = await leerVariante(await preprocesar(false, false), 'en gris sin igualar');
     if (conGrisPlano && (!conGris || comparaLecturas(conGrisPlano.lectura, conGris.lectura) < 0)) {
       conGris = conGrisPlano;
+    }
+  }
+
+  // NUEVO: Variante desenfumada -- elimina ruido de sal y pimienta que confunde
+  // a Sauvola y produce caracteres fantasmas en el OCR.
+  if (!cubreLaPagina(conGris)) {
+    const desenfumada = await preprocesar(false, true, true);
+    const conDesenfumada = await leerVariante(desenfumada, 'desenfumada');
+    if (conDesenfumada && (!conGris || comparaLecturas(conDesenfumada.lectura, conGris.lectura) < 0)) {
+      conGris = conDesenfumada;
+    }
+  }
+
+  // NUEVO: Variante con CLAHE real -- para documentos muy palidos o con
+  // iluminacion muy desigual donde el contraste original es insuficiente.
+  if (!cubreLaPagina(conGris)) {
+    const mejorada = await preprocesar(false, true, false, true);
+    const conMejora = await leerVariante(mejorada, 'contraste_mejorado');
+    if (conMejora && (!conGris || comparaLecturas(conMejora.lectura, conGris.lectura) < 0)) {
+      conGris = conMejora;
     }
   }
 
@@ -519,22 +602,34 @@ async function reconocerElemento(
   const lectura = await leerConVariantes(worker, item);
   if (lecturaSolida(lectura.texto, lectura.confianza / 100)) return lectura;
 
+  // NUEVO: Si la primera lectura no es solida, intentar con otros PSM.
+  // SINGLE_BLOCK es bueno para formularios compactos; SINGLE_COLUMN para
+  // hojas de vida simples sin columnas detectables.
+  let mejorLectura = lectura;
+  try {
+    const reintentoPsm = await leerConPsmVariante(worker, item);
+    if (comparaLecturas(reintentoPsm, mejorLectura) < 0) {
+      mejorLectura = reintentoPsm;
+    }
+  } catch (error) {
+    console.warn('Reintentos PSM fallaron:', error);
+  }
+
+  if (lecturaSolida(mejorLectura.texto, mejorLectura.confianza / 100)) return mejorLectura;
+
   try {
     const giro = await detectarOrientacion(worker, item);
     if (giro !== 0) {
       const reintento = await leerConVariantes(worker, await girarImagen(item, giro));
-      if (
-        puntajeLectura(reintento.texto, reintento.confianza / 100) >
-        puntajeLectura(lectura.texto, lectura.confianza / 100)
-      ) {
-        return reintento;
+      if (comparaLecturas(reintento, mejorLectura) < 0) {
+        mejorLectura = reintento;
       }
     }
   } catch (error) {
     console.warn('Deteccion de orientacion omitida:', error);
   }
 
-  return lectura;
+  return mejorLectura;
 }
 
 /** Ejecuta OCR sobre uno o varios archivos, blobs o canvas. */

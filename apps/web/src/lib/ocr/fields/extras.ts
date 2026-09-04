@@ -140,6 +140,11 @@ export function extraerReferencias(
       .replace(/\((?:laboral|personal|familiar)\)/i, '')
       .replace(telefono, '')
       .replace(/^(?:referencia\s*(?:laboral|personal|familiar)?\s*:?\s*)/i, '')
+      // Se eliminan los parentesis que quedaron con la etiqueta del medio de
+      // contacto, aunque el telefono ya se haya quitado ("Luis Sotto (Telefono:
+      // )") o acompanen a otros datos ("Eucaris Guete (Telefono: ... / E-mail:
+      // eucaris@...)").
+      .replace(/\([^)]*(?:tel[eé]fono|tel|celular|cel|e-?mail|correo|email|contacto)[^)]*\)\s*$/i, '')
       .replace(/[-–—:,\s]+$/, '')
       .trim();
 

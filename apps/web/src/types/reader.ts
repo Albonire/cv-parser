@@ -40,7 +40,7 @@ export interface ExtractedDocumentData {
   extractedText: string;
   confidenceScore: number;
   processingTimeMs: number;
-  method: 'pdf_text' | 'pdf_ocr' | 'image_ocr' | 'docx';
+  method: 'pdf_text' | 'pdf_ocr' | 'image_ocr' | 'docx' | 'txt';
   candidateData?: CandidateFormData;
   contractData?: ContractFormData;
   idCardData?: IdCardFormData;

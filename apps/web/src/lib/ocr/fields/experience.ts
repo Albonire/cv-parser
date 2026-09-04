@@ -66,7 +66,14 @@ function pareceCargo(texto: string): boolean {
 /** Separa "Empresa SAS - Cargo" o "Cargo - Empresa SAS" en sus dos partes. */
 function partirEmpresaCargo(texto: string): { empresa: string; cargo: string } | null {
   const partes = texto.split(/\s+[-–—|]\s+/).map((p) => p.trim()).filter(Boolean);
-  if (partes.length < 2) return null;
+  if (partes.length < 2) {
+    // Formato "Empresa: Cargo" (lista "Transportadora Distransa: Conductor").
+    const porDosPuntos = texto.split(/\s*:\s+/).map((p) => p.trim()).filter(Boolean);
+    if (porDosPuntos.length === 2 && pareceCargo(porDosPuntos[1])) {
+      return { empresa: porDosPuntos[0], cargo: porDosPuntos[1] };
+    }
+    return null;
+  }
 
   const indiceCargo = partes.findIndex((p) => pareceCargo(p));
   if (indiceCargo < 0) return null;
@@ -233,9 +240,19 @@ export function extraerExperiencia(
   const alcance = haySeccion && lineasSeccion.length > 0 ? lineasSeccion : todas;
 
   const porEtiquetas = desdeEtiquetas(alcance);
+  const porRangos = desdeRangos(alcance);
+
+  // Un formulario con etiquetas (Empresa:/Cargo:/Fechas:) es el mas fiable y
+  // gana sobre los rangos. Pero si la ruta por etiquetas solo produjo fragmentos
+  // sin empresa ("Cargo: Conductor - Repartidor" sin la "Empresa:" que la ancla),
+  // es un formato de lista ("Empresa: cargo (año)") y el barrido por rangos es
+  // mas completo: se favorece el que tenga mas datos.
+  if (porEtiquetas.length > 0 && porEtiquetas.every((e) => e.company)) return porEtiquetas;
+  if (porEtiquetas.length > 0 && !porEtiquetas.every((e) => e.company) && porRangos.length > 0) {
+    return porRangos;
+  }
   if (porEtiquetas.length > 0) return porEtiquetas;
 
-  const porRangos = desdeRangos(alcance);
   if (porRangos.length > 0) return porRangos;
 
   const textoAlcance = alcance.map((l) => l.text).join('\n');

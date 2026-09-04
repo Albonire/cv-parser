@@ -20,17 +20,56 @@ const RANGO_DE_ANIOS =
   /\b(?:19|20)\d{2}\s*(?:[-–—]|a|al|hasta|to)\s*(?:(?:19|20)\d{2}|presente|actualidad|actual|present)\b/gi;
 
 /**
+ * Valida y normaliza un candidato a telefono. Devuelve el numero limpio o null
+ * si no parece un telefono. Tambien parte bloques que juntan dos telefonos
+ * ("Cel. 3218055469 - 3002808775") y descarta NIT colombianos, que no lo son.
+ */
+function validarCandidato(brutoRaw: string, excluir?: string): string | null {
+  let bruto = brutoRaw.replace(/[\s.()-]+$/, '').trim();
+
+  // Normaliza espacios dentro de paréntesis: "( +91)" -> "(+91)"
+  bruto = bruto.replace(/\(\s*\+\s*(\d)/g, '(+$1');
+  bruto = bruto.replace(/\(\s*(\d)/g, '($1');
+
+  let digitos = bruto.replace(/\D/g, '');
+
+  // Dos telefonos pegados por un separador forman un bloque de mas de 15
+  // digitos que de otro modo se descarta entero ("3218055469 - 3002808775").
+  if (digitos.length > 15) {
+    const partes = bruto.split(/\s*[-–—]\s*/);
+    for (const parte of partes) {
+      const p = parte.replace(/\D/g, '');
+      if (p.length === digitos.length) continue; // sin separador real
+      const r = validarCandidato(parte, excluir);
+      if (r) return r;
+    }
+    return null;
+  }
+
+  // Rango 7-15 (extendido para soportar +1-xxx-xxx-xxxx que es 12 dígitos)
+  if (digitos.length < 7 || digitos.length > 15) return null;
+  if (excluir && digitos === excluir) return null;
+  // Un año suelto o un rango numerico no es un telefono.
+  if (/^(?:19|20)\d{2}$/.test(digitos)) return null;
+  // Un NIT colombiano ("901.167.955-4") no es un telefono: termina en un
+  // digito de verificacion tras un guion.
+  if (/^\d{1,3}(?:[.,]\d{3}){2}-\d$/.test(bruto)) return null;
+
+  return bruto.replace(/\s{2,}/g, ' ');
+}
+
+/**
  * Devuelve el primer telefono valido del texto.
  * @param excluir digitos a ignorar (por ejemplo, el numero de documento).
  */
 export function buscarTelefono(texto: string, excluir?: string): string | null {
   const limpio = texto.replace(RANGO_DE_ANIOS, ' ');
-  
+
   // Intenta regex principal primero
   CANDIDATO.lastIndex = 0;
   let candidatos: RegExpExecArray[] = [];
   let match: RegExpExecArray | null;
-  
+
   while ((match = CANDIDATO.exec(limpio)) !== null) {
     candidatos.push(match);
   }
@@ -51,23 +90,9 @@ export function buscarTelefono(texto: string, excluir?: string): string | null {
     }
   }
 
-  // Valida cada candidato
   for (const candidato of candidatos) {
-    let bruto = candidato[0].replace(/[\s.()-]+$/, '').trim();
-    
-    // Normaliza espacios dentro de paréntesis: "( +91)" -> "(+91)"
-    bruto = bruto.replace(/\(\s*\+\s*(\d)/g, '(+$1');
-    bruto = bruto.replace(/\(\s*(\d)/g, '($1');
-    
-    const digitos = bruto.replace(/\D/g, '');
-
-    // Rango 7-15 (extendido para soportar +1-xxx-xxx-xxxx que es 12 dígitos)
-    if (digitos.length < 7 || digitos.length > 15) continue;
-    if (excluir && digitos === excluir) continue;
-    // Un año suelto o un rango numerico no es un telefono.
-    if (/^(?:19|20)\d{2}$/.test(digitos)) continue;
-
-    return bruto.replace(/\s{2,}/g, ' ');
+    const valido = validarCandidato(candidato[0], excluir);
+    if (valido) return valido;
   }
 
   return null;

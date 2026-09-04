@@ -82,20 +82,37 @@ export function extractSkillsFromText(text: string): { category: string; skillNa
   const found: { category: string; skillName: string }[] = [];
   const added = new Set<string>();
 
+  const hayContextoProgramacion =
+    /\b(?:lenguajes?\s+de\s+programaci[oó]n|programaci[oó]n|programming|dev|desarroll[oó]r?|developer|software|c[oó]digo|code|computaci[oó]n|inform[aá]tica|systems?|ingenier[oa]\s+de\s+software)\b/i.test(
+      text
+    );
+
   for (const cat of SKILLS_TAXONOMY) {
     for (const skill of cat.skills) {
       // Usar limites de palabra escapados para evitar falsos positivos
       const escaped = skill.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}(?=[^a-zA-Z0-9]|$)`, 'i');
-      if (regex.test(text)) {
-        const key = skill.toLowerCase();
-        if (!added.has(key)) {
-          added.add(key);
-          found.push({
-            category: cat.category,
-            skillName: skill,
-          });
-        }
+      if (!regex.test(text)) continue;
+
+      // Lenguajes de una o dos letras ("C", "R", "Go") producen falsos
+      // positivos en cualquier documento ("C2", "R&D", "Go"). Solo se aceptan si
+      // hay contexto claro de programacion en el texto.
+      const esCorto = skill.replace(/\s+/g, '').length <= 2;
+      if (esCorto && !hayContextoProgramacion) continue;
+
+      // "Seguridad Social" (y otras habilidades administrativas) suelen colarse
+      // desde un encabezado de seccion ("Seguridad Social y Afiliaciones"). Se
+      // descarta cuando el texto inmediato anuncia una seccion y no una skill.
+      if (/seguridad\s+social/i.test(skill) && /seguridad\s+social\b[^.\n]{0,15}\b(?:y\s+afiliaciones|afiliaciones)\b/i.test(text))
+        continue;
+
+      const key = skill.toLowerCase();
+      if (!added.has(key)) {
+        added.add(key);
+        found.push({
+          category: cat.category,
+          skillName: skill,
+        });
       }
     }
   }

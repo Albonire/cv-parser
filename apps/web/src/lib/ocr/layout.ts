@@ -18,6 +18,8 @@ export interface Word {
   isBold?: boolean;
   /** Confianza del OCR entre 0 y 1. Los origenes digitales usan 1. */
   confidence?: number;
+  /** Palabra con confianza baja (< 0.6), candidata a ser ilegible. */
+  uncertain?: boolean;
 }
 
 /** Renglon reconstruido, con las señales de formato que necesita el segmentador. */

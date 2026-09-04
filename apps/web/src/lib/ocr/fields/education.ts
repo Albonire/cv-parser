@@ -116,15 +116,20 @@ function desdeRenglones(lineas: LayoutLine[]): EducationItem[] {
 
     const conPrefijo = texto.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{4,20})\s*:\s*(.+)$/);
     const nivelPrefijo = conPrefijo ? nivelDesdePrefijo(conPrefijo[1]) : null;
+    // "Educacion:" / "Formacion:" / "Estudios:" son etiquetas de seccion, no un
+    // nivel: aun asi conviene tratar lo que sigue ("Básica Primaria - Instituto
+    // ...") como contenido de formacion para no arrastrar la etiqueta al titulo.
+    const esEtiquetaSeccion =
+      conPrefijo !== null && /^(educaci[oó]n|formaci[oó]n|formaci[oó]n\s+acad[eé]mica|estudios?|acad[eé]mico)$/i.test(normalize(conPrefijo[1]));
 
-    if (nivelPrefijo) {
+    if (nivelPrefijo || esEtiquetaSeccion) {
       const resto = conPrefijo![2];
       const partes = resto.split(/\s+[-–—]\s+/).map((p) => p.trim()).filter(Boolean);
       const institucionParte = partes.find((p) => ES_INSTITUCION.test(p));
       const tituloParte = partes.find((p) => p !== institucionParte) ?? partes[0] ?? resto;
 
       items.push({
-        level: nivelPrefijo,
+        level: nivelPrefijo ?? nivelDesdeTexto(tituloParte),
         institution: stripYears(institucionParte ?? buscarInstitucion(textos, i)),
         degree: stripYears(tituloParte),
         endYear: anio(resto),

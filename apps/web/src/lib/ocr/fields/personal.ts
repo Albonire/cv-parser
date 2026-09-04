@@ -62,6 +62,15 @@ const NO_ES_NOMBRE =
   /(?:curriculum|curriculo|hoja\s+de\s+vida|resume\b|^cv$|datos\s+personales|informaci[oó]n\s+personal|personal\s+information|contacto|contact|perfil|profile|summary|resumen|experiencia|experience|educaci[oó]n|education|habilidades|skills|idiomas|languages|certificaciones|referencias|references|objetivo|objective|formato\s+[uú]nico|persona\s+natural|funci[oó]n\s+p[uú]blica|universidad|university|colegio|instituto|sena|empresa|trabajo\s+en\s+equipo|liderazgo|comunicaci[oó]n|puntualidad|responsabilidad|proactividad|adaptabilidad|honestidad)/i;
 
 /**
+ * Encabezados de seccion de una hoja de vida. Son titulos de bloque, no el cargo
+ * aspirado ni la profesion. Por contener la palabra "profesional" o "resumen",
+ * un barrido ingenuo los tomaria como titular ("Perfil Profesional",
+ * "Formacion Academica y Perfil Profesional", "Resumen").
+ */
+const ES_ENCABEZADO_SECCION =
+  /\b(?:perfil\s+profesional|formaci[oó]n\s+acad[eé]mica(\s+y\s+perfil\s+profesional)?|resumen\s+profesional|informaci[oó]n\s+personal|datos\s+personales|historial\s+laboral|experiencia\s+laboral|formaci[oó]n\s+y\s+perfil|referencias\s+(?:personales|laborales)|objetivo\s+(?:profesional|laboral))\b/i;
+
+/**
  * Firmas, despedidas y unidades institucionales del emisor. En memorandos,
  * llamados y liquidaciones el OCR suele capturar la firma o el pie
  * ("Atentamente: Gerencia", "Departamento de Talento Humano", "Firma:") y ese
@@ -249,8 +258,8 @@ function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   if (enEncabezado) return enEncabezado[0].toLowerCase();
 
   const textoDocumento = textos(todas).join('\n');
-  const enDocumento = textoDocumento.match(PATRON_CORREO);
-  if (enDocumento) return enDocumento[0].toLowerCase();
+  const enDocumento = buscarCorreoCandidato(todas);
+  if (enDocumento) return enDocumento.toLowerCase();
 
   // Ninguna arroba legible: se intenta reconstruir la direccion.
   const reconstruido = reconstruirCorreoOcr(textoEncabezado) || reconstruirCorreoOcr(textoDocumento);
@@ -272,6 +281,32 @@ function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   if (permisivo) return permisivo;
 
   return '';
+}
+
+/**
+ * Busca el correo del candidato en todo el documento, descartando los que
+ * pertenecen al bloque de referencias personales/laborales. Sin este filtro,
+ * el parser tomaba el correo del conyuge en la seccion "Referencias
+ * Personales" como si fuera el del candidato.
+ */
+function buscarCorreoCandidato(todas: LayoutLine[]): string | null {
+  const lineas = todas.map((l) => l.text);
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    const encontrado = linea.match(PATRON_CORREO);
+    if (!encontrado) continue;
+    const email = encontrado[0];
+    // Las referencias suelen estar al final y sus lineas asocian el correo con
+    // una persona + telefono ("Eucaris Guete Medrano (Telefono: ... / E-mail:
+    // eucarisguete8@gmail.com)"). Si en la linea hay un telefono junto a un
+    // nombre con mayuscula inicial, es una referencia y no el candidato.
+    const pareceReferencia =
+      /referenc/i.test(lineas.slice(Math.max(0, i - 1), i + 2).join(' ')) ||
+      (buscarTelefono(linea) !== null && /^\s*[A-ZÁÉÍÓÚ][a-záéíóú]+\s+[A-ZÁÉÍÓÚ]/.test(linea));
+    if (pareceReferencia) continue;
+    return email;
+  }
+  return null;
 }
 
 /**
@@ -548,6 +583,11 @@ function pareceTitular(candidato: string, ciudad: string): boolean {
   if (/^\d/.test(candidato)) return false;
   if (ETIQUETA_SUELTA.test(candidato)) return false;
 
+  // Un encabezado de seccion de la hoja de vida ("Perfil Profesional",
+  // "Formacion Academica y Perfil Profesional", "Resumen Profesional") no es
+  // un cargo aspirado, aunque contenga la palabra "profesional".
+  if (ES_ENCABEZADO_SECCION.test(candidato)) return false;
+
   // Basura OCR aislada (siglas sin vocales o sin significado): "NRTA", "XXXX".
   // Un titular real es una frase con sentido, casi siempre un cargo conocido.
   // Se exige al menos una vocal y que no sea un mero fragmento cortado.
@@ -665,6 +705,105 @@ function buscarMontoSalarioEnTexto(texto: string): number | undefined {
   return extraerMontoSalario(match ? match[1] : null);
 }
 
+/**
+ * Extrae campos usando contexto de etiquetas en la misma linea ("CEDULA: 123456").
+ * Funciona cuando el layout no agrupa bien los campos pero el texto plano si
+ * conserva la estructura "Etiqueta: valor".
+ */
+function extraerConContexto(lineas: string[]): Partial<DatosPersonales> {
+  const resultado: Partial<DatosPersonales> = {};
+
+  for (const linea of lineas) {
+    const match = linea.match(/^([^:]{2,40}):\s*(.+)$/);
+    if (!match) continue;
+
+    const etiqueta = match[1].trim().toLowerCase();
+    const valor = match[2].trim();
+
+    if (/(?:cedula|c[eé]dula|cc|documento|identificaci[oó]n)/i.test(etiqueta)) {
+      const docMatch = valor.match(/\b[\d.]{7,12}\b/);
+      if (docMatch) resultado.documentNumber = docMatch[0].replace(/\./g, '');
+    } else if (/(?:tel|cel|telefono|celular|movil|whatsapp)/i.test(etiqueta)) {
+      const telMatch = valor.match(/\b3\d{9}\b/);
+      if (telMatch) resultado.phone = telMatch[0];
+    } else if (/(?:correo|email|mail)/i.test(etiqueta)) {
+      const emailMatch = valor.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
+      if (emailMatch) resultado.email = emailMatch[0].toLowerCase();
+    } else if (/(?:nombre|nombres)/i.test(etiqueta)) {
+      if (!resultado.firstNames) {
+        const partes = valor.split(/\s+/);
+        if (partes.length >= 2) {
+          resultado.firstNames = partes.slice(0, -1).join(' ');
+          resultado.lastNames = partes[partes.length - 1];
+        }
+      }
+    } else if (/(?:ciudad|lugar|municipio)/i.test(etiqueta)) {
+      if (!resultado.cityResidence) {
+        const candidata = valor.split(/[|,;]/)[0].trim().substring(0, 50);
+        // No inyectar basura de cargo como ciudad ("CONDUCTOR").
+        if (candidata.length > 2 && !ciudadPareceCargo(candidata)) {
+          resultado.cityResidence = candidata;
+        }
+      }
+    } else if (/(?:direcci[oó]n|domicilio)/i.test(etiqueta)) {
+      if (!resultado.address) {
+        resultado.address = valor.split(/[|,;]/)[0].trim().substring(0, 80);
+      }
+    } else if (/(?:nacionalidad)/i.test(etiqueta)) {
+      if (!resultado.nationality) {
+        resultado.nationality = valor.split(/[|,;]/)[0].trim();
+      }
+    } else if (/(?:estado\s+civil)/i.test(etiqueta)) {
+      if (!resultado.maritalStatus) {
+        resultado.maritalStatus = valor.split(/[|,;]/)[0].trim();
+      }
+    } else if (/(?:sexo|g[eé]nero)/i.test(etiqueta)) {
+      if (!resultado.gender) {
+        resultado.gender = valor.split(/[|,;]/)[0].trim();
+      }
+    }
+  }
+
+  return resultado;
+}
+
+/**
+ * Extrae datos con patrones relajados cuando los metodos principales fallan.
+ * Busca cualquier nombre plausible, cedula, telefono o correo en el texto.
+ */
+function extraccionRespaldo(texto: string): Partial<DatosPersonales> {
+  const resultado: Partial<DatosPersonales> = {};
+
+  // Buscar nombre plausible (dos palabras con mayuscula, 2+ caracteres cada una).
+  if (!resultado.firstNames) {
+    const nombreMatch = texto.match(/\b([A-ZÁÉÍÓÚ][a-záéíóú]{2,})\s+([A-ZÁÉÍÓÚ][a-záéíóú]{2,})\b/);
+    if (nombreMatch) {
+      resultado.firstNames = nombreMatch[1];
+      resultado.lastNames = nombreMatch[2];
+    }
+  }
+
+  // Buscar cedula (7-10 digitos).
+  if (!resultado.documentNumber) {
+    const docMatch = texto.match(/\b\d{7,10}\b/);
+    if (docMatch) resultado.documentNumber = docMatch[0];
+  }
+
+  // Buscar telefono (10 digitos empiezan por 3).
+  if (!resultado.phone) {
+    const telMatch = texto.match(/\b3\d{9}\b/);
+    if (telMatch) resultado.phone = telMatch[0];
+  }
+
+  // Buscar correo electronico.
+  if (!resultado.email) {
+    const emailMatch = texto.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
+    if (emailMatch) resultado.email = emailMatch[0].toLowerCase();
+  }
+
+  return resultado;
+}
+
 export function extraerDatosPersonales(
   encabezado: LayoutLine[],
   todas: LayoutLine[]
@@ -701,21 +840,27 @@ export function extraerDatosPersonales(
 
   const ciudad = extraerCiudad(encabezado, todas);
 
+  // NUEVO: Si los metodos principales fallaron, intentar con contexto y respaldo.
+  const contexto = extraerConContexto(lineas);
+  const respaldo = (!firstNames && !documentNumber && !extraerTelefono(encabezado, todas, documentNumber))
+    ? extraccionRespaldo(textoCompleto)
+    : {};
+
   return {
-    firstNames,
-    lastNames,
-    documentType,
-    documentNumber,
-    email: extraerCorreo(encabezado, todas),
-    phone: extraerTelefono(encabezado, todas, documentNumber),
-    cityResidence: ciudad,
-    address: direccion ?? undefined,
-    nationality: nacionalidad?.split(/[|,]/)[0].trim() ?? '',
+    firstNames: firstNames || contexto.firstNames || respaldo.firstNames || '',
+    lastNames: lastNames || contexto.lastNames || respaldo.lastNames || '',
+    documentType: documentType,
+    documentNumber: documentNumber || contexto.documentNumber || respaldo.documentNumber || '',
+    email: extraerCorreo(encabezado, todas) || contexto.email || respaldo.email || '',
+    phone: extraerTelefono(encabezado, todas, documentNumber) || contexto.phone || respaldo.phone || '',
+    cityResidence: ciudad || contexto.cityResidence || '',
+    address: direccion ?? contexto.address ?? undefined,
+    nationality: (nacionalidad || contexto.nationality)?.split(/[|,]/)[0].trim() ?? '',
     birthPlace: lugarNacimiento?.trim(),
     birthDate: fechaMatch ? fechaMatch[0].trim() : undefined,
-    maritalStatus: estadoCivil?.split(/[|]/)[0].trim(),
-    gender: genero?.split(/[|]/)[0].trim(),
-    headline: extraerTitular(encabezado, lineaNombre, `${firstNames} ${lastNames}`, ciudad),
+    maritalStatus: (estadoCivil || contexto.maritalStatus)?.split(/[|]/)[0].trim(),
+    gender: (genero || contexto.gender)?.split(/[|]/)[0].trim(),
+    headline: extraerTitular(encabezado, lineaNombre, `${firstNames || contexto.firstNames || ''} ${lastNames || contexto.lastNames || ''}`, ciudad || contexto.cityResidence || ''),
     salaryExpectation,
     availability: disponibilidad?.split(/[|]/)[0].trim(),
     driverLicense: licencia?.match(/\b(A1|A2|B1|B2|B3|C1|C2|C3)\b/i)?.[0].toUpperCase(),

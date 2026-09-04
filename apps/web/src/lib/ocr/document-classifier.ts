@@ -62,8 +62,17 @@ function puntajeHojaDeVida(lower: string): number {
   );
 }
 
-/** Con dos senales fuertes ya no hay duda de que es una hoja de vida. */
-const CV_INEQUIVOCO = 6;
+/**
+ * Con dos senales fuertes ya no hay duda de que es una hoja de vida.
+ *
+ * Conventionalmente bastan "EXPERIENCIA LABORAL" (3) + "DATOS PERSONALES" (2)
+ * (o + "FORMACION ACADEMICA" 3) para reconocer un perfil de candidato. Un
+ * documento como "Datos Personales y de Contrato", que es la plantilla de
+ * candidato de Rosimar (nombre, cedula, cargo/perfil, educacion y experiencia),
+ * mezcla terminos de contrato y de EPS y sin esta prioridad terminaba en un
+ * formulario equivocado en vez de en su hoja de vida.
+ */
+const CV_INEQUIVOCO = 5;
 
 /** Minusculas y sin diacriticos: hace robusta la busqueda ante mayusculas y
  *  acentos del OCR (p. ej. "ATENCIÓN" == "atencion"). */
@@ -90,6 +99,11 @@ export function clasificarHistorial(texto: string): DocumentCategory {
   if (cv >= CV_INEQUIVOCO) return 'hoja_de_vida';
 
   // Consultas de Seguridad Social / EPS / ARL / pensiones (formulario tipo EPS).
+  // Se exige ademas una senal inequivoca de certificado/afiliacion (cotizante,
+  // afiliad-, certificado, regimen, IPS...). Sin ella, un perfil de candidato o
+  // una hoja de vida que mencione de pasada "Seguridad Social: EPS Sanitas | AFP
+  // Porvenir | ARL Positiva" se clasificaba como EPS y saltaba al formulario de
+  // salud dejando vacio el formulario de hoja de vida.
   const salud =
     (lower.includes('seguridad social') ? 3 : 0) +
     (lower.includes('informacion basica del afiliado') ? 3 : 0) +
@@ -99,7 +113,11 @@ export function clasificarHistorial(texto: string): DocumentCategory {
     (lower.includes('cotizante') ? 2 : 0) +
     (lower.includes('pensiones') ? 1 : 0) +
     (lower.includes('compensacion') ? 1 : 0);
-  if (salud >= 4) return 'salud';
+  const certificadoSalud =
+    /(?:afiliad|cotizante|certificado de afili|regimen (?:contributivo|subsidiado)|portabilidad|ips\b|numero de afiliacion)/.test(
+      lower
+    );
+  if (salud >= 4 && certificadoSalud) return 'salud';
 
   // Cedula de ciudadania / tarjeta de identidad.
   const cedula =

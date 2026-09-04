@@ -176,6 +176,23 @@ function esPlantilla(linea: string): boolean {
 const CEDULA_CON_PREFIJO = /\b(?:c\.?\s?c\.?|cc)\s*(\d[\d.\s-]{5,}\d)/i;
 
 /**
+ * Encabezados de seccion tipicos de un expediente Rosimar/datos personales.
+ * No son nombres de persona y contamineban el rescate del trabajador.
+ */
+const ES_ENCABEZADO_SECCION =
+  /^(?:historial\s+disciplinario|novedades|desvinculaci[oó]n|educaci[oó]n|referencias|seguridad\s+social|salud|datos\s+personales|experiencia|afiliaciones?)\b/i;
+
+/** Limpia y pone en mayusculas iniciales un nombre leido de una linea "Nombre:". */
+function limpiarNombrePersona(valor: string): string {
+  return valor
+    .replace(/\(.*\)|;.*$/g, '')
+    .trim()
+    .split(/\s+/)
+    .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w))
+    .join(' ');
+}
+
+/**
  * Rescate para cuando la columna de rotulos no se leyo.
  *
  * En un contrato en dos columnas puede pasar que el OCR lea la columna de
@@ -205,14 +222,31 @@ function completarSinRotulos(documento: DocumentLayout, actual: ContractFormData
     completado.employerName = primero((l) => FORMA_JURIDICA.test(l)) ?? '';
   }
   if (!completado.workerName) {
-    // Un nombre de persona no lleva vocabulario del documento ni es un cargo:
-    // sin esos dos filtros el rescate tomaba "CONTRATO INDIVIDUAL DE TRABAJO" o
-    // "COORDINADORA DE TALENTO HUMANO" por el nombre del trabajador.
-    const nombre = primero(
-      (l) =>
-        pareceNombreDePersona(l) && !FORMA_JURIDICA.test(l) && !esPlantilla(l) && !contieneCargo(l)
-    );
-    completado.workerName = nombre ?? '';
+    // Expediente Rosimar ("Datos Personales y de Contrato"): "Nombre:" sin
+    // "del trabajador"/"del empleador" abre el bloque del trabajador. Se valida
+    // que el valor sea un nombre de persona (no un cargo ni una empresa).
+    const nombreConEtiqueta = huerfanos
+      .map((l) => /^nombre\s*[:#.-]\s*(.+)$/i.exec(l))
+      .find(
+        (m) =>
+          m && pareceNombreDePersona(m[1]) && !FORMA_JURIDICA.test(m[1]) && !contieneCargo(m[1])
+      );
+    if (nombreConEtiqueta) {
+      completado.workerName = limpiarNombrePersona(nombreConEtiqueta[1]);
+    } else {
+      // Un nombre de persona no lleva vocabulario del documento ni es un cargo:
+      // sin esos dos filtros el rescate tomaba "CONTRATO INDIVIDUAL DE TRABAJO" o
+      // "COORDINADORA DE TALENTO HUMANO" por el nombre del trabajador.
+      const nombre = primero(
+        (l) =>
+          pareceNombreDePersona(l) &&
+          !FORMA_JURIDICA.test(l) &&
+          !esPlantilla(l) &&
+          !contieneCargo(l) &&
+          !ES_ENCABEZADO_SECCION.test(l)
+      );
+      completado.workerName = nombre ?? '';
+    }
   }
   if (!completado.workerDocumentNumber) {
     const conPrefijo = huerfanos.map((l) => l.match(CEDULA_CON_PREFIJO)).find((m) => m);
@@ -276,6 +310,13 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
   let workerDocumentNumber = workerDocumentRaw
     ? workerDocumentRaw.replace(/[.\s-]/g, '').replace(/\D/g, '')
     : '';
+  // La cedula puede quedar pegada a fechas de un expediente consolidado
+  // ("19.895.754 (Expedida el 18 de agosto de 1985...)"). Si el numero es
+  // demasiado largo, se recorta al primer bloque de 7-11 digitos seguidos.
+  if (workerDocumentNumber.length > 11) {
+    workerDocumentNumber =
+      (workerDocumentRaw ?? '').replace(/[.\s]/g, '').match(/\d{7,11}/)?.[0] ?? '';
+  }
   if (!workerDocumentNumber) workerDocumentNumber = buscarCedulaGenerica(todas) ?? '';
   const workerDateOfBirth = limpiarValor(
     valorEnBloque(bloqueTrabajador, documento, ETIQUETAS_NACIMIENTO, { useFuzzy: false })
@@ -581,6 +622,20 @@ function normalizarTextoCompleto(texto: string): string {
 /** Detecta el tipo de contrato por barrido global, tolerante a ruido. */
 function detectarTipoContrato(texto: string): ContractType {
   const lower = texto.toLowerCase();
+
+  // Si hay una etiqueta explicita "Tipo de Contrato:", su valor es autoritativo.
+  // Sin esto, la mera presencia de "SENA" en la educacion de un expediente
+  // consolidado marcaba "aprendizaje" aunque el tipo fuera a termino fijo.
+  const etiquetado = lower.match(/tipo\s+de\s+contrato\s*[:#.-]\s*([^\n]+)/i);
+  if (etiquetado) {
+    const valor = etiquetado[1];
+    if (/indefinid[oa]/i.test(valor)) return 'indefinido';
+    if (/(?:obra\s+(?:o\s+)?labor|labor\s+contratada)/i.test(valor)) return 'obra_labor';
+    if (/aprendizaje|internship|trainee|sena/i.test(valor)) return 'aprendizaje';
+    if (/tiempo\s+parcial|part-time|medio\s+tiempo/i.test(valor)) return 'tiempo_parcial';
+    return 'termino_fijo';
+  }
+
   if (/indefinid[oa]|indefinite/i.test(lower)) return 'indefinido';
   if (/(?:obra\s+(?:o\s+)?labor|labor\s+contratada)/i.test(lower)) return 'obra_labor';
   if (/aprendizaje|internship|trainee|sena/i.test(lower)) return 'aprendizaje';

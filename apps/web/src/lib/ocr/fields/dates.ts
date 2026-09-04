@@ -60,6 +60,9 @@ export function quitarRango(linea: string, rango: RangoDetectado): string {
   return linea
     .replace(rango.texto, ' ')
     .replace(/\s*[|•·]\s*/g, ' ')
+    // Parentesis que quedaron huerfanos al quitar el rango que iba dentro:
+    // "Conductor (2022 - 2023)" -> "Conductor ( )" -> "Conductor".
+    .replace(/\s*\(\s*\)\s*/g, '')
     .replace(/^[\s,;:.\-–—]+|[\s,;:.\-–—]+$/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();

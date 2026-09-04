@@ -46,7 +46,7 @@ export interface EmployeeDocumentRecord {
   /** Confianza compuesta de la extraccion (0-1). */
   confidenceScore: number;
   /** Metodo de extraccion usado. */
-  method: 'pdf_text' | 'pdf_ocr' | 'image_ocr' | 'docx';
+  method: 'pdf_text' | 'pdf_ocr' | 'image_ocr' | 'docx' | 'txt';
   /** Imagen original del documento como data URI base64 (para vista visual en expediente). */
   imageData?: string;
   createdAt: string;
