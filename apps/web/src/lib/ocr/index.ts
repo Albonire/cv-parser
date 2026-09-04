@@ -15,6 +15,7 @@ import { parseFuncionesText } from './parser-funciones';
 import { detectarCargos } from './cargos';
 import { clasificarHistorial } from './document-classifier';
 import { DocumentLayout, layoutFromPlainText } from './layout';
+import { visualConsent } from './visual-consent';
 
 const EXTENSIONES_IMAGEN = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
 
@@ -80,6 +81,8 @@ export async function processDocument(
   let layout: DocumentLayout | undefined;
   let method: ExtractedDocumentData['method'] = 'pdf_text';
   let rawConfidence = 0.95;
+  // Paginas renderizadas (escaneo) o el archivo de imagen, para el veto visual.
+  let pageImages: Blob[] | Blob | undefined;
 
   onProgress?.(5, `Iniciando analisis de ${file.name}...`);
 
@@ -101,6 +104,7 @@ export async function processDocument(
       rawConfidence = 0.96;
     } else if (pdfResult.renderedPages && pdfResult.renderedPages.length > 0) {
       method = 'pdf_ocr';
+      pageImages = pdfResult.renderedPages;
       onProgress?.(50, 'Ejecutando OCR sobre paginas escaneadas...');
       const ocrRes = await performOcr(pdfResult.renderedPages, onProgress);
       extractedText = ocrRes.text;
@@ -109,6 +113,7 @@ export async function processDocument(
     }
   } else if (EXTENSIONES_IMAGEN.includes(extension)) {
     method = 'image_ocr';
+    pageImages = file as Blob;
     onProgress?.(25, 'Preprocesando imagen y ejecutando OCR...');
     const ocrRes = await performOcr(file, onProgress);
     extractedText = ocrRes.text;
@@ -158,6 +163,26 @@ export async function processDocument(
       candidateData = posible;
     }
   }
+
+  // Veto visual (opt-in, bandera `cv_visual_consent`). Cuando el VLM esta
+  // activo y disponible, una pagina con pinta de firma/membrete/carta ("Gerencia",
+  // "Atentamente", "Departamento de...") indica que el documento NO es una hoja
+  // de vida, aunque el OCR mezclara esa cabecera con el bloque de contacto. En
+  // ese caso se retira el formulario de candidato: el problema real no se
+  // resuelve capturando mejor el campo, se resuelve no proponiendo el formulario
+  // equivocado. Si el modelo no esta disponible (`visualConsent` devuelve null)
+  // no se hace NADA y el resultado es identico al de hoy.
+  if (detectedType === 'cv' && pageImages !== undefined) {
+    const visual = await visualConsent(
+      Array.isArray(pageImages) ? pageImages : [pageImages],
+      undefined
+    );
+    if (visual && visual.hasSignatureLikePage) {
+      detectedType = 'unknown';
+      candidateData = undefined;
+    }
+  }
+
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;
   const healthData = detectedType === 'health' ? parseHealthText(extractedText) : undefined;
   const liquidacionData =
