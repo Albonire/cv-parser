@@ -6,7 +6,7 @@ import { LiquidacionFormData } from '../../types/liquidacion';
 import { readDocxFile } from './docx-reader';
 import { readTxtFile } from './txt-reader';
 import { readPdfFile } from './pdf-reader';
-import { performOcr } from './tesseract-worker';
+import { performOcr, OcrOptions } from './tesseract-worker';
 import { classifyDocumentType } from './document-classifier';
 import { parseCvText } from './parser-cv';
 import { parseContractText } from './parser-contract';
@@ -311,7 +311,8 @@ export function detectarTextoIninteligible(
  */
 export async function processDocument(
   file: File,
-  onProgress?: (progress: number, message: string) => void
+  onProgress?: (progress: number, message: string) => void,
+  ocrOpciones?: OcrOptions
 ): Promise<ExtractedDocumentData> {
   const startTime = performance.now();
   const extension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -352,7 +353,7 @@ export async function processDocument(
       method = 'pdf_ocr';
       pageImages = pdfResult.renderedPages;
       onProgress?.(50, 'Ejecutando OCR sobre paginas escaneadas...');
-      const ocrRes = await performOcr(pdfResult.renderedPages, onProgress);
+      const ocrRes = await performOcr(pdfResult.renderedPages, onProgress, ocrOpciones);
       extractedText = ocrRes.text;
       layout = ocrRes.layout;
       rawConfidence = ocrRes.confidence;
@@ -361,7 +362,7 @@ export async function processDocument(
     method = 'image_ocr';
     pageImages = file as Blob;
     onProgress?.(25, 'Preprocesando imagen y ejecutando OCR...');
-    const ocrRes = await performOcr(file, onProgress);
+    const ocrRes = await performOcr(file, onProgress, ocrOpciones);
     extractedText = ocrRes.text;
     layout = ocrRes.layout;
     rawConfidence = ocrRes.confidence;

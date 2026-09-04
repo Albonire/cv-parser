@@ -7,7 +7,7 @@ import { EditableIdForm } from './EditableIdForm';
 import { EditableHealthForm } from './EditableHealthForm';
 import { EditableLiquidacionForm } from './EditableLiquidacionForm';
 import { HistorialEmpleadoPanel, DatosFotos } from './HistorialEmpleadoPanel';
-import { processDocument } from '../../lib/ocr';
+import { processDocument, PreprocesoForzado } from '../../lib/ocr';
 import { extraerArchivosDeZip, esZip } from '../../lib/ocr/extraer-zip';
 import { ExtractedDocumentData, BatchItem } from '../../types/reader';
 import { CandidateFormData } from '../../types/candidate';
@@ -50,6 +50,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const [showRawText, setShowRawText] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | null>(null);
   const [historialEmpleado, setHistorialEmpleado] = useState<HistorialEmpleadoConLineaTiempo | null>(null);
+  const [fuerzaOcr, setFuerzaOcr] = useState<PreprocesoForzado | undefined>(undefined);
 
   // Consolida el lote en grupos por empleado (cedula/nombre) para ver las fotos
   // de un mismo empleado en conjunto, en vez de foto por foto.
@@ -536,6 +537,35 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   };
 
+  /**
+   * Valvula de escape (RN-7): si la lectura automatica de una imagen no sirve,
+   * el usuario fuerza una variante concreta de preprocesado y se relee la misma
+   * imagen. No altera .docx/.txt/.pdf: solo se ofrece en rutas de OCR.
+   */
+  const rehacerOcr = async (variante: PreprocesoForzado) => {
+    if (!currentFile) return;
+    setIsProcessing(true);
+    setProgressPercent(0);
+    setFuerzaOcr(variante);
+    try {
+      const result = await processDocument(
+        currentFile,
+        (p, msg) => {
+          setProgressPercent(p);
+          setProgressMessage(msg);
+        },
+        { fuerzaPreproceso: variante }
+      );
+      setCurrentResult(result);
+      setShowRawText(true);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al releer la imagen';
+      setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleNextOrClear = () => {
     if (batchQueue.length > 0 && currentBatchIndex + 1 < batchQueue.length) {
       const nextIdx = currentBatchIndex + 1;
@@ -723,6 +753,43 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               Cargar otro archivo
             </button>
           </div>
+
+          {/* Valvula de escape de OCR (RN-7): releer la imagen con otra
+              preparacion si la lectura automatica no convence. Solo aparece en
+              rutas que pasaron por OCR (imagen o PDF escaneado). */}
+          {(currentResult.method === 'image_ocr' || currentResult.method === 'pdf_ocr') &&
+            currentFile && (
+              <div className="bg-paper rounded-lg border border-fog p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-ink">
+                    Releer la imagen con otro preprocesado
+                  </h3>
+                  <span className="text-[11px] text-steel">
+                    {fuerzaOcr ? `Variante activa: ${etiquetaVariant(fuerzaOcr)}` : 'Lectura automatica'}
+                  </span>
+                </div>
+                <p className="text-xs text-steel">
+                  Si el texto no se leyo bien, prueba otra preparacion y vuelve a
+                  generar los formularios. No cambia el archivo original.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VARIANTES_OCR.map((v) => (
+                    <button
+                      key={v.valor}
+                      onClick={() => rehacerOcr(v.valor)}
+                      disabled={isProcessing}
+                      className={`px-3 py-1.5 rounded border text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        fuerzaOcr === v.valor
+                          ? 'border-signal-blue bg-mist text-ink'
+                          : 'border-fog bg-paper hover:bg-mist text-steel'
+                      }`}
+                    >
+                      {v.etiqueta}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
           {/* Calidad de la extraccion: avisos, campos vacios y cargo detectado (RN-7) */}
           <div className="bg-paper rounded-lg border border-fog p-4 space-y-3">
@@ -1039,6 +1106,20 @@ function etiquetaTipo(tipo: string): string {
     unknown: 'Documento',
   };
   return mapa[tipo] ?? tipo;
+}
+
+/** Variantes de preprocesado ofrecidas por la valvula de escape de OCR. */
+const VARIANTES_OCR: { valor: PreprocesoForzado; etiqueta: string }[] = [
+  { valor: 'gris', etiqueta: 'Gris' },
+  { valor: 'plano', etiqueta: 'Sin ajustes' },
+  { valor: 'desenfumado', etiqueta: 'Reducir ruido' },
+  { valor: 'contraste', etiqueta: 'Más contraste' },
+  { valor: 'binarizado', etiqueta: 'Blanco y negro' },
+  { valor: 'original', etiqueta: 'Original' },
+];
+
+function etiquetaVariant(v: PreprocesoForzado): string {
+  return VARIANTES_OCR.find((x) => x.valor === v)?.etiqueta ?? v;
 }
 
 /** Devuelve la cedula/nit detectada en un resultado extraido, si la hay. */

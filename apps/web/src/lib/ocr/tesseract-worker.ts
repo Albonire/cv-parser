@@ -1,5 +1,11 @@
 import { createWorker, PSM, Worker } from 'tesseract.js';
-import { GiroPagina, girarImagen, muestraGirada, preprocessImage } from './image-prep';
+import {
+  GiroPagina,
+  girarImagen,
+  muestraGirada,
+  preprocessImage,
+  OpcionesPreproceso,
+} from './image-prep';
 import { buildLayout, DocumentLayout, PageInput, Word } from './layout';
 import { normalizarPalabraOcr } from './ocr-normalize';
 
@@ -386,6 +392,33 @@ function pareceTablaEtiquetada(texto: string): boolean {
 }
 
 /**
+ * Variante de preprocesado que un usuario puede forzar desde la interfaz cuando
+ * la lectura automatica no le sirve (valvula de escape, RN-7: revisar antes de
+ * guardar). No altera la seleccion automatica por defecto: solo se usa si se
+ * pide explicitamente.
+ */
+export type PreprocesoForzado =
+  | 'gris'
+  | 'plano'
+  | 'desenfumado'
+  | 'contraste'
+  | 'binarizado'
+  | 'original';
+
+/** Opciones opcionales de OCR; hasta hoy solo la variante forzada. */
+export interface OcrOptions {
+  fuerzaPreproceso?: PreprocesoForzado;
+}
+
+const PRECONFIG_PREPROCESO: Record<Exclude<PreprocesoForzado, 'original'>, OpcionesPreproceso> = {
+  gris: { binarizar: false, igualarLuz: true },
+  plano: { binarizar: false, igualarLuz: false },
+  desenfumado: { binarizar: false, igualarLuz: true, desenfumar: true },
+  contraste: { binarizar: false, igualarLuz: true, mejorarContraste: true },
+  binarizado: { binarizar: true },
+};
+
+/**
  * Lee la pagina probando los preprocesados que le pueden servir.
  *
  * Las fotografias de camara (WhatsApp, celular) leen mejor en escala de grises;
@@ -396,8 +429,15 @@ function pareceTablaEtiquetada(texto: string): boolean {
  * La escala de grises se lee siempre. Las demas variantes cuestan un OCR entero
  * cada una, asi que solo se leen cuando la forma del documento dice que pueden
  * cambiar el resultado.
+ *
+ * Cuando se pasa `forzar`, se lee SOLO esa preparacion y se devuelve sin entrar
+ * en la seleccion por puntaje: es la valvula de escape de la interfaz.
  */
-async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Lectura> {
+async function leerConVariantes(
+  worker: Worker,
+  fuente: File | Blob,
+  forzar?: PreprocesoForzado
+): Promise<Lectura> {
   const leer = async (src: File | Blob): Promise<Lectura> => {
     const res = await worker.recognize(src, {}, { blocks: true, text: true });
     return {
@@ -420,6 +460,21 @@ async function leerConVariantes(worker: Worker, fuente: File | Blob): Promise<Le
     };
   };
   const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
+
+  // Valvula de escape: leer SOLO la variante pedida por el usuario y devolverla
+  // sin la seleccion automatica por puntaje.
+  if (forzar) {
+    try {
+      if (forzar === 'original') {
+        return evaluar(await leer(fuente)).lectura;
+      }
+      const preparada = await preprocessImage(fuente, PRECONFIG_PREPROCESO[forzar]);
+      return evaluar(await leer(preparada)).lectura;
+    } catch (error) {
+      console.warn(`Lectura forzada "${forzar}" omitida, se usa la fuente original:`, error);
+      return evaluar(await leer(fuente)).lectura;
+    }
+  }
 
   const preprocesar = async (
     binarizar: boolean,
@@ -570,12 +625,19 @@ async function esApaisada(fuente: File | Blob): Promise<boolean> {
 /** Reconoce un elemento de imagen corrigiendo antes su orientacion. */
 async function reconocerElemento(
   worker: Worker,
-  item: File | Blob | HTMLCanvasElement
+  item: File | Blob | HTMLCanvasElement,
+  forzar?: PreprocesoForzado
 ): Promise<Lectura> {
   // En Node (pruebas) no hay Canvas: se manda el archivo tal cual.
   if (typeof window === 'undefined' || !(item instanceof File || item instanceof Blob)) {
     const { data } = await worker.recognize(item as HTMLCanvasElement, {}, { blocks: true, text: true });
     return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
+  }
+
+  // Valvula de escape: se respeta la variante pedida sin sondear orientacion ni
+  // reintentar con otros PSM, porque el usuario quiere exactamente esa lectura.
+  if (forzar) {
+    return leerConVariantes(worker, item, forzar);
   }
 
   // Una pagina apaisada es sospechosa de venir escaneada de lado, asi que se
@@ -635,8 +697,10 @@ async function reconocerElemento(
 /** Ejecuta OCR sobre uno o varios archivos, blobs o canvas. */
 export async function performOcr(
   input: File | Blob | HTMLCanvasElement | (File | Blob | HTMLCanvasElement)[],
-  onProgress?: (progress: number, message: string) => void
+  onProgress?: (progress: number, message: string) => void,
+  opciones?: OcrOptions
 ): Promise<OcrExecutionResult> {
+  const fuerza = opciones?.fuerzaPreproceso;
   const worker = await getTesseractWorker(onProgress);
   const items = Array.isArray(input) ? input : [input];
 
@@ -652,7 +716,7 @@ export async function performOcr(
       onProgress(base, `Reconociendo texto en pagina ${i + 1} de ${items.length}...`);
     }
 
-    const { texto, confianza, cajas } = await reconocerElemento(worker, item);
+    const { texto, confianza, cajas } = await reconocerElemento(worker, item, fuerza);
 
     const palabras = extraerPalabras(cajas);
     const words = tesseractWordsToWords(palabras);
