@@ -69,7 +69,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const activaEnMenu = secundarias.some((s) => s.id === activeSection);
 
   const clasePestana = (activa: boolean) =>
-    `whitespace-nowrap border-b-2 px-3 py-4 text-sm font-medium no-underline transition-colors ${
+    `whitespace-nowrap border-b-2 px-3 py-2 text-xs sm:text-sm font-medium no-underline transition-colors ${
       activa
         ? 'border-rosimar-blue text-ink'
         : 'border-transparent text-steel hover:border-fog hover:text-ink'
@@ -77,26 +77,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* Cabecera corporativa. El degradado se toma de los tokens, no de
-          valores escritos a mano; `.header-primary` no sirve aquí porque trae
-          su propio relleno y estiliza el h1 de las cabeceras de página. */}
+      {/* Cabecera corporativa compacta. */}
       <div
-        className="border-b border-rosimar-navy/20 px-6 py-4"
+        className="border-b border-rosimar-navy/20 px-6 py-2"
         style={{
           background:
             'linear-gradient(135deg, var(--color-rosimar-navy) 0%, var(--color-rosimar-blue) 100%)',
         }}
       >
         <div className="mx-auto max-w-[1280px]">
-          <div className="flex h-16 items-center justify-between gap-6">
+          <div className="flex h-10 items-center justify-between gap-6">
             <a
               href={hrefDe('reader')}
-              className="flex flex-col no-underline transition-opacity hover:opacity-90"
+              className="flex items-center gap-2.5 no-underline transition-opacity hover:opacity-90"
             >
-              <span className="font-display text-xl font-bold tracking-tight text-paper">
+              <span className="font-display text-lg font-bold tracking-tight text-paper">
                 Rosimar
               </span>
-              <span className="hidden text-caption text-paper/75 md:inline">
+              <span className="hidden text-caption text-paper/75 md:inline border-l border-paper/30 pl-2.5">
                 Gestión de Talento
               </span>
             </a>
@@ -109,7 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="cursor-pointer rounded-lg border border-paper/40 bg-transparent px-3 py-1.5 text-caption font-medium text-paper transition-colors hover:bg-paper/10 focus:outline-none"
+                  className="cursor-pointer rounded-lg border border-paper/40 bg-transparent px-2.5 py-1 text-caption font-medium text-paper transition-colors hover:bg-paper/10 focus:outline-none"
                 >
                   Cerrar sesión
                 </button>

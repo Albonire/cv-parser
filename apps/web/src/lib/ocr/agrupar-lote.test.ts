@@ -93,4 +93,23 @@ describe('Agrupacion de lote por empleado', () => {
     const reparsed = parseCvText(consolidado.extractedText ?? '', layoutFromPlainText(consolidado.extractedText ?? ''));
     expect(reparsed.phone).toBe('3138587655');
   });
+
+  it('consolida Carmelo Baltazar y Carmelo Antonio Baltazar Yepez mediante fuzzy matching con cédula', () => {
+    const doc1 = resultado(
+      'contrato_carmelo.jpeg',
+      'CONTRATO DE TRABAJO\nTRABAJADOR: CARMELO BALTAZAR\nC.C. 98.650.992\nCARGO: CONDUCTOR',
+      undefined,
+      'contract'
+    );
+    const doc2 = resultado(
+      'comprobante_carmelo.jpeg',
+      'COMPROBANTE DE EGRESO\nPAGADO A: BALTAZAR YEPEZ CARMELO ANTONIO\nPOR: $ 442.266',
+      undefined,
+      'liquidacion'
+    );
+    const grupos = agruparPorEmpleado([doc1, doc2]);
+    expect(grupos).toHaveLength(1);
+    expect(grupos[0].cedula).toBe('98650992');
+    expect(grupos[0].items).toHaveLength(2);
+  });
 });

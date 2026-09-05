@@ -78,7 +78,7 @@ export function identidadDeResultado(r: ExtractedDocumentData): IdentidadEmplead
 }
 
 const PATRON_NOMBRE_EMPLEADO =
-  /(?:\bpara\b|emplead[oa]|trabajad[oa]r|afiliad[oa]|cotizante|beneficiari[oa]|contratista|nombre\s+del\s+emplead[oa]|nombre\s+del\s+trabajador|nombre\s+del\s+afiliad[oa])\s*[:.#-]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}(?:\s+(?:de\s+|del\s+|de\s+la\s+|de\s+los\s+)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}){0,4})(?=\n|$)/i;
+  /(?:\bpara\b|emplead[oa]|trabajad[oa]r|afiliad[oa]|cotizante|beneficiari[oa]|contratista|pagado\s+a|a\s+la\s+orden\s+de|nombre\s+del\s+emplead[oa]|nombre\s+del\s+trabajador|nombre\s+del\s+afiliad[oa])\s*[:.#-]?\s*([A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}(?:\s+(?:de\s+|del\s+|de\s+la\s+|de\s+los\s+)?[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.''-]{2,}){0,4})(?=\n|$)/i;
 
 /** Extrae el nombre del empleado desde encabezados comunes de documentos de RRHH. */
 export function buscarNombreEnTexto(texto: string): string | undefined {
@@ -97,6 +97,27 @@ export function buscarNombreEnTexto(texto: string): string | undefined {
 function normalizarCedula(cedula?: string): string | undefined {
   const limpia = (cedula ?? '').replace(/[.\s-]/g, '');
   return limpia || undefined;
+}
+
+/** Compara dos nombres tolerando abreviaturas o apellidos compuestos mediante intersección de tokens. */
+export function nombresCoinciden(nomA?: string, nomB?: string): boolean {
+  if (!nomA || !nomB) return false;
+  const aNorm = nomA.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const bNorm = nomB.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (aNorm === bNorm) return true;
+
+  const stopWords = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'el']);
+  const tokensA = aNorm.split(/\s+/).filter((t) => t.length >= 3 && !stopWords.has(t));
+  const tokensB = bNorm.split(/\s+/).filter((t) => t.length >= 3 && !stopWords.has(t));
+
+  if (tokensA.length === 0 || tokensB.length === 0) return false;
+
+  const inter = tokensA.filter((t) => tokensB.includes(t));
+  const minTokens = Math.min(tokensA.length, tokensB.length);
+  if (minTokens <= 2) {
+    return inter.length >= minTokens;
+  }
+  return inter.length >= 2;
 }
 
 /** Agrupa los resultados de un lote por empleado, conservando el orden de carga. */
@@ -124,25 +145,49 @@ export function agruparPorEmpleado(results: ExtractedDocumentData[]): GrupoLote[
   for (const r of results) {
     const ident = identidadDeResultado(r);
     const ced = normalizarCedula(ident.cedula);
-    const nom = ident.nombre?.trim().toLowerCase();
+    const nom = ident.nombre?.trim();
 
     let grupo: GrupoLote;
     if (ced) {
-      grupo = obtenerGrupo(`ced:${ced}`, ident.cedula, ident.nombre);
-    } else if (nom) {
-      // Fusio por nombre: si ya hay un grupo con el mismo empleado (identificado
-      // por cedula u otro documento) se respeta, para no partir el lote de un
-      // mismo empleado cuando algunas fotos traen cedula y otras solo nombre.
-      const conCedula = [...groups.values()].find((g) => g.cedula && g.nombre?.trim().toLowerCase() === nom);
-      if (conCedula) {
-        grupo = conCedula;
-      } else {
-        // Dos grupos sin cedula no deben colisionar por nombre; si ya hay un grupo
-        // con cedula conocida se respeta. Aqui se usa el nombre como clave.
-        const existente = [...groups.values()].find(
-          (g) => !g.cedula && g.nombre?.trim().toLowerCase() === nom
+      // Buscar si ya existe un grupo con esta cédula
+      const grupoConCed = [...groups.values()].find(
+        (g) => g.cedula && normalizarCedula(g.cedula) === ced
+      );
+      if (!grupoConCed) {
+        // Buscar si ya existía un grupo creado solo por nombre que coincida
+        const grupoPorNombre = [...groups.values()].find(
+          (g) => !g.cedula && nombresCoinciden(g.nombre, nom)
         );
-        grupo = existente ?? obtenerGrupo(`nom:${ident.nombre!.trim()}`, undefined, ident.nombre);
+        if (grupoPorNombre) {
+          grupoPorNombre.cedula = ident.cedula;
+          if (nom && (!grupoPorNombre.nombre || nom.length > grupoPorNombre.nombre.length)) {
+            grupoPorNombre.nombre = nom;
+          }
+          groups.delete(grupoPorNombre.key);
+          grupoPorNombre.key = `ced:${ced}`;
+          groups.set(grupoPorNombre.key, grupoPorNombre);
+          grupo = grupoPorNombre;
+        } else {
+          grupo = obtenerGrupo(`ced:${ced}`, ident.cedula, ident.nombre);
+        }
+      } else {
+        grupo = grupoConCed;
+        if (!grupo.nombre && nom) {
+          grupo.nombre = nom;
+        } else if (nom && grupo.nombre && nom.length > grupo.nombre.length && nombresCoinciden(grupo.nombre, nom)) {
+          grupo.nombre = nom;
+        }
+      }
+    } else if (nom) {
+      // Buscar grupo existente (con cédula o sin cédula) que coincida por nombre difuso
+      const existente = [...groups.values()].find((g) => nombresCoinciden(g.nombre, nom));
+      if (existente) {
+        grupo = existente;
+        if (!grupo.nombre || nom.length > grupo.nombre.length) {
+          grupo.nombre = nom;
+        }
+      } else {
+        grupo = obtenerGrupo(`nom:${nom}`, undefined, nom);
       }
     } else {
       itemsSinIdentidad.push(r);

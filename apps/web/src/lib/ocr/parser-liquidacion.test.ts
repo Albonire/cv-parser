@@ -65,4 +65,27 @@ describe('Parser de Liquidacion Final', () => {
     expect((parsed.otrosConceptos ?? []).every((c) => !/cesantias/i.test(c.concepto))).toBe(true);
     expect(parsed.cesantias).toBe(1000000);
   });
+
+  it('extrae comprobante de egreso #6826 pagado a Carmelo Baltazar descartando NIT de Rosimar', () => {
+    const text = `
+    COMPROBANTE DE EGRESO No. 6826
+    EMPRESA: DISTRIBUCIONES ROSIMAR S.A.S.
+    NIT: 901.167.955-4
+    FECHA: 15/12/2024
+    PAGADO A: BALTAZAR YEPEZ CARMELO ANTONIO
+    C.C. 98.650.992
+    POR CONCEPTO DE: LIQUIDACION PRIMA DE SERVICIOS
+    POR: $ 442.266
+    LA SUMA DE: Cuatrocientos cuarenta y dos mil doscientos sesenta y seis pesos m/cte
+    FIRMA BENEFICIARIO
+    `;
+
+    const parsed = parseLiquidacionText(text);
+
+    expect(parsed.workerName).toBe('Baltazar Yepez Carmelo Antonio');
+    expect(parsed.workerDocumentNumber).toBe('98650992');
+    expect(parsed.workerDocumentNumber).not.toBe('901167955');
+    expect(parsed.totalLiquidacion).toBe(442266);
+    expect(parsed.employerName).toMatch(/rosimar/i);
+  });
 });

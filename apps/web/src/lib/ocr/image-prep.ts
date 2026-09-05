@@ -8,7 +8,7 @@
  */
 
 /** Ancho minimo en pixeles. Tesseract degrada bastante por debajo de este valor. */
-const ANCHO_OBJETIVO = 2000;
+const ANCHO_OBJETIVO = 2400;
 /** Tope de pixeles para no agotar la memoria del navegador en fotos grandes. */
 const MAX_PIXELES = 6_000_000;
 /** Rango de busqueda de inclinacion, en grados. */
@@ -79,9 +79,9 @@ export async function muestraGirada(
   anchoObjetivo: number
 ): Promise<HTMLCanvasElement> {
   const bitmap =
-    fuente instanceof HTMLCanvasElement
+    typeof HTMLCanvasElement !== 'undefined' && fuente instanceof HTMLCanvasElement
       ? fuente
-      : await cargarImagen(fuente);
+      : await cargarImagen(fuente as File | Blob);
 
   const trasponer = grados === 90 || grados === 270;
   const anchoOrigen = trasponer ? bitmap.height : bitmap.width;
