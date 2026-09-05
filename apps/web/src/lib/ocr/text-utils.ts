@@ -78,7 +78,7 @@ export function splitLabeledPairs(rawLine: string): LabeledPair[] {
   // Las viñetas y la numeracion iniciales impedirian reconocer la primera etiqueta.
   const line = stripBullets(rawLine);
   const pattern =
-    /(?:^|\s{2,}|\s*\|\s*|\s*[•*]\s*)([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ.\s/]{1,38}?)\s*:\s*/g;
+    /(?:^|\s{2,}|\s*\|\s*|\s*[•*]\s*)([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ.\s/]{1,38}?)\s*(?::|—{1,2}|_{1,2}\s*\|)\s*/g;
   const marks: { label: string; start: number; valueStart: number }[] = [];
 
   let match: RegExpExecArray | null;
@@ -121,16 +121,21 @@ export function findLabeledValue(lines: string[], labels: string[]): string | nu
     }
   }
 
-  // Etiqueta y valor en el MISMO renglon separados por dos o mas espacios y sin
-  // dos puntos ("Domicilio del empleador   CALLE 11 No. 39 37"). El OCR de
-  // tablas sin titulo suele perder el ":". Solo se acepta cuando la parte
-  // izquierda coincide exactamente con una etiqueta buscada, para no romper
+  // Etiqueta y valor en el MISMO renglon separados por dos o mas espacios,
+  // dos puntos o delimitadores de celda de tabla (|, —, _, [). El OCR de
+  // tablas suele perder el ":". Solo se acepta cuando la parte
+  // izquierda coincide con una etiqueta buscada, para no romper
   // nombres ni valores con espacios multiples.
   for (const line of lines) {
-    const m = line.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s./]{1,60}?)\s{2,}(\S.*)$/);
+    const m = line.match(
+      /^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s./]{1,60}?)(?:\s{2,}|\s*(?::|—{1,2}|_{1,2}\s*\||\||\[)\s*)(\S.*)$/
+    );
     if (!m) continue;
     const label = normalize(m[1]);
-    if (wanted.includes(label)) {
+    if (
+      wanted.includes(label) ||
+      wanted.some((w) => w.length >= 5 && (label.endsWith(` ${w}`) || label.startsWith(`${w} `)))
+    ) {
       const valor = m[2].trim();
       if (valor.length >= 2) return valor;
     }

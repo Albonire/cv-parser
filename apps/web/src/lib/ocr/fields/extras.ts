@@ -145,10 +145,37 @@ export function extraerReferencias(
       // )") o acompanen a otros datos ("Eucaris Guete (Telefono: ... / E-mail:
       // eucaris@...)").
       .replace(/\([^)]*(?:tel[eé]fono|tel|celular|cel|e-?mail|correo|email|contacto)[^)]*\)\s*$/i, '')
+      .replace(/^(?:tel[eé]fono|celular|tel|cel|contacto)\s*:?\s*/i, '')
       .replace(/[-–—:,\s]+$/, '')
       .trim();
 
-    if (nombre.length < 3 || nombre.length > 60) nombre = 'Referencia';
+    if (
+      nombre.length < 3 ||
+      nombre.length > 60 ||
+      /^(?:tel[eé]fono|celular|tel|cel|contacto)$/i.test(nombre)
+    ) {
+      nombre = 'Referencia';
+    }
+
+    // Si el nombre no viene en el mismo renglon, mirar los renglones previos dentro de la seccion
+    if (nombre === 'Referencia') {
+      const idx = alcance.indexOf(linea);
+      for (let k = idx - 1; k >= 0 && k >= idx - 4; k--) {
+        const prevRaw = alcance[k].text;
+        if (buscarTelefono(prevRaw) || MARCA_REFERENCIA.test(prevRaw)) {
+          break;
+        }
+        const prev = stripBullets(prevRaw).trim();
+        if (
+          prev.length >= 3 &&
+          prev.length <= 60 &&
+          !/^(?:parentesco|cargo|empresa|relaci[oó]n|correo|email|e-mail)\s*:/i.test(prev)
+        ) {
+          nombre = prev.replace(/^(?:nombre(?:\s+completo)?\s*:?\s*)/i, '').trim();
+          break;
+        }
+      }
+    }
 
     items.push({ referenceType: tipo, name: nombre, phone: telefono });
   }

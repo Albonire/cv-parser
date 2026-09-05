@@ -111,4 +111,72 @@ describe('clasificarHistorial', () => {
       'desconocido'
     );
   });
+
+  it('clasifica ficha con datos de contrato como contrato aunque contenga historial disciplinario', () => {
+    const ficha = `
+Datos Personales y de Contrato 
+• Nombre: Adonis Guette Gonzalez 
+• Cédula de Ciudadanía: 1.140.867.614 
+• Cargo: Auxiliar de Bodega / Ayudante de Bodega 
+• Empresa Empleadora: Distribuciones Rosimar S.A.S. (NIT 901.167.955-4) 
+• Salario: $1.423.500 
+• Forma de Pago: Quincenal 
+• Tipo de Contrato: Término fijo inferior a un año (3 meses iniciales) 
+• Fecha de Inicio: 23 de mayo de 2025 
+• Lugar de Trabajo: Calle 10 # 38 - 93, Barranquilla 
+• Dirección de Notificación: Carrera 29 # 12 - 10 
+Historial Disciplinario 
+• 24 de marzo de 2026 (Memorando No. 102): Amonestación por "Abuso de confianza" tras tomar dinero del cobro sin autorización. 
+• 8 de mayo de 2026 (Llamado de atención No. 104): Llamado de atención por "Toma de decisiones sin consultar" e incumplimiento de funciones durante la jornada laboral. 
+Novedades de Nómina y Prestaciones 
+• 1 de junio de 2026 (Comprobante de Egreso No. 8509): Liquidación y pago de $859.111 por concepto de Vacaciones Consolidadas. 
+Desvinculación 
+• Fecha de Retiro: 13 de agosto de 2026 
+• Motivo: Renuncia voluntaria al cargo por motivos personales.
+    `;
+    expect(clasificarHistorial(ficha)).toBe('contrato');
+    expect(classifyDocumentType(ficha)).toBe('contract');
+  });
+
+  it('clasifica el archivo real Datos Personales y de Contrato.pdf usando layoutFromPdfFile', async () => {
+    const fs = await import('fs');
+    const path = '/home/fabian/Downloads/Datos Personales y de Contrato.pdf';
+    if (!fs.existsSync(path)) return;
+    const { layoutFromPdfFile } = await import('./__fixtures__/pdf-pipeline');
+    const layout = await layoutFromPdfFile(path);
+    expect(clasificarHistorial(layout.text)).toBe('contrato');
+    expect(classifyDocumentType(layout.text)).toBe('contract');
+  });
+
+  it('clasifica certificado de Positiva ARL como salud / health priorizándolo sobre contrato', () => {
+    const arl = `
+    POSITIVA COMPAÑIA DE SEGUROS S.A.
+    CERTIFICADO DE AFILIACION A RIESGOS LABORALES
+    La suscrita Gerente de Servicio al Cliente certifica que:
+    BALTAZAR YEPEZ CARMELO ANTONIO
+    Identificado con Cédula de Ciudadanía No. 98.650.992
+    Se encuentra afiliado al Sistema General de Riesgos Laborales a través de la empresa:
+    DISTRIBUCIONES ROSIMAR S.A.S. NIT: 901.167.955-4
+    Estado de afiliación: ACTIVO
+    Fecha de cobertura: 01/09/2022
+    Tipo de vinculación: Dependiente - Contrato de trabajo
+    `;
+    expect(clasificarHistorial(arl)).toBe('salud');
+    expect(classifyDocumentType(arl)).toBe('health');
+  });
+
+  it('clasifica foto recortada de hoja de vida mediante tieneDensidadDatosPersonales aunque no tenga título formal', () => {
+    const croppedCv = `
+    CARMELO ANTONIO BALTAZAR YEPEZ
+    Cédula de Ciudadanía: 98.650.992
+    Celular: 312 456 7890
+    Dirección: Calle 45 # 12 - 34, Barrio El Recreo
+    Fecha de nacimiento: 15 de marzo de 1985
+    Estado Civil: Unión libre
+    Educación: Bachiller Técnico Industrial
+    `;
+    expect(clasificarHistorial(croppedCv)).toBe('hoja_de_vida');
+    expect(classifyDocumentType(croppedCv)).toBe('cv');
+  });
 });
+

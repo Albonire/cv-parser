@@ -125,16 +125,23 @@ export function buscarCedulaEnTexto(texto: string): string | undefined {
   const limpio = texto.replace(/\b(?:telefono|telefonos|celular|movil|whatsapp|contacto)\b/gi, ' ');
 
   // 1) Numero precedido por una etiqueta de documento: "CC No. 32.891.622",
-  //    "Cedula: 1098765432", "NIT 900.123.456-7", "NUMERO DE IDENTIFICACION".
+  //    "C.C. 98.650.992", "Cedula: 1098765432", "NIT 900.123.456-7".
   const etiquetada = limpio.match(
-    /(?:\bcc\b|cedula|documento de identidad|identificaci[oó]n|nit)\s+(?:no\.?|n[ºo])?\s*(\d[\d.\s-]{5,}\d)/i
+    /(?:\bcc\b|c\.?\s*c\.?|cedula|documento(?:\s+de\s+identidad)?|identificaci[oó]n|nit)\s*[:.-]?\s*(?:no\.?|n[ºo])?\s*[:.-]?\s*(\d[\d.\s-]{5,}\d)/i
   );
   if (etiquetada) {
     const digito = etiquetada[1].replace(/[.\s-]/g, '');
     if (digito.length >= 7 && digito.length <= 11) return digito;
   }
 
-  // 2) Cualquier grupo de 8-10 digitos aislado (cedula colombiana tipica).
+  // 2) Número con formato de cédula colombiana con puntos de miles: 98.650.992 o 1.050.234.987
+  const conPuntos = limpio.match(/\b\d{1,3}(?:\.\d{3}){2,3}\b/);
+  if (conPuntos) {
+    const digito = conPuntos[0].replace(/\./g, '');
+    if (digito.length >= 7 && digito.length <= 11 && !digito.startsWith('3')) return digito;
+  }
+
+  // 3) Cualquier grupo de 8-10 digitos aislado (cedula colombiana tipica).
   //    Se descartan los que comienzan con 3 (moviles) para no confundir con telefono.
   const grupos = limpio.match(/(?<![\d.])\d{8,10}(?![\d.])/g) ?? [];
   const candidata = grupos.find((n) => !n.startsWith('3'));
