@@ -52,6 +52,50 @@ jobs:
       - name: Build de produccion
         run: npm run build
 
-# El banco de precision del lector (`npm run bench:ocr`) no entra aqui: tarda
-# unos ocho minutos y necesita Chromium en el runner. Se corre a mano antes de
-# tocar el motor. Como hacerlo, en docs/MEDICION_LECTOR.md.
+  banco:
+    name: Banco del lector (perfil limpio)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Los escaneos no se versionan (son 22 MB de JPEG); el generador los
+      # reproduce identicos, porque el degradado va con semilla.
+      - name: Generar los escaneos
+        run: npm run gen:scans
+
+      # Solo el perfil limpio: 13 de los 40 documentos, poco mas de un minuto.
+      # No es la medida completa, es una verja. Los umbrales van con holgura
+      # sobre lo medido (84,3% y 4,5 s por documento el 5 de septiembre de 2026)
+      # para que no salte por el ruido del runner, pero cierran el paso a las dos
+      # formas en que este motor se ha degradado: leer peor y, sobre todo, anadir
+      # pasadas de OCR automaticas que multiplican el tiempo sin ganar precision.
+      - name: Medir el perfil limpio
+        run: npm run copy:ocr && node scripts/bench-ocr.mjs limpio --precision-minima=78 --ms-maximos=9000
+
+      # El perfil medio (fotocopia) es donde antes se vio el desbordamiento de
+      # tiempo: 15 documentos, medidos en 83,9% y 8,9 s el 5 de septiembre.
+      - name: Medir el perfil medio
+        run: node scripts/bench-ocr.mjs medio --precision-minima=78 --ms-maximos=15000
+
+# La medida COMPLETA (`npm run bench:ocr`, los 40 escaneos y los 12 contratos)
+# no entra aqui: tarda demasiado. Se corre a mano antes de tocar el motor, y es
+# obligatoria para cualquier cambio del lector. Como hacerlo, en
+# docs/MEDICION_LECTOR.md.

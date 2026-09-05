@@ -21,6 +21,24 @@ const RAIZ = path.resolve(AQUI, '..');
 const ESCANEOS = path.join(RAIZ, 'test-scans');
 /** Banco a medir: hojas de vida por defecto, contratos con `--banco=contratos`. */
 const BANCO = (process.argv.find((a) => a.startsWith('--banco=')) ?? '').split('=')[1] || 'escaneados';
+
+/**
+ * Umbrales opcionales para usar el banco como verja. Sin ellos el script solo
+ * informa, que es como se usa a mano; con ellos termina en error si el motor ha
+ * empeorado, que es como lo usa el CI.
+ *
+ * Hacen falta porque `npm test` no mide el motor: se puede tener las pruebas en
+ * verde con el lector roto, y ha pasado cuatro veces en este proyecto. La
+ * precision detecta que el motor lee peor; el tiempo detecta que alguien ha
+ * anadido pasadas de OCR automaticas, que es como se ha degradado dos veces sin
+ * ganar nada a cambio.
+ */
+const numeroDeBandera = (nombre) => {
+  const bandera = process.argv.find((a) => a.startsWith(`--${nombre}=`));
+  return bandera ? Number(bandera.split('=')[1]) : undefined;
+};
+const PRECISION_MINIMA = numeroDeBandera('precision-minima');
+const MS_MAXIMOS = numeroDeBandera('ms-maximos');
 const VERDAD = path.join(
   RAIZ,
   'src',
@@ -237,6 +255,41 @@ async function main() {
   fs.writeFileSync(INFORME, `${JSON.stringify(resultados, null, 2)}\n`);
   reportar(resultados);
   console.log(`\nDetalle campo por campo en ${path.relative(RAIZ, INFORME)}`);
+
+  verificarUmbrales(resultados);
+}
+
+/** Termina en error si el motor ha empeorado por debajo de los umbrales dados. */
+function verificarUmbrales(resultados) {
+  if (PRECISION_MINIMA === undefined && MS_MAXIMOS === undefined) return;
+
+  const precision =
+    100 * (resultados.reduce((suma, d) => suma + notaDocumento(d), 0) / resultados.length);
+  const msPorDocumento = resultados.reduce((suma, d) => suma + d.ms, 0) / resultados.length;
+
+  const fallos = [];
+  if (PRECISION_MINIMA !== undefined && precision < PRECISION_MINIMA) {
+    fallos.push(
+      `precision ${precision.toFixed(1)}% por debajo del minimo ${PRECISION_MINIMA}%`
+    );
+  }
+  if (MS_MAXIMOS !== undefined && msPorDocumento > MS_MAXIMOS) {
+    fallos.push(
+      `${Math.round(msPorDocumento)} ms por documento, por encima del maximo ${MS_MAXIMOS} ms`
+    );
+  }
+
+  if (fallos.length === 0) {
+    console.log('\nDentro de los umbrales.');
+    return;
+  }
+
+  console.error(`\nEl motor ha empeorado:\n  - ${fallos.join('\n  - ')}`);
+  console.error(
+    '\nSi el cambio es a proposito, ajuste el umbral en .github/workflows/ci.yml\n' +
+      'con el numero nuevo delante, para que quede constancia de lo que se acepta.'
+  );
+  process.exit(1);
 }
 
 main().catch((error) => {
