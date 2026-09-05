@@ -228,6 +228,43 @@ async function medirDocumento(registro: {
   return resultado;
 }
 
+/**
+ * Pasa UNA imagen (foto de expediente) por el pipeline REAL de `processDocument`
+ * y devuelve el texto reconocido y sus metadatos. Es el camino que usa la
+ * aplicacion; sirve para diagnosticar fotos concretas en Chromium.
+ */
+export async function medirImagen(
+  fuente: string,
+  fuerzaPreproceso?: 'gris' | 'plano' | 'desenfumado' | 'contraste' | 'binarizado' | 'original'
+): Promise<{
+  archivo: string;
+  method: string;
+  confidenceScore: number;
+  ms: number;
+  caracteres: number;
+  texto: string;
+  warnings: string[];
+}> {
+  const respuesta = await fetch(`/fotos-usuario/${encodeURIComponent(fuente)}`);
+  if (!respuesta.ok) throw new Error(`No se pudo leer ${fuente}: ${respuesta.status}`);
+  const blob = await respuesta.blob();
+  const file = new File([blob], fuente, { type: blob.type || 'image/jpeg' });
+
+  const inicio = performance.now();
+  const datos = await processDocument(file, undefined, fuerzaPreproceso ? { fuerzaPreproceso } : undefined);
+  const ms = Math.round(performance.now() - inicio);
+
+  return {
+    archivo: fuente,
+    method: datos.method,
+    confidenceScore: datos.confidenceScore,
+    ms,
+    caracteres: datos.extractedText.length,
+    texto: datos.extractedText,
+    warnings: datos.warnings ?? [],
+  };
+}
+
 async function diagnosticar(archivo: string): Promise<{
   texto: string;
   contrato: unknown;
@@ -275,10 +312,11 @@ declare global {
   interface Window {
     bancoLector?: {
       medirDocumento: typeof medirDocumento;
+      medirImagen: typeof medirImagen;
       diagnosticar: typeof diagnosticar;
     };
   }
 }
 
-window.bancoLector = { medirDocumento, diagnosticar };
+window.bancoLector = { medirDocumento, medirImagen, diagnosticar };
 document.body.dataset.bancoListo = '1';

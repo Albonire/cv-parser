@@ -597,19 +597,64 @@ async function leerConVariantes(
     return solidas.sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
   }
 
-  // Ninguna fue solida: respaldo binarizado (escaneo con sombra) y gana la que
-  // reconocio mas texto.
+  // Ninguna fue solida. Se lee tambien la variante binarizada (pensada para un
+  // escaneo plano con sombra) pero como ULTIMO recurso: en una foto de camara
+  // (baja luz, vineta) la binarizacion local borra los trazos finos y el OCR
+  // devuelve basura aun con confianza alta. Antes entraba en igualdad de
+  // condiciones y ganaba por volumen, porque a mas basura mas caracteres y mas
+  // "datos" aparentes (fechas, montos y cedulas de relleno). Medido en las fotos
+  // reales de expediente: el contrato lei mejor original/gris, pero ganaba la
+  // binarizada por 425 caracteres de ruido contra 223 limpios.
+  // La binarizada solo debe superar a las demas sin condiciones cuando el
+  // insumo es una pagina de PDF (escaneo plano, para el que se invento): en los
+  // formularios duros con sombra es justamente la mejor lectura, aunque su
+  // confianza sea menor que la de la escala de grises (medido: CV_04 y CV_17
+  // pierden 50 puntos si se la rechaza por confianza o por volumen).
+  //
+  // En cambio, cuando el insumo es una FOTO de camara (un File enviado por el
+  // usuario), la binarizacion borra los trazos finos y el OCR devuelve basura:
+  // mas caracteres, mas "datos" aparentes y MENOS confianza que la fuente
+  // limpia. Medido en el contrato de WhatsApp: la binarizada ganaba con 776
+  // caracteres ilegibles (51%) a la fuente original limpia (82%).
+  const esFotoCamara = fuente instanceof File;
   const binarizada = await preprocesar(true);
-  const candidatas: { lectura: Lectura }[] = [];
-  if (conFuente) candidatas.push(conFuente);
-  if (conGris) candidatas.push(conGris);
+  let lecturaBinarizada: ReturnType<typeof evaluar> | null = null;
   if (binarizada && binarizada !== gris) {
     try {
-      candidatas.push(evaluar(await leer(binarizada)));
+      lecturaBinarizada = evaluar(await leer(binarizada));
     } catch (error) {
       console.warn('Lectura binarizada omitida:', error);
     }
   }
+
+  const noBinarizadas = [conFuente, conGris].filter(
+    (c): c is NonNullable<typeof c> => !!c
+  );
+
+  if (esFotoCamara && lecturaBinarizada && noBinarizadas.length > 0) {
+    const mejorSinBinarizar = [...noBinarizadas].sort(
+      (a, b) => comparaLecturas(a.lectura, b.lectura)
+    )[0];
+    const longitudS = mejorSinBinarizar.lectura.texto.trim().length;
+    // Las sin binarizar no reconocieron practicamente nada (p. ej. una cedula
+    // oscura): ahi la binarizada es el unico camino y se acepta.
+    const noLeyeronCasiNada =
+      longitudS < CARACTERES_LECTURA_SOLIDA / 4 &&
+      mejorSinBinarizar.lectura.confianza < CONFIANZA_LECTURA_SOLIDA;
+    // La binarizada de una foto solo suma si aporta mas datos con confianza
+    // decente. Ni el volumen ni la cantidad de basura cuentan: a mas ruido mas
+    // caracteres y mas patrones de dato aparentes.
+    const ganaClaramente =
+      datosUtiles(lecturaBinarizada.lectura.texto) >=
+        datosUtiles(mejorSinBinarizar.lectura.texto) + 2 &&
+      lecturaBinarizada.lectura.confianza >= 0.6;
+    if (!noLeyeronCasiNada && !ganaClaramente) {
+      return mejorSinBinarizar.lectura;
+    }
+  }
+
+  const candidatas = [...noBinarizadas];
+  if (lecturaBinarizada) candidatas.push(lecturaBinarizada);
   if (candidatas.length === 0) return { texto: '', confianza: 0, cajas: [] };
   return [...candidatas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
 }
@@ -668,9 +713,16 @@ async function reconocerElemento(
   // SINGLE_BLOCK es bueno para formularios compactos; SINGLE_COLUMN para
   // hojas de vida simples sin columnas detectables.
   let mejorLectura = lectura;
+  // Un reintento con menos del 40% de confianza es basura de OCR; solo se
+  // acepta cuando la lectura actual no reconocio practicamente nada. Sin este
+  // piso, una cedula oscura leida a 53% era reemplazada por un reintento PSM a
+  // 32% solo porque la basura cazaba un patron de dato de relleno.
+  const reemplazaReintento = (reintento: Lectura) =>
+    reintento.confianza / 100 >= 0.4 ||
+    mejorLectura.texto.trim().length < 50;
   try {
     const reintentoPsm = await leerConPsmVariante(worker, item);
-    if (comparaLecturas(reintentoPsm, mejorLectura) < 0) {
+    if (reemplazaReintento(reintentoPsm) && comparaLecturas(reintentoPsm, mejorLectura) < 0) {
       mejorLectura = reintentoPsm;
     }
   } catch (error) {
@@ -683,7 +735,7 @@ async function reconocerElemento(
     const giro = await detectarOrientacion(worker, item);
     if (giro !== 0) {
       const reintento = await leerConVariantes(worker, await girarImagen(item, giro));
-      if (comparaLecturas(reintento, mejorLectura) < 0) {
+      if (reemplazaReintento(reintento) && comparaLecturas(reintento, mejorLectura) < 0) {
         mejorLectura = reintento;
       }
     }
