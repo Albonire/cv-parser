@@ -40,7 +40,7 @@ export function parseLiquidacionText(text: string): LiquidacionFormData {
 
 function extraerTrabajador(lower: string): string | undefined {
   const m = lower.match(
-    /(?:trabajador|empleado|nombre\s+(?:del\s+)?trabajador)\s*[:#.-]?\s*([a-z\u00e0-\u00ff\u00f1]{3,}(?:[ \t]+[a-z\u00e0-\u00ff\u00f1]{2,}){1,3})/i
+    /(?:trabajador|empleado|nombre\s+(?:del\s+)?trabajador|pagado\s+a|a\s+la\s+orden\s+de|beneficiario)\s*[:#.-]?\s*([a-z\u00e0-\u00ff\u00f1]{3,}(?:[ \t]+[a-z\u00e0-\u00ff\u00f1]{2,}){1,4})/i
   );
   if (!m) return undefined;
   return m[1]
@@ -52,14 +52,21 @@ function extraerTrabajador(lower: string): string | undefined {
 
 function extraerDocumento(lower: string): string | undefined {
   const etiquetada = lower.match(
-    /(?:\bcc\b|cedula(?:\s+de\s+ciudadania)?|identificacion|documento)\s*(?:n[oº]\b|no\.?)?\s*[:#.-]?\s*(\d[\d.\s-]{4,})/
+    /(?:\bcc\b|c\.?\s*c\.?|cedula(?:\s+de\s+ciudadania)?|identificacion|documento)\s*(?:n[oº]\b|no\.?)?\s*[:#.-]?\s*(\d[\d.\s-]{4,})/i
   );
   if (etiquetada) {
     const digito = etiquetada[1].replace(/[.\s-]/g, '');
-    if (digito.length >= 7 && digito.length <= 11) return digito;
+    if (digito.length >= 7 && digito.length <= 11 && !digito.startsWith('901167')) return digito;
+  }
+  const conPuntos = lower.match(/\b\d{1,3}(?:\.\d{3}){2,3}\b/);
+  if (conPuntos) {
+    const digito = conPuntos[0].replace(/\./g, '');
+    if (digito.length >= 7 && digito.length <= 11 && !digito.startsWith('3') && !digito.startsWith('901167')) {
+      return digito;
+    }
   }
   const grupos = lower.match(/(?<![\d.])\d{8,10}(?![\d.])/g) ?? [];
-  return grupos.find((n) => !n.startsWith('3'));
+  return grupos.find((n) => !n.startsWith('3') && !n.startsWith('901167') && n !== '901167955');
 }
 
 function extraerEmpleador(lower: string): string | undefined {
@@ -109,6 +116,10 @@ function capturarTotal(lower: string): number | undefined {
     capturarMonto(
       lower,
       /total\s+(?:de\s+)?(?:a\s+pagar|a\s+liquidar|liquidacion\s+(?:a\s+pagar)?|pagar)[\s\S]{0,30}?\$?\s*([\d.,]{4,})/
+    ) ??
+    capturarMonto(
+      lower,
+      /(?:la\s+suma\s+de|por\s+concepto\s+de|\bpor\b|valor\s+neto|neto\s+a\s+pagar)\s*[:#.-]?\s*\$?\s*([\d.,]{4,})/i
     ) ??
     capturarMonto(
       lower,
