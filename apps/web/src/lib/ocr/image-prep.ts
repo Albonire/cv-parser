@@ -9,8 +9,16 @@
 
 /** Ancho minimo en pixeles. Tesseract degrada bastante por debajo de este valor. */
 const ANCHO_OBJETIVO = 2400;
-/** Tope de pixeles para no agotar la memoria del navegador en fotos grandes. */
-const MAX_PIXELES = 6_000_000;
+/**
+ * Tope de pixeles para no agotar la memoria del navegador en fotos grandes.
+ * En 6 MP una foto de camara tipica (12 MP) se reducia un 30% antes del OCR y
+ * Tesseract veia las letras mas pequenas de lo que la foto permite. Subido a
+ * 12 MP las fotos se lean cerca de su resolucion nativa: es el "zoom"
+ * que detalla mejor los trazos. Cuesta OCR mas lento (un 30-40% mas de pixeles),
+ * coste asumido. Las paginas de PDF escaneado no pasan por aqui: usan su propia
+ * escala en `pdf-reader.ts` y siguen midiendose igual en el banco de precision.
+ */
+const MAX_PIXELES = 12_000_000;
 /** Rango de busqueda de inclinacion, en grados. */
 const MAX_INCLINACION = 5;
 const PASO_INCLINACION = 0.5;
