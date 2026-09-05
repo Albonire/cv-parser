@@ -51,16 +51,15 @@ function extraerTrabajador(lower: string): string | undefined {
 }
 
 function extraerDocumento(lower: string): string | undefined {
-  const etiquetada = lower.match(
-    /(?:\bcc\b|c\.?\s*c\.?|cedula(?:\s+de\s+ciudadania)?|identificacion|documento)\s*(?:n[oº]\b|no\.?)?\s*[:#.-]?\s*(\d[\d.\s-]{4,})/i
-  );
-  if (etiquetada) {
-    const digito = etiquetada[1].replace(/[.\s-]/g, '');
+  const regexEtiquetada =
+    /(?:\bcc\b|c\.?\s*[co0]\.?|cedula(?:\s+de\s+ciudadania)?|identificacion|documento)\s*(?:n[oº]\b|no\.?)?\s*[:#.-]?\s*(\d[\d.\s-]{4,})/gi;
+  for (const m of lower.matchAll(regexEtiquetada)) {
+    const digito = m[1].replace(/[.\s-]/g, '');
     if (digito.length >= 7 && digito.length <= 11 && !digito.startsWith('901167')) return digito;
   }
-  const conPuntos = lower.match(/\b\d{1,3}(?:\.\d{3}){2,3}\b/);
-  if (conPuntos) {
-    const digito = conPuntos[0].replace(/\./g, '');
+  const conPuntos = lower.matchAll(/\b\d{1,3}(?:\.\d{3}){2,3}\b/g);
+  for (const m of conPuntos) {
+    const digito = m[0].replace(/\./g, '');
     if (digito.length >= 7 && digito.length <= 11 && !digito.startsWith('3') && !digito.startsWith('901167')) {
       return digito;
     }

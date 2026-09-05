@@ -175,35 +175,41 @@ async function leerConPsmVariante(
 ): Promise<Lectura> {
   let mejorLectura: Lectura = { texto: '', confianza: 0, cajas: [] };
 
-  for (const variante of PSM_VARIANTES) {
+  try {
+    for (const variante of PSM_VARIANTES) {
+      try {
+        await worker.setParameters({
+          tessedit_pageseg_mode: variante.modo,
+          preserve_interword_spaces: '1',
+        });
+
+        const res = await worker.recognize(fuente, {}, { blocks: true, text: true });
+        const lectura: Lectura = {
+          texto: res.data.text ?? '',
+          confianza: res.data.confidence ?? 0,
+          cajas: res.data.blocks,
+        };
+
+        if (comparaLecturas(lectura, mejorLectura) < 0) {
+          mejorLectura = lectura;
+        }
+
+        if (lecturaSolida(lectura.texto, lectura.confianza / 100)) break;
+      } catch (error) {
+        console.warn(`PSM ${variante.nombre} fallo:`, error);
+      }
+    }
+  } finally {
+    // Restaurar a PSM.AUTO para las siguientes paginas.
     try {
       await worker.setParameters({
-        tessedit_pageseg_mode: variante.modo,
+        tessedit_pageseg_mode: PSM.AUTO,
         preserve_interword_spaces: '1',
       });
-
-      const res = await worker.recognize(fuente, {}, { blocks: true, text: true });
-      const lectura: Lectura = {
-        texto: res.data.text ?? '',
-        confianza: res.data.confidence ?? 0,
-        cajas: res.data.blocks,
-      };
-
-      if (comparaLecturas(lectura, mejorLectura) < 0) {
-        mejorLectura = lectura;
-      }
-
-      if (lecturaSolida(lectura.texto, lectura.confianza / 100)) break;
-    } catch (error) {
-      console.warn(`PSM ${variante.nombre} fallo:`, error);
+    } catch (e) {
+      console.warn('Error al restaurar PSM.AUTO:', e);
     }
   }
-
-  // Restaurar a PSM.AUTO para las siguientes paginas.
-  await worker.setParameters({
-    tessedit_pageseg_mode: PSM.AUTO,
-    preserve_interword_spaces: '1',
-  });
 
   return mejorLectura;
 }
@@ -653,6 +659,8 @@ async function leerConVariantes(
     const mejorSinBinarizar = [...noBinarizadas].sort((a, b) => {
       const datos = datosUtiles(b.lectura.texto) - datosUtiles(a.lectura.texto);
       if (datos !== 0) return datos;
+      if (a.columnas >= 2 && a.solida && (b.columnas < 2 || !b.solida)) return -1;
+      if (b.columnas >= 2 && b.solida && (a.columnas < 2 || !a.solida)) return 1;
       return comparaLecturas(a.lectura, b.lectura);
     })[0];
     const longitudS = mejorSinBinarizar.lectura.texto.trim().length;

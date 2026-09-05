@@ -653,10 +653,14 @@ export function parseContractText(text: string, layout?: DocumentLayout): Contra
     );
     if (lCargo) {
       const limpio = lCargo.text.replace(/^[•*\s-]+/g, '').trim();
-      if (limpio.split(/\s+/).length <= 6 && !esPlantilla(limpio)) {
-        position = limpio;
+      const sinEmail = limpio
+        .replace(/[\w.+-]+@[\w.-]+\.\w{2,}/g, '')
+        .replace(/@\S*/g, '')
+        .trim();
+      if (sinEmail.split(/\s+/).length <= 6 && !esPlantilla(sinEmail) && esCargoValido(sinEmail)) {
+        position = sinEmail;
       } else {
-        const palabras = limpio.split(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/);
+        const palabras = sinEmail.split(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+/);
         const palabraCargo = palabras.find((p) => contieneCargo(p) && !/rosimar|distribuciones/i.test(p));
         if (palabraCargo) {
           position = palabraCargo.charAt(0).toUpperCase() + palabraCargo.slice(1).toLowerCase();
@@ -1055,20 +1059,18 @@ function buscarCedulaGenerica(texto: string, employerNit?: string): string | und
     return true;
   };
 
-  // 1. Cédula con prefijo explícito (incluyendo variaciones OCR: C.C, CC, CO, C.00, C C, Cédula de Ciudadanía)
-  const conPrefijoOcr = limpio.match(
-    /(?:\bcc\b|c\.?\s?c\.?|co\b|c\.00|c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|documento(?:\s+de\s+(?:identidad|identificacion|ciudadan[ií]a))?|identificacion)\s*(?:n[oº°]?\.?|numero)?\s*[:.-]?\s*([0-9oO][0-9oO.\s-]{5,11}[0-9])/i
-  );
-  if (conPrefijoOcr) {
-    const digito = conPrefijoOcr[1].replace(/[oO]/g, '0').replace(/\D/g, '');
+  // 1. Cédula con prefijo explícito (incluyendo variaciones OCR: C.C, CC, CO, C.O, C.00, C C, Cédula de Ciudadanía)
+  const regexPrefijo =
+    /(?:\bcc\b|c\.?\s*[co0]\.?|co\b|c\.00|c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|documento(?:\s+de\s+(?:identidad|identificacion|ciudadan[ií]a))?|identificacion)\s*(?:n[oº°]?\.?|numero)?\s*[:.-]?\s*([0-9oO][0-9oO.\s-]{5,11}[0-9])/gi;
+  for (const m of limpio.matchAll(regexPrefijo)) {
+    const digito = m[1].replace(/[oO]/g, '0').replace(/\D/g, '');
     if (esValida(digito)) return digito;
   }
 
-  const etiquetada = limpio.match(
-    /(?:\bcc\b|c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|documento(?:\s+de\s+(?:identidad|identificacion|ciudadan[ií]a))?|identificacion)\s*(?:n[oº°]?\.?|numero)?\s*[:.-]?\s*(\d[\d.\s-]{5,}\d)/i
-  );
-  if (etiquetada) {
-    const digito = etiquetada[1].replace(/[.\s-]/g, '');
+  const regexEtiquetada =
+    /(?:\bcc\b|c\.?\s*[co0]\.?|c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|documento(?:\s+de\s+(?:identidad|identificacion|ciudadan[ií]a))?|identificacion)\s*(?:n[oº°]?\.?|numero)?\s*[:.-]?\s*(\d[\d.\s-]{5,}\d)/gi;
+  for (const m of limpio.matchAll(regexEtiquetada)) {
+    const digito = m[1].replace(/[.\s-]/g, '');
     if (esValida(digito)) return digito;
   }
   const grupos = limpio.match(/(?<![\d.])\d{6,10}(?![\d.])/g) ?? [];

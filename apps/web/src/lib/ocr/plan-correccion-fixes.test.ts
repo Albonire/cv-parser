@@ -4,6 +4,7 @@ import { extractSkillsFromText } from './skills-taxonomy';
 import { extraerHabilidades } from './fields/skills';
 import { parseCvText } from './parser-cv';
 import { parseContractText } from './parser-contract';
+import { parseLiquidacionText } from './parser-liquidacion';
 
 describe('Plan Correccion Input/Output Real - Unit Tests', () => {
   describe('1. parsearMonto sin TypeError en comas y centavos', () => {
@@ -247,6 +248,77 @@ FECHA DE VENCIMIENTO: 31 DE JULIO 2025
       expect(parsed.employerName).not.toMatch(/rosimar/i);
       expect(parsed.employerEmail).toBe('textiles@outlook.com');
       expect(parsed.employerNit).not.toBe('901.167.955-4');
+    });
+
+    it('extrae cedula del trabajador cuando el NIT o cedula patronal con prefijo aparece antes en el documento', () => {
+      const textoCedulasMultiples = `
+CONTRATO DE TRABAJO
+EMPLEADOR: DISTRIBUCIONES ROSIMAR S.A.S.
+NIT: 901.167.955-4
+REPRESENTANTE LEGAL: C.C. 901167955
+TRABAJADOR: ANDRES RESTREPO
+C.C. 1098765432
+FECHA DE INICIO: 20250104
+      `;
+
+      const parsed = parseContractText(textoCedulasMultiples);
+      expect(parsed.workerDocumentNumber).toBe('1098765432');
+    });
+
+    it('tolera variaciones de OCR en el prefijo de cedula como C.O. o C.0.', () => {
+      const textoOcrVariante = `
+CONTRATO INDIVIDUAL DE TRABAJO
+EMPLEADOR: DISTRIBUCIONES ROSIMAR S.A.S.
+TRABAJADOR: CARMELO BALTAZAR
+C.O. 98.650.992
+CARGO: CONDUCTOR
+SALARIO: $ 1.423.500
+      `;
+
+      const parsed = parseContractText(textoOcrVariante);
+      expect(parsed.workerDocumentNumber).toBe('98650992');
+    });
+
+    it('extrae cargo limpiando correo electronico adherido en el mismo renglon', () => {
+      const textoCargoConEmail = `
+CONTRATO DE TRABAJO
+EMPLEADOR: DISTRIBUCIONES ROSIMAR S.A.S.
+TRABAJADOR: ANDRES RESTREPO
+VENDEDOR andres.restrepo@gmail.com
+SALARIO: $ 1.423.500
+      `;
+
+      const parsed = parseContractText(textoCargoConEmail);
+      expect(parsed.position).toBe('VENDEDOR');
+    });
+  });
+
+  describe('5. Extracción robusta de cédula en parser-liquidacion.ts', () => {
+    it('extrae cedula del trabajador con puntos cuando el NIT patronal aparece antes sin rotulo C.C.', () => {
+      const textoLiq = `
+LIQUIDACION DEFINITIVA
+EMPRESA: DISTRIBUCIONES ROSIMAR S.A.S.
+NIT: 901.167.955-4
+TRABAJADOR: ANGEL REYNEL BECERRA
+8.731.108
+TOTAL A PAGAR: $ 1.832.686
+      `;
+
+      const parsed = parseLiquidacionText(textoLiq);
+      expect(parsed.workerDocumentNumber).toBe('8731108');
+    });
+
+    it('tolera prefijo de cedula con OCR degradado C.O. en liquidacion', () => {
+      const textoLiqOcr = `
+COMPROBANTE DE EGRESO
+PAGADO A: BALTAZAR YEPEZ CARMELO ANTONIO
+C.O. 98.650.992
+POR CONCEPTO DE: LIQUIDACION
+TOTAL: $ 442.266
+      `;
+
+      const parsed = parseLiquidacionText(textoLiqOcr);
+      expect(parsed.workerDocumentNumber).toBe('98650992');
     });
   });
 });
