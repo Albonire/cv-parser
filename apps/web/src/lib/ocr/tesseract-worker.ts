@@ -8,6 +8,7 @@ import {
 } from './image-prep';
 import { buildLayout, DocumentLayout, PageInput, Word } from './layout';
 import { normalizarPalabraOcr } from './ocr-normalize';
+import { coberturaCampos, puntajeFormulario } from './vocabulario-campos';
 
 /**
  * Motor de OCR en el navegador (WebAssembly).
@@ -114,11 +115,12 @@ function puntajeLectura(texto: string, confianza: number): number {
  * sirven de medida neutral de lo util que trae una lectura.
  */
 const PATRONES_DATO: RegExp[] = [
-  /[\w.+-]+@[\w.-]+\.\w{2,}/g,
+  /[\w.+-]+@[\w.-]+\s*\.\s*\w{2,}/g,
   /\b\d{3}[\s.-]?\d{3}[\s.-]?\d{4}\b/g,
   /\b\d{1,3}(?:[.\s]\d{3}){2,}\b/g,
+  /\b(?:C\.?C\.?|CC|CO)\s*\d{6,10}\b/gi,
   /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g,
-  /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(?:de\s+)?\d{4}\b/gi,
+  /\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s*(?:de\s+)?\d{4}\b/gi,
   /\$\s*\d{1,3}(?:[.,]\d{3})+/g,
 ];
 
@@ -152,6 +154,23 @@ function comparaLecturas(a: Lectura, b: Lectura): number {
 }
 
 /**
+ * Compara dos lecturas para la seleccion exhaustiva de una imagen: manda el
+ * `puntajeFormulario` (patrones de dato + palabras del diccionario de campos);
+ * el volumen de texto solo desempata, igual que en `comparaLecturas`.
+ */
+function comparaPorFormulario(a: Lectura, b: Lectura): number {
+  const campos = puntajeFormulario(b.texto) - puntajeFormulario(a.texto);
+  if (campos !== 0) return campos;
+  return puntajeLectura(b.texto, b.confianza / 100) - puntajeLectura(a.texto, a.confianza / 100);
+}
+
+interface LecturaEvaluada {
+  lectura: Lectura;
+  columnas: number;
+  solida: boolean;
+}
+
+/**
  * Modos de segmentacion de pagina para reintentos.
  * Cuando PSM.AUTO no produce una lectura solida, se prueban otros modos
  * que pueden capturar mejor ciertos tipos de documentos:
@@ -176,35 +195,41 @@ async function leerConPsmVariante(
 ): Promise<Lectura> {
   let mejorLectura: Lectura = { texto: '', confianza: 0, cajas: [] };
 
-  for (const variante of PSM_VARIANTES) {
+  try {
+    for (const variante of PSM_VARIANTES) {
+      try {
+        await worker.setParameters({
+          tessedit_pageseg_mode: variante.modo,
+          preserve_interword_spaces: '1',
+        });
+
+        const res = await worker.recognize(fuente, {}, { blocks: true, text: true });
+        const lectura: Lectura = {
+          texto: res.data.text ?? '',
+          confianza: res.data.confidence ?? 0,
+          cajas: res.data.blocks,
+        };
+
+        if (comparaLecturas(lectura, mejorLectura) < 0) {
+          mejorLectura = lectura;
+        }
+
+        if (lecturaSolida(lectura.texto, lectura.confianza / 100)) break;
+      } catch (error) {
+        console.warn(`PSM ${variante.nombre} fallo:`, error);
+      }
+    }
+  } finally {
+    // Restaurar a PSM.AUTO para las siguientes paginas.
     try {
       await worker.setParameters({
-        tessedit_pageseg_mode: variante.modo,
+        tessedit_pageseg_mode: PSM.AUTO,
         preserve_interword_spaces: '1',
       });
-
-      const res = await worker.recognize(fuente, {}, { blocks: true, text: true });
-      const lectura: Lectura = {
-        texto: res.data.text ?? '',
-        confianza: res.data.confidence ?? 0,
-        cajas: res.data.blocks,
-      };
-
-      if (comparaLecturas(lectura, mejorLectura) < 0) {
-        mejorLectura = lectura;
-      }
-
-      if (lecturaSolida(lectura.texto, lectura.confianza / 100)) break;
-    } catch (error) {
-      console.warn(`PSM ${variante.nombre} fallo:`, error);
+    } catch (e) {
+      console.warn('Error al restaurar PSM.AUTO:', e);
     }
   }
-
-  // Restaurar a PSM.AUTO para las siguientes paginas.
-  await worker.setParameters({
-    tessedit_pageseg_mode: PSM.AUTO,
-    preserve_interword_spaces: '1',
-  });
 
   return mejorLectura;
 }
@@ -285,6 +310,8 @@ const CARACTERES_SONDA_UTIL = 60;
  * las paginas derechas son la inmensa mayoria.
  */
 const MARGEN_ORIENTACION = 10;
+/** Confianza minima para aceptar un giro de 90/180/270 grados. Evita falsos giros por ruido. */
+const CONFIANZA_MINIMA_GIRO = 60;
 
 interface Sonda {
   grados: GiroPagina;
@@ -354,7 +381,9 @@ export async function detectarOrientacion(
     if (valorSonda(sonda) > valorSonda(mejor)) mejor = sonda;
   }
 
-  return valorSonda(mejor) >= valorSonda(derecho) + MARGEN_ORIENTACION ? mejor.grados : 0;
+  return valorSonda(mejor) >= valorSonda(derecho) + MARGEN_ORIENTACION && mejor.conf >= CONFIANZA_MINIMA_GIRO
+    ? mejor.grados
+    : 0;
 }
 
 /**
@@ -440,13 +469,22 @@ async function leerConVariantes(
   fuente: File | Blob,
   forzar?: PreprocesoForzado
 ): Promise<Lectura> {
-  const leer = async (src: File | Blob): Promise<Lectura> => {
-    const res = await worker.recognize(src, {}, { blocks: true, text: true });
-    return {
-      texto: res.data.text ?? '',
-      confianza: res.data.confidence ?? 0,
-      cajas: res.data.blocks,
-    };
+  const leer = async (src: File | Blob, psm?: PSM): Promise<Lectura> => {
+    if (psm !== undefined) {
+      await worker.setParameters({ tessedit_pageseg_mode: psm });
+    }
+    try {
+      const res = await worker.recognize(src, {}, { blocks: true, text: true });
+      return {
+        texto: res.data.text ?? '',
+        confianza: res.data.confidence ?? 0,
+        cajas: res.data.blocks,
+      };
+    } finally {
+      if (psm !== undefined) {
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+      }
+    }
   };
 
   // Cuantas columnas detecta la maquetacion para esa lectura y si es solida.
@@ -461,7 +499,6 @@ async function leerConVariantes(
       solida: lecturaSolida(l.texto, l.confianza / 100),
     };
   };
-  const score = (l: Lectura) => puntajeLectura(l.texto, l.confianza / 100);
 
   // Valvula de escape: leer SOLO la variante pedida por el usuario y devolverla
   // sin la seleccion automatica por puntaje.
@@ -492,10 +529,10 @@ async function leerConVariantes(
     }
   };
 
-  const leerVariante = async (src: Blob | null, nombre: string) => {
+  const leerVariante = async (src: Blob | null, nombre: string, psm?: PSM) => {
     if (!src) return null;
     try {
-      return evaluar(await leer(src));
+      return evaluar(await leer(src, psm));
     } catch (error) {
       console.warn(`Lectura ${nombre} omitida:`, error);
       return null;
@@ -505,9 +542,19 @@ async function leerConVariantes(
   const gris = await preprocesar(false);
   let conGris = await leerVariante(gris, 'en escala de grises');
 
+  const esContratoOFormulario = (txt: string) =>
+    /contrato|empleador|trabajad|termino\s+fijo|salario|prestaci[oó]n\s+(?:de\s+)?servicios/i.test(txt);
+  const tieneSenalesTabularesOContrato = (txt: string) =>
+    esContratoOFormulario(txt) || pareceTablaEtiquetada(txt) || /[|_[\]—]{2,}/.test(txt);
+
   /** La lectura cubre la pagina y no hay nada mas que buscar. */
-  const cubreLaPagina = (c: typeof conGris) =>
-    !!c && c.solida && renglonesUtiles(c.lectura.texto) >= RENGLONES_PAGINA_COMPLETA;
+  const cubreLaPagina = (c: typeof conGris) => {
+    if (!c || !c.solida || renglonesUtiles(c.lectura.texto) < RENGLONES_PAGINA_COMPLETA) return false;
+    // Si parece contrato o tabla pero no trae datos utiles basicos, no se considera completa:
+    // PSM.AUTO puede haber leido solo la prosa legal del pie descartando la tabla.
+    if (tieneSenalesTabularesOContrato(c.lectura.texto) && datosUtiles(c.lectura.texto) < 3) return false;
+    return true;
+  };
 
   // La igualacion de luz levanta mucho las fotos con vineta o sombra y estorba
   // en los escaneos muy degradados, donde emborrona el texto en vez de igualar
@@ -526,27 +573,20 @@ async function leerConVariantes(
     }
   }
 
-  // El desenfumado y el CLAHE NO se prueban aqui. Los dos existen y estan bien
-  // implementados, pero como variantes automaticas cuestan un OCR completo cada
-  // una sobre las paginas que ya son las mas lentas, y medido no compensan: con
-  // ellas el banco de hojas de vida baja de 79,3% a 76,5% y el perfil duro pasa
-  // de 14,6 s a 47,3 s por documento, porque una pagina degradada acaba pagando
-  // hasta seis OCR completos. Siguen disponibles desde la interfaz con
-  // `fuerzaPreproceso`, que es donde valen la pena: una persona que ve una
-  // lectura mala pide releer con otro preprocesado y decide mirando el
-  // resultado, que es mejor juez que `comparaLecturas` sobre texto degradado.
+  // El desenfumado y el CLAHE NO se prueban automaticamente. Los dos existen y
+  // estan bien implementados, pero como variantes automaticas cuestan un OCR
+  // completo cada una sobre las paginas que ya son las mas lentas, y medido no
+  // compensan: encadenadas, una pagina degradada acababa pagando hasta seis OCR
+  // completos y el perfil duro pasaba de 14,6 s a 47,3 s por documento sin ganar
+  // precision. Siguen disponibles desde la interfaz con `fuerzaPreproceso`, que
+  // es donde valen la pena: una persona que ve una lectura mala pide releer con
+  // otro preprocesado y juzga el resultado, que es mejor juez que
+  // `comparaLecturas` sobre texto degradado.
 
-  // Si la lectura en gris cubre la pagina no hay nada que la fuente original
-  // pueda anadir, y leerla cuesta un OCR entero. Solo se paga cuando el gris se
-  // queda corto, que es justo cuando el preprocesado ha borrado una tabla:
-  // Tesseract devuelve confianza alta aunque no haya encontrado casi nada, asi
-  // que "solida" por si sola no basta para decidirlo.
-  // La condicion de tabla ya se ha cobrado arriba: si la ganadora cubre la
-  // pagina, no hay por que pagar ademas la fuente original. Se midio lo
-  // contrario, dejar que una tabla probara siempre la fuente, y cuesta 0,8
-  // puntos y dos segundos por documento sin ganar nada.
-  if (cubreLaPagina(conGris)) {
-    return conGris!.lectura;
+  // Si no hay señales de tabla ni de contrato, y la lectura en gris cubre la pagina,
+  // no hay nada mas que buscar y se evita el coste de OCR adicional.
+  if (conGris && !tieneSenalesTabularesOContrato(conGris.lectura.texto) && cubreLaPagina(conGris)) {
+    return conGris.lectura;
   }
 
   // Fuente original: lee completa una tabla alineada cuyas celdas tocan el
@@ -561,53 +601,57 @@ async function leerConVariantes(
   }
   const conFuente = lecturaFuente ? evaluar(lecturaFuente) : null;
 
-  // Una lectura con dos columnas bien formadas y solida es la que el parser
-  // de tablas aprovecha (la geometria resuelve etiqueta->valor). Se prefiere
-  // siempre, aunque la otra tenga mas texto.
-  const enDosColumnas = [conFuente, conGris].filter(
-    (c): c is NonNullable<typeof c> => !!c && c.columnas >= 2 && c.solida
-  );
-  if (enDosColumnas.length > 0) {
-    return [...enDosColumnas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
-  }
+  const candidatas: { lectura: Lectura; columnas: number; solida: boolean }[] = [];
+  if (conGris) candidatas.push(conGris);
+  if (conFuente) candidatas.push(conFuente);
 
-  // Todo de una columna: se conserva la escala de grises (configuracion
-  // historica que lee bien las hojas de vida) salvo que la fuente original
-  // reconozca muchisimo mas texto, como en una tabla alineada.
-  const solidas = [conFuente, conGris].filter(
-    (c): c is NonNullable<typeof c> => !!c && c.solida
-  );
-  if (solidas.length > 0) {
-    const conLaFuente = solidas.find((c) => c === conFuente);
-    const conElGris = solidas.find((c) => c === conGris);
-    if (conLaFuente && conElGris) {
-      if (conLaFuente.lectura.texto.length >= conElGris.lectura.texto.length * 1.6) {
-        return conLaFuente.lectura;
-      }
-      return conElGris.lectura;
+  // Respaldo de bloque para fotos con tablas / cuadrícula (contratos de WhatsApp):
+  // PSM.AUTO a menudo descarta celdas de una tabla creyendo que son gráficos.
+  // Cuando un documento contiene señales tabulares o de contrato, se evalúa
+  // PSM.SINGLE_BLOCK (6) y se compara con comparaLecturas para que las celdas
+  // de la tabla no se descarten.
+  const haySenalesTabulares = candidatas.some((c) => tieneSenalesTabularesOContrato(c.lectura.texto));
+  if (haySenalesTabulares) {
+    if (gris) {
+      const conBloqueGris = await leerVariante(gris, 'en bloque gris', PSM.SINGLE_BLOCK);
+      if (conBloqueGris) candidatas.push(conBloqueGris);
     }
-    return solidas.sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
+
+    const conBloqueFuente = await leerVariante(fuente, 'en bloque fuente', PSM.SINGLE_BLOCK);
+    if (conBloqueFuente) candidatas.push(conBloqueFuente);
   }
 
-  // Ninguna fue solida. Se lee tambien la variante binarizada (pensada para un
-  // escaneo plano con sombra) pero como ULTIMO recurso: en una foto de camara
-  // (baja luz, vineta) la binarizacion local borra los trazos finos y el OCR
-  // devuelve basura aun con confianza alta. Antes entraba en igualdad de
-  // condiciones y ganaba por volumen, porque a mas basura mas caracteres y mas
-  // "datos" aparentes (fechas, montos y cedulas de relleno). Medido en las fotos
-  // reales de expediente: el contrato lei mejor original/gris, pero ganaba la
-  // binarizada por 425 caracteres de ruido contra 223 limpios.
-  // La binarizada solo debe superar a las demas sin condiciones cuando el
-  // insumo es una pagina de PDF (escaneo plano, para el que se invento): en los
-  // formularios duros con sombra es justamente la mejor lectura, aunque su
-  // confianza sea menor que la de la escala de grises (medido: CV_04 y CV_17
-  // pierden 50 puntos si se la rechaza por confianza o por volumen).
-  //
-  // En cambio, cuando el insumo es una FOTO de camara (un File enviado por el
-  // usuario), la binarizacion borra los trazos finos y el OCR devuelve basura:
-  // mas caracteres, mas "datos" aparentes y MENOS confianza que la fuente
-  // limpia. Medido en el contrato de WhatsApp: la binarizada ganaba con 776
-  // caracteres ilegibles (51%) a la fuente original limpia (82%).
+  if (!haySenalesTabulares) {
+    // Una lectura con dos columnas bien formadas y solida es la que el parser
+    // de tablas aprovecha (la geometria resuelve etiqueta->valor). Se prefiere
+    // siempre, aunque la otra tenga mas texto.
+    const enDosColumnas = [conFuente, conGris].filter(
+      (c): c is NonNullable<typeof c> => !!c && c.columnas >= 2 && c.solida
+    );
+    if (enDosColumnas.length > 0) {
+      return [...enDosColumnas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
+    }
+
+    // Todo de una columna: se conserva la escala de grises (configuracion
+    // historica que lee bien las hojas de vida) salvo que la fuente original
+    // reconozca muchisimo mas texto, como en una tabla alineada.
+    const solidas = [conFuente, conGris].filter(
+      (c): c is NonNullable<typeof c> => !!c && c.solida
+    );
+    if (solidas.length > 0) {
+      const conLaFuente = solidas.find((c) => c === conFuente);
+      const conElGris = solidas.find((c) => c === conGris);
+      if (conLaFuente && conElGris) {
+        if (conLaFuente.lectura.texto.length >= conElGris.lectura.texto.length * 1.6) {
+          return conLaFuente.lectura;
+        }
+        return conElGris.lectura;
+      }
+      return solidas.sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
+    }
+  }
+
+  // Si ninguna fue solida o estamos en rescate tabular: evaluar binarizada con filtro de basura en fotos
   const esFotoCamara = fuente instanceof File;
   const binarizada = await preprocesar(true);
   let lecturaBinarizada: ReturnType<typeof evaluar> | null = null;
@@ -619,14 +663,16 @@ async function leerConVariantes(
     }
   }
 
-  const noBinarizadas = [conFuente, conGris].filter(
-    (c): c is NonNullable<typeof c> => !!c
-  );
+  const noBinarizadas = [...candidatas];
 
   if (esFotoCamara && lecturaBinarizada && noBinarizadas.length > 0) {
-    const mejorSinBinarizar = [...noBinarizadas].sort(
-      (a, b) => comparaLecturas(a.lectura, b.lectura)
-    )[0];
+    const mejorSinBinarizar = [...noBinarizadas].sort((a, b) => {
+      const datos = datosUtiles(b.lectura.texto) - datosUtiles(a.lectura.texto);
+      if (datos !== 0) return datos;
+      if (a.columnas >= 2 && a.solida && (b.columnas < 2 || !b.solida)) return -1;
+      if (b.columnas >= 2 && b.solida && (a.columnas < 2 || !a.solida)) return 1;
+      return comparaLecturas(a.lectura, b.lectura);
+    })[0];
     const longitudS = mejorSinBinarizar.lectura.texto.trim().length;
     // Las sin binarizar no reconocieron practicamente nada (p. ej. una cedula
     // oscura): ahi la binarizada es el unico camino y se acepta.
@@ -645,18 +691,179 @@ async function leerConVariantes(
     }
   }
 
-  const candidatas = [...noBinarizadas];
   if (lecturaBinarizada) candidatas.push(lecturaBinarizada);
   if (candidatas.length === 0) return { texto: '', confianza: 0, cajas: [] };
-  return [...candidatas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
+
+  return [...candidatas].sort((a, b) => {
+    const datos = datosUtiles(b.lectura.texto) - datosUtiles(a.lectura.texto);
+    if (datos !== 0) return datos;
+    if (a.columnas >= 2 && a.solida && (b.columnas < 2 || !b.solida)) return -1;
+    if (b.columnas >= 2 && b.solida && (a.columnas < 2 || !a.solida)) return 1;
+    return puntajeLectura(b.lectura.texto, b.lectura.confianza / 100) - puntajeLectura(a.lectura.texto, a.lectura.confianza / 100);
+  })[0].lectura;
+}
+
+/**
+ * Cuantas palabras del diccionario de campos hacen falta para dar una lectura
+ * por buena en la seleccion exhaustiva. La escala de grises puede cubrir la
+ * pagina entera y estar leyendo mitad basura: si no trae el vocabulario de los
+ * formularios, las otras variantes pueden ganarle.
+ */
+const COBERTURA_CAMPOS_SUFICIENTE = 6;
+
+/**
+ * Lectura exhaustiva para UNA imagen: prueba todas las preparaciones y elige la
+ * que mejor alimenta a los formularios.
+ *
+ * La seleccion por defecto (`leerConVariantes`) se detiene en cuanto la escala
+ * de grises cubre la pagina (400 caracteres, confianza 0,8 y quince renglones).
+ * Eso ahorra un OCR por pagina en un lote, pero en una foto donde la escala de
+ * grises lee "suficiente" y mal -- mucha basura o la mitad de las palabras -,
+ * nunca se prueba la variante que la lee mejor. Aqui se leen gris, plano,
+ * desenfumado, contraste y la fuente original, y gana la que sume mas
+ * `puntajeFormulario` (patrones de dato + palabras del diccionario de campos).
+ *
+ * Se corta antes solo cuando una lectura es solida Y cubre el diccionario: ahi
+ * no hay nada mas que buscar y las variantes restantes solo costarian OCRs
+ * enteros. Es el caso corriente de una foto limpia.
+ */
+async function leerExhaustivo(worker: Worker, fuente: File | Blob): Promise<Lectura> {
+  const leer = async (src: File | Blob): Promise<Lectura> => {
+    const res = await worker.recognize(src, {}, { blocks: true, text: true });
+    return {
+      texto: res.data.text ?? '',
+      confianza: res.data.confidence ?? 0,
+      cajas: res.data.blocks,
+    };
+  };
+
+  const evaluar = (l: Lectura): LecturaEvaluada => {
+    const palabras = tesseractWordsToWords(extraerPalabras(l.cajas));
+    const ancho = Math.max(1, ...palabras.map((w) => w.x + w.width));
+    const alto = Math.max(1, ...palabras.map((w) => w.y + w.height));
+    const layout = buildLayout([{ words: palabras, width: ancho, height: alto }]);
+    return {
+      lectura: l,
+      columnas: Math.max(1, layout.columnsPerPage[0] ?? 1),
+      solida: lecturaSolida(l.texto, l.confianza / 100),
+    };
+  };
+
+  const preprocesar = async (opciones: OpcionesPreproceso): Promise<Blob | null> => {
+    try {
+      return await preprocessImage(fuente, opciones);
+    } catch (error) {
+      console.warn('Preprocesamiento omitido:', error);
+      return null;
+    }
+  };
+
+  const leerVariante = async (nombre: string, src: File | Blob | null): Promise<LecturaEvaluada | null> => {
+    if (!src) return null;
+    try {
+      return evaluar(await leer(src));
+    } catch (error) {
+      console.warn(`Lectura ${nombre} omitida:`, error);
+      return null;
+    }
+  };
+
+  /** La lectura es solida, cubre la pagina entera y trae el vocabulario de los formularios. */
+  const cubreLosCampos = (c: LecturaEvaluada | null) =>
+    !!c &&
+    c.solida &&
+    renglonesUtiles(c.lectura.texto) >= RENGLONES_PAGINA_COMPLETA &&
+    coberturaCampos(c.lectura.texto) >= COBERTURA_CAMPOS_SUFICIENTE;
+
+  const conGris = await leerVariante(
+    'en escala de grises',
+    await preprocesar({ binarizar: false, igualarLuz: true })
+  );
+  if (cubreLosCampos(conGris)) return conGris!.lectura;
+  const candidatas: LecturaEvaluada[] = [];
+  if (conGris) candidatas.push(conGris);
+
+  const conPlano = await leerVariante(
+    'en gris sin igualar',
+    await preprocesar({ binarizar: false, igualarLuz: false })
+  );
+  if (conPlano) {
+    candidatas.push(conPlano);
+    if (cubreLosCampos(conPlano)) return conPlano.lectura;
+  }
+
+  const conDesenfumada = await leerVariante(
+    'desenfumada',
+    await preprocesar({ binarizar: false, igualarLuz: true, desenfumar: true })
+  );
+  if (conDesenfumada) {
+    candidatas.push(conDesenfumada);
+    if (cubreLosCampos(conDesenfumada)) return conDesenfumada.lectura;
+  }
+
+  const conContraste = await leerVariante(
+    'contraste_mejorado',
+    await preprocesar({ binarizar: false, igualarLuz: true, mejorarContraste: true })
+  );
+  if (conContraste) {
+    candidatas.push(conContraste);
+    if (cubreLosCampos(conContraste)) return conContraste.lectura;
+  }
+
+  const conFuente = await leerVariante('en la fuente original', fuente);
+  if (conFuente) {
+    candidatas.push(conFuente);
+    if (cubreLosCampos(conFuente)) return conFuente.lectura;
+  }
+
+  // La binarizada borra los trazos finos de una foto de camara y devuelve basura
+  // con confianza alta, asi que solo se lee cuando ninguna variante sin binarizar
+  // cubrio los campos; incluso ahi gana solo si aporta claramente mas de lo que
+  // reconocieron las demas (ver la guarda en `leerConVariantes`).
+  let conBinarizada: LecturaEvaluada | null = null;
+  if (!candidatas.some(cubreLosCampos)) {
+    conBinarizada = await leerVariante('binarizada', await preprocesar({ binarizar: true }));
+  }
+
+  const dosColumnas = [...candidatas, conBinarizada].filter(
+    (c): c is LecturaEvaluada => !!c && c.columnas >= 2 && c.solida
+  );
+  if (dosColumnas.length > 0) {
+    return [...dosColumnas].sort((a, b) => comparaPorFormulario(a.lectura, b.lectura))[0].lectura;
+  }
+
+  if (conBinarizada) {
+    const mejorSinBinarizar = [...candidatas].sort((a, b) =>
+      comparaPorFormulario(a.lectura, b.lectura)
+    )[0];
+    const noLeyeronCasiNada =
+      mejorSinBinarizar.lectura.texto.trim().length < CARACTERES_LECTURA_SOLIDA / 4 &&
+      mejorSinBinarizar.lectura.confianza < CONFIANZA_LECTURA_SOLIDA * 100;
+    const ganaClaramente =
+      puntajeFormulario(conBinarizada.lectura.texto) >=
+        puntajeFormulario(mejorSinBinarizar.lectura.texto) + 2 &&
+      conBinarizada.lectura.confianza >= 60;
+    if (!noLeyeronCasiNada && !ganaClaramente) {
+      return mejorSinBinarizar.lectura;
+    }
+  }
+
+  const pool = conBinarizada ? [...candidatas, conBinarizada] : candidatas;
+  if (pool.length === 0) return { texto: '', confianza: 0, cajas: [] };
+  return [...pool].sort((a, b) => comparaPorFormulario(a.lectura, b.lectura))[0].lectura;
 }
 
 /** Proporciones de la imagen, sin pasar por OCR. */
 async function esApaisada(fuente: File | Blob): Promise<boolean> {
-  const bitmap = await createImageBitmap(fuente);
-  const apaisada = bitmap.width > bitmap.height;
-  bitmap.close?.();
-  return apaisada;
+  if (typeof createImageBitmap !== 'function') return false;
+  try {
+    const bitmap = await createImageBitmap(fuente);
+    const apaisada = bitmap.width > bitmap.height;
+    bitmap.close?.();
+    return apaisada;
+  } catch {
+    return false;
+  }
 }
 
 /** Reconoce un elemento de imagen corrigiendo antes su orientacion. */
@@ -665,42 +872,59 @@ async function reconocerElemento(
   item: File | Blob | HTMLCanvasElement,
   forzar?: PreprocesoForzado
 ): Promise<Lectura> {
-  // En Node (pruebas) no hay Canvas: se manda el archivo tal cual.
-  if (typeof window === 'undefined' || !(item instanceof File || item instanceof Blob)) {
-    const { data } = await worker.recognize(item as HTMLCanvasElement, {}, { blocks: true, text: true });
+  if (typeof HTMLCanvasElement !== 'undefined' && item instanceof HTMLCanvasElement) {
+    const { data } = await worker.recognize(item, {}, { blocks: true, text: true });
     return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
   }
 
   // Valvula de escape: se respeta la variante pedida sin sondear orientacion ni
   // reintentar con otros PSM, porque el usuario quiere exactamente esa lectura.
   if (forzar) {
-    return leerConVariantes(worker, item, forzar);
+    return leerConVariantes(worker, item as File | Blob, forzar);
   }
 
+  if (typeof window === 'undefined' && !(item instanceof File || item instanceof Blob)) {
+    const { data } = await worker.recognize(item as unknown as HTMLCanvasElement, {}, { blocks: true, text: true });
+    return { texto: data.text ?? '', confianza: data.confidence ?? 0, cajas: data.blocks };
+  }
+
+  const fileItem = item as File | Blob;
   // Una pagina apaisada es sospechosa de venir escaneada de lado, asi que se
   // sondea ANTES de leerla: leerla de lado no cuesta menos y no sirve de nada.
   let apaisada = false;
   try {
-    apaisada = await esApaisada(item);
+    apaisada = await esApaisada(fileItem);
   } catch (error) {
     console.warn('No se pudo medir la pagina:', error);
   }
 
   if (apaisada) {
     try {
-      const giro = await detectarOrientacion(worker, item);
-      if (giro !== 0) return leerConVariantes(worker, await girarImagen(item, giro));
+      const giro = await detectarOrientacion(worker, fileItem);
+      if (giro !== 0) return leerConVariantes(worker, await girarImagen(fileItem, giro));
     } catch (error) {
       console.warn('Deteccion de orientacion omitida:', error);
     }
-    return leerConVariantes(worker, item);
+    return leerConVariantes(worker, fileItem);
   }
+
+  // Una sola imagen (foto subida por el usuario) se lee de forma exhaustiva:
+  // se prueban todas las preparaciones y gana la que mejor alimenta a los
+  // formularios, sin que el usuario tenga que elegir variante. Un lote de
+  // paginas de PDF escaneado usa la seleccion economica de `leerConVariantes`,
+  // que ya se mide sobre el banco de escaneos.
+  const esImagenUnica = fileItem instanceof File;
 
   // Pagina vertical: se lee primero y solo se sondea la orientacion si salio
   // mal. Es el caso corriente, y asi no paga ninguna sonda.
-  const lectura = await leerConVariantes(worker, item);
+  const lectura = await (esImagenUnica
+    ? leerExhaustivo(worker, fileItem)
+    : leerConVariantes(worker, fileItem));
   if (lecturaSolida(lectura.texto, lectura.confianza / 100)) return lectura;
 
+  // NUEVO: Si la primera lectura no es solida, intentar con otros PSM.
+  // SINGLE_BLOCK es bueno para formularios compactos; SINGLE_COLUMN para
+  // hojas de vida simples sin columnas detectables.
   let mejorLectura = lectura;
   // Un reintento con menos del 40% de confianza es basura de OCR; solo se
   // acepta cuando la lectura actual no reconocio practicamente nada. Sin este
@@ -709,36 +933,27 @@ async function reconocerElemento(
   const reemplazaReintento = (reintento: Lectura) =>
     reintento.confianza / 100 >= 0.4 ||
     mejorLectura.texto.trim().length < 50;
-
-  // La ORIENTACION va primero. Una pagina al reves no se arregla cambiando el
-  // modo de segmentacion, y el orden contrario hacia dano: un reintento de PSM
-  // dejaba la lectura lo bastante "solida" como para volver antes de sondear, y
-  // la pagina se quedaba girada. Medido, el banco perdia 3,6 puntos en
-  // `girado180` y 1,8 en `girado90`.
   try {
-    const giro = await detectarOrientacion(worker, item);
+    const reintentoPsm = await leerConPsmVariante(worker, fileItem);
+    if (reemplazaReintento(reintentoPsm) && comparaLecturas(reintentoPsm, mejorLectura) < 0) {
+      mejorLectura = reintentoPsm;
+    }
+  } catch (error) {
+    console.warn('Reintentos PSM fallaron:', error);
+  }
+
+  if (lecturaSolida(mejorLectura.texto, mejorLectura.confianza / 100)) return mejorLectura;
+
+  try {
+    const giro = await detectarOrientacion(worker, fileItem);
     if (giro !== 0) {
-      const reintento = await leerConVariantes(worker, await girarImagen(item, giro));
+      const reintento = await leerConVariantes(worker, await girarImagen(fileItem, giro));
       if (reemplazaReintento(reintento) && comparaLecturas(reintento, mejorLectura) < 0) {
         mejorLectura = reintento;
       }
     }
   } catch (error) {
     console.warn('Deteccion de orientacion omitida:', error);
-  }
-
-  if (lecturaSolida(mejorLectura.texto, mejorLectura.confianza / 100)) return mejorLectura;
-
-  // Ya derecha y todavia floja: se prueban otros modos de segmentacion.
-  // SINGLE_BLOCK va bien con un formulario compacto y SINGLE_COLUMN con una
-  // hoja de vida sin columnas detectables.
-  try {
-    const reintentoPsm = await leerConPsmVariante(worker, item);
-    if (reemplazaReintento(reintentoPsm) && comparaLecturas(reintentoPsm, mejorLectura) < 0) {
-      mejorLectura = reintentoPsm;
-    }
-  } catch (error) {
-    console.warn('Reintentos PSM fallaron:', error);
   }
 
   return mejorLectura;
