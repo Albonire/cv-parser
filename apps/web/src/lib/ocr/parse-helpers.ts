@@ -95,10 +95,16 @@ function diaValido(d: number, m: number, y: number): boolean {
  */
 export function parsearMonto(txt: string): number | undefined {
   if (!txt) return undefined;
-  const limpio = txt
+  let limpio = txt
     .replace(/[^\d,.]/g, '')
-    .replace(/,/g, (_, __, offset, s) => (/,/.test(s.slice(offset - 3, offset)) ? '' : _))
+    .replace(/,/g, (match, offset, str) => (/,/.test(str.slice(offset - 3, offset)) ? '' : match))
     .replace(/,/g, '.');
+
+  // Si termina en decimales (.00 o ,00 o .xx), descartar los centavos
+  if (/\.\d{2}$/.test(limpio)) {
+    limpio = limpio.replace(/\.\d{2}$/, '');
+  }
+
   // 1.234.567 -> 1234567  (punto separador de miles)
   if (/^\d{1,3}(\.\d{3})+$/.test(limpio)) {
     return parseInt(limpio.replace(/\./g, ''), 10);

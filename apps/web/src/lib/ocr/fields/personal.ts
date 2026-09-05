@@ -207,7 +207,7 @@ const PATRON_CORREO = /[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+[a-zA-Z]/;
  * Estos son respaldos y se filtran estrictamente.
  */
 const PATRON_EMAIL_ALTERNATIVO =
-  /[a-zA-Z0-9_.+-]+[\s\.@-]+[a-zA-Z0-9-]+[\s\.]+[a-zA-Z0-9-.]+\.[a-zA-Z]{2,}/i;
+  /[a-zA-Z0-9_.+-]+[\s.@-]+[a-zA-Z0-9-]+[\s.]+[a-zA-Z0-9-.]+\.[a-zA-Z]{2,}/i;
 
 function extraerCorreo(encabezado: LayoutLine[], todas: LayoutLine[]): string {
   const textoEncabezado = textos(encabezado).join('\n');
@@ -586,13 +586,18 @@ function buscarMontoSalarioEnTexto(texto: string): number | undefined {
 
 export function extraerDatosPersonales(
   encabezado: LayoutLine[],
-  todas: LayoutLine[]
+  todas: LayoutLine[],
+  lineasExcluidas?: LayoutLine[]
 ): DatosPersonales {
-  const lineas = textos(todas);
+  const excluidasSet = new Set(lineasExcluidas ?? []);
+  const lineasFiltradas = lineasExcluidas ? todas.filter((l) => !excluidasSet.has(l)) : todas;
+  const encabezadoFiltrado = lineasExcluidas ? encabezado.filter((l) => !excluidasSet.has(l)) : encabezado;
+
+  const lineas = textos(lineasFiltradas);
   const textoCompleto = lineas.join('\n');
 
-  const { firstNames, lastNames, lineaNombre } = extraerNombre(encabezado, todas);
-  const { documentType, documentNumber } = extraerDocumento(todas);
+  const { firstNames, lastNames, lineaNombre } = extraerNombre(encabezadoFiltrado, lineasFiltradas);
+  const { documentType, documentNumber } = extraerDocumento(lineasFiltradas);
 
   const socialLinks: string[] = [];
   const linkedin = textoCompleto.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);

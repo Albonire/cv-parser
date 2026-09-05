@@ -16,13 +16,13 @@ interface PageHeaderProps {
  * y cuál es el objetivo principal.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, action }) => (
-  <div className="flex flex-col gap-8 border-b border-slate-200 py-8 sm:flex-row sm:items-end sm:justify-between">
+  <div className="flex flex-col gap-4 border-b border-slate-200 py-4 sm:flex-row sm:items-end sm:justify-between">
     <div className="max-w-2xl flex-1">
-      <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 leading-tight">
+      <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 leading-tight">
         {title}
       </h1>
       {description && (
-        <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+        <p className="mt-1.5 text-sm text-slate-600 leading-relaxed">
           {description}
         </p>
       )}

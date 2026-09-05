@@ -45,13 +45,14 @@ function senalesDeContrato(texto: string): boolean {
   const palabras = [
     'empleador', 'trabajad', 'forma de pago', 'lugar de ejecucion',
     'periodo de prueba', 'nit', 'domicilio', 'termino fijo', 'clausul',
+    'datos personales y de contrato', 'salario',
   ];
   let cuantas = 0;
   for (const p of palabras) if (t.includes(p)) cuantas++;
   const esHojaDeVida =
     t.includes('hoja de vida') || t.includes('curriculum') ||
     t.includes('experiencia laboral') || t.includes('perfil profesional');
-  return !esHojaDeVida && cuantas >= 2 && t.includes('empleador');
+  return !esHojaDeVida && cuantas >= 2 && (t.includes('empleador') || t.includes('contrato'));
 }
 
 /**
@@ -118,33 +119,25 @@ export async function processDocument(
   let contractData: ContractFormData | undefined =
     detectedType === 'contract' ? parseContractText(extractedText, layout) : undefined;
 
-  // Una hoja de vida sin ningun encabezado de seccion no da ninguna palabra
-  // clave, asi que el clasificador la deja en `desconocido`. En vez de mandarla
-  // al aviso de documento no estructurado, se intenta leerla y se asciende a
-  // hoja de vida SOLO si el resultado trae datos de una persona real. Asi no se
-  // fuerza nunca un formulario vacio, que es lo que el clasificador evita, pero
-  // tampoco se pierde una hoja de vida por no llevar titulos.
-  if (categoria === 'desconocido' && !candidateData && !contractData) {
-    // Se prueban las dos lecturas. La maquetacion ayuda en los documentos con
-    // columnas o encabezados, pero en una hoja sin ningun titulo el texto
-    // plano encuentra el bloque de contacto que la maquetacion no agrupa.
-    const conMaquetacion = parseCvText(extractedText, layout);
-    const posible = pareceHojaDeVida(conMaquetacion)
-      ? conMaquetacion
-      : parseCvText(extractedText);
-
+  // Si no se detecto un formulario estructurado (cv o contract), o cayo en una
+  // categoria secundaria (desconocido, llamado_atencion, memorando, funciones), se
+  // intenta rescatar: si hay claras senales de contrato o de hoja de vida,
+  // se promueve al formulario correspondiente en vez de dejarlo como unknown vacio.
+  if (!candidateData && !contractData) {
     if (senalesDeContrato(extractedText)) {
-      // Una foto de contrato con el titulo "CONTRATO" degradado cae aqui y no
-      // debe leerse como hoja de vida (produjo "COMBARRANQUILLA" como nombre y
-      // cargo). Si el texto huele a contrato, se prefiere ese formulario.
-      const contrato = parseContractText(extractedText, layout);
-      if (contrato.employerName || contrato.workerName) {
-        detectedType = 'contract';
-        contractData = contrato;
+      // Una foto de contrato con el titulo "CONTRATO" degradado o un documento
+      // con senales contractuales que cayo en categoria secundaria se rescata aqui.
+      detectedType = 'contract';
+      contractData = parseContractText(extractedText, layout);
+    } else if (categoria === 'desconocido') {
+      const conMaquetacion = parseCvText(extractedText, layout);
+      const posible = pareceHojaDeVida(conMaquetacion)
+        ? conMaquetacion
+        : parseCvText(extractedText);
+      if (pareceHojaDeVida(posible)) {
+        detectedType = 'cv';
+        candidateData = posible;
       }
-    } else if (pareceHojaDeVida(posible)) {
-      detectedType = 'cv';
-      candidateData = posible;
     }
   }
   const idCardData = detectedType === 'id_card' ? parseIdCardText(extractedText) : undefined;

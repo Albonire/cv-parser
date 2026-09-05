@@ -82,8 +82,29 @@ export function extractSkillsFromText(text: string): { category: string; skillNa
   const found: { category: string; skillName: string }[] = [];
   const added = new Set<string>();
 
+  // Limpiar bloques de identificación documental (C.C., C.C, CC, C. C., NIT, Cédula)
+  // para que la letra 'C' de 'C.C.' no se interprete erróneamente como lenguaje de programación.
+  const textoSinDocIds = text
+    .replace(/(?:\bcc\b|c(?:\s*\.)?\s*c(?:\s*\.)?|c\s*\/\s*c|cedula|documento(?:\s+de\s+(?:identidad|identificacion))?|identificacion|nit)\s*[:.-]?\s*(?:no\.?|n[ºo])?\s*[:.-]?\s*[\d.\s-]{5,}/gi, ' ')
+    .replace(/c\s*\.\s*c(?:\s*\.)?/gi, ' ')
+    .replace(/\b(?:cc|c\.c\.|c\.c)\b/gi, ' ');
+
   for (const cat of SKILLS_TAXONOMY) {
     for (const skill of cat.skills) {
+      if (skill === 'C') {
+        // 'C' como lenguaje de programación debe ser mayúscula, no venir de C.C./CC ni de bloques de ID,
+        // ni estar pegado a puntos o caracteres de numeración/abreviatura
+        const regexC = /(?:^|[^a-zA-Z0-9.#+])C(?=[^a-zA-Z0-9.#+]|$)/;
+        if (regexC.test(textoSinDocIds)) {
+          const key = skill.toLowerCase();
+          if (!added.has(key)) {
+            added.add(key);
+            found.push({ category: cat.category, skillName: skill });
+          }
+        }
+        continue;
+      }
+
       // Usar limites de palabra escapados para evitar falsos positivos
       const escaped = skill.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}(?=[^a-zA-Z0-9]|$)`, 'i');
