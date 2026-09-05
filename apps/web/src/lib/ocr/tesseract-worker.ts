@@ -178,7 +178,9 @@ interface LecturaEvaluada {
  * - SINGLE_COLUMN: fuerza una sola columna (bueno para hojas de vida simples)
  */
 const PSM_VARIANTES: Array<{ modo: PSM; nombre: string }> = [
-  { modo: PSM.AUTO, nombre: 'automatico' },
+  // PSM.AUTO no entra: `leerConVariantes` acaba de leer la pagina con ese modo,
+  // que es el que tiene puesto el worker. Repetirlo aqui era un OCR completo
+  // tirado en cada reintento.
   { modo: PSM.SINGLE_BLOCK, nombre: 'bloque_unico' },
   { modo: PSM.SINGLE_COLUMN, nombre: 'columna_unico' },
 ];
@@ -571,25 +573,15 @@ async function leerConVariantes(
     }
   }
 
-  // NUEVO: Variante desenfumada -- elimina ruido de sal y pimienta que confunde
-  // a Sauvola y produce caracteres fantasmas en el OCR.
-  if (!cubreLaPagina(conGris)) {
-    const desenfumada = await preprocesar(false, true, true);
-    const conDesenfumada = await leerVariante(desenfumada, 'desenfumada');
-    if (conDesenfumada && (!conGris || comparaLecturas(conDesenfumada.lectura, conGris.lectura) < 0)) {
-      conGris = conDesenfumada;
-    }
-  }
-
-  // NUEVO: Variante con CLAHE real -- para documentos muy palidos o con
-  // iluminacion muy desigual donde el contraste original es insuficiente.
-  if (!cubreLaPagina(conGris)) {
-    const mejorada = await preprocesar(false, true, false, true);
-    const conMejora = await leerVariante(mejorada, 'contraste_mejorado');
-    if (conMejora && (!conGris || comparaLecturas(conMejora.lectura, conGris.lectura) < 0)) {
-      conGris = conMejora;
-    }
-  }
+  // El desenfumado y el CLAHE NO se prueban automaticamente. Los dos existen y
+  // estan bien implementados, pero como variantes automaticas cuestan un OCR
+  // completo cada una sobre las paginas que ya son las mas lentas, y medido no
+  // compensan: encadenadas, una pagina degradada acababa pagando hasta seis OCR
+  // completos y el perfil duro pasaba de 14,6 s a 47,3 s por documento sin ganar
+  // precision. Siguen disponibles desde la interfaz con `fuerzaPreproceso`, que
+  // es donde valen la pena: una persona que ve una lectura mala pide releer con
+  // otro preprocesado y juzga el resultado, que es mejor juez que
+  // `comparaLecturas` sobre texto degradado.
 
   // Si no hay señales de tabla ni de contrato, y la lectura en gris cubre la pagina,
   // no hay nada mas que buscar y se evita el coste de OCR adicional.
