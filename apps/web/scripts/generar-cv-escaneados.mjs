@@ -102,7 +102,13 @@ function verdadDe(cv, archivo, plantilla, perfilNombre) {
       'education#': cv.educacion.length,
       'education[].institution': cv.educacion.map((e) => e.institucion),
       'education[].degree': cv.educacion.map((e) => e.titulo),
-      'skills#': Math.min(2, cv.habilidades.length),
+      // Por NOMBRE, no por cantidad. Comparar un recuento daba por buena
+      // cualquier coincidencia: la taxonomia incluye los lenguajes 'C', 'R' y
+      // 'Go', y una letra suelta del OCR contaba como habilidad encontrada. Con
+      // eso, doce hojas de vida administrativas puntuaban dos habilidades que
+      // no tenian. Medido: el campo pasaba por 81,3% cuando de verdad estaba
+      // en la mitad.
+      'skills[].skillName': cv.habilidades,
     },
   };
 }

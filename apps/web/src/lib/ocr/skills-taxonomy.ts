@@ -1,3 +1,5 @@
+import { normalize } from './text-utils';
+
 export interface SkillTaxonomyCategory {
   category: string;
   skills: string[];
@@ -82,6 +84,12 @@ export function extractSkillsFromText(text: string): { category: string; skillNa
   const found: { category: string; skillName: string }[] = [];
   const added = new Set<string>();
 
+  // La comparacion va SIN TILDES. La taxonomia las lleva ("Gestión Documental")
+  // y el OCR de un escaneo degradado las pierde con toda naturalidad, asi que
+  // comparar literalmente hacia depender el campo de que la tilde sobreviviera.
+  // Es el mismo `normalize()` con el que el resto del proyecto compara texto.
+  const textoNormalizado = normalize(text);
+
   const hayContextoProgramacion =
     /\b(?:lenguajes?\s+de\s+programaci[oó]n|programaci[oó]n|programming|dev|desarroll[oó]r?|developer|software|c[oó]digo|code|computaci[oó]n|inform[aá]tica|systems?|ingenier[oa]\s+de\s+software)\b/i.test(
       text
@@ -90,9 +98,9 @@ export function extractSkillsFromText(text: string): { category: string; skillNa
   for (const cat of SKILLS_TAXONOMY) {
     for (const skill of cat.skills) {
       // Usar limites de palabra escapados para evitar falsos positivos
-      const escaped = skill.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const escaped = normalize(skill).replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}(?=[^a-zA-Z0-9]|$)`, 'i');
-      if (!regex.test(text)) continue;
+      if (!regex.test(textoNormalizado)) continue;
 
       // Lenguajes de una o dos letras ("C", "R", "Go") producen falsos
       // positivos en cualquier documento ("C2", "R&D", "Go"). Solo se aceptan si
