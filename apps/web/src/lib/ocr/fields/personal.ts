@@ -20,11 +20,11 @@ const ETIQUETAS = {
     'cedula de extranjeria', 'ce', 'tarjeta de identidad', 'ti', 'pasaporte',
   ],
   telefono: [
-    'telefono', 'telefonos', 'telefono fijo', 'telefono celular', 'celular',
-    'cel', 'movil', 'whatsapp', 'contacto', 'tel', 'phone', 'mobile', 'cell',
-    'numero de contacto',
+    'telefono', 'telefonos', 'telefono fijo', 'telefono celular', 'telefono movil',
+    'celular', 'cel', 'movil', 'whatsapp', 'contacto', 'tel', 'phone', 'mobile', 'cell',
+    'numero de contacto', 'numero de telefono', 'numero celular', 'telefono electronico',
   ],
-  correo: ['email', 'e mail', 'correo', 'correo electronico', 'mail'],
+  correo: ['email', 'e mail', 'e-mail', 'correo', 'correo electronico', 'mail', 'correo de contacto'],
   ciudad: [
     'ciudad', 'ciudad de residencia', 'municipio', 'lugar de residencia',
     'ubicacion', 'city', 'location',

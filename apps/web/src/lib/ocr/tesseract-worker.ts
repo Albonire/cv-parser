@@ -8,6 +8,7 @@ import {
 } from './image-prep';
 import { buildLayout, DocumentLayout, PageInput, Word } from './layout';
 import { normalizarPalabraOcr } from './ocr-normalize';
+import { coberturaCampos, puntajeFormulario } from './vocabulario-campos';
 
 /**
  * Motor de OCR en el navegador (WebAssembly).
@@ -149,6 +150,23 @@ function comparaLecturas(a: Lectura, b: Lectura): number {
   const datos = datosUtiles(b.texto) - datosUtiles(a.texto);
   if (datos !== 0) return datos;
   return puntajeLectura(b.texto, b.confianza / 100) - puntajeLectura(a.texto, a.confianza / 100);
+}
+
+/**
+ * Compara dos lecturas para la seleccion exhaustiva: manda el `puntajeFormulario`
+ * (patrones de dato + palabras del diccionario de campos); el volumen de texto
+ * solo desempata, igual que en `comparaLecturas`.
+ */
+function comparaPorFormulario(a: Lectura, b: Lectura): number {
+  const campos = puntajeFormulario(b.texto) - puntajeFormulario(a.texto);
+  if (campos !== 0) return campos;
+  return puntajeLectura(b.texto, b.confianza / 100) - puntajeLectura(a.texto, a.confianza / 100);
+}
+
+interface LecturaEvaluada {
+  lectura: Lectura;
+  columnas: number;
+  solida: boolean;
 }
 
 /**
@@ -659,6 +677,156 @@ async function leerConVariantes(
   return [...candidatas].sort((a, b) => comparaLecturas(a.lectura, b.lectura))[0].lectura;
 }
 
+/**
+ * Cuantas palabras del diccionario de campos hacen falta para dar una lectura
+ * por buena en la seleccion exhaustiva. La escala de grises puede cubrir la
+ * pagina entera y estar leyendo mitad basura: si no trae el vocabulario de los
+ * formularios, las otras variantes pueden ganarle.
+ */
+const COBERTURA_CAMPOS_SUFICIENTE = 6;
+
+/**
+ * Lectura exhaustiva para UNA imagen: prueba todas las preparaciones y elige la
+ * que mejor alimenta a los formularios.
+ *
+ * La seleccion por defecto (`leerConVariantes`) se detiene en cuanto la escala
+ * de grises cubre la pagina (400 caracteres, confianza 0,8 y quince renglones).
+ * Eso ahorra un OCR por pagina en un lote, pero en una foto donde la escala de
+ * grises lee "suficiente" y mal -- mucha basura o la mitad de las palabras -,
+ * nunca se prueba la variante que la lee mejor. Aqui se leen gris, plano,
+ * desenfumado, contraste y la fuente original, y gana la que sume mas
+ * `puntajeFormulario` (patrones de dato + palabras del diccionario de campos).
+ *
+ * Se corta antes solo cuando una lectura es solida Y cubre el diccionario: ahi
+ * no hay nada mas que buscar y las variantes restantes solo costarian OCRs
+ * enteros. Es el caso corriente de una foto limpia.
+ */
+async function leerExhaustivo(worker: Worker, fuente: File | Blob): Promise<Lectura> {
+  const leer = async (src: File | Blob): Promise<Lectura> => {
+    const res = await worker.recognize(src, {}, { blocks: true, text: true });
+    return {
+      texto: res.data.text ?? '',
+      confianza: res.data.confidence ?? 0,
+      cajas: res.data.blocks,
+    };
+  };
+
+  const evaluar = (l: Lectura): LecturaEvaluada => {
+    const palabras = tesseractWordsToWords(extraerPalabras(l.cajas));
+    const ancho = Math.max(1, ...palabras.map((w) => w.x + w.width));
+    const alto = Math.max(1, ...palabras.map((w) => w.y + w.height));
+    const layout = buildLayout([{ words: palabras, width: ancho, height: alto }]);
+    return {
+      lectura: l,
+      columnas: Math.max(1, layout.columnsPerPage[0] ?? 1),
+      solida: lecturaSolida(l.texto, l.confianza / 100),
+    };
+  };
+
+  const preprocesar = async (opciones: OpcionesPreproceso): Promise<Blob | null> => {
+    try {
+      return await preprocessImage(fuente, opciones);
+    } catch (error) {
+      console.warn('Preprocesamiento omitido:', error);
+      return null;
+    }
+  };
+
+  const leerVariante = async (nombre: string, src: File | Blob | null): Promise<LecturaEvaluada | null> => {
+    if (!src) return null;
+    try {
+      return evaluar(await leer(src));
+    } catch (error) {
+      console.warn(`Lectura ${nombre} omitida:`, error);
+      return null;
+    }
+  };
+
+  /** La lectura es solida, cubre la pagina entera y trae el vocabulario de los formularios. */
+  const cubreLosCampos = (c: LecturaEvaluada | null) =>
+    !!c &&
+    c.solida &&
+    renglonesUtiles(c.lectura.texto) >= RENGLONES_PAGINA_COMPLETA &&
+    coberturaCampos(c.lectura.texto) >= COBERTURA_CAMPOS_SUFICIENTE;
+
+  const conGris = await leerVariante(
+    'en escala de grises',
+    await preprocesar({ binarizar: false, igualarLuz: true })
+  );
+  if (cubreLosCampos(conGris)) return conGris!.lectura;
+  const candidatas: LecturaEvaluada[] = [];
+  if (conGris) candidatas.push(conGris);
+
+  const conPlano = await leerVariante(
+    'en gris sin igualar',
+    await preprocesar({ binarizar: false, igualarLuz: false })
+  );
+  if (conPlano) {
+    candidatas.push(conPlano);
+    if (cubreLosCampos(conPlano)) return conPlano.lectura;
+  }
+
+  const conDesenfumada = await leerVariante(
+    'desenfumada',
+    await preprocesar({ binarizar: false, igualarLuz: true, desenfumar: true })
+  );
+  if (conDesenfumada) {
+    candidatas.push(conDesenfumada);
+    if (cubreLosCampos(conDesenfumada)) return conDesenfumada.lectura;
+  }
+
+  const conContraste = await leerVariante(
+    'contraste_mejorado',
+    await preprocesar({ binarizar: false, igualarLuz: true, mejorarContraste: true })
+  );
+  if (conContraste) {
+    candidatas.push(conContraste);
+    if (cubreLosCampos(conContraste)) return conContraste.lectura;
+  }
+
+  const conFuente = await leerVariante('en la fuente original', fuente);
+  if (conFuente) {
+    candidatas.push(conFuente);
+    if (cubreLosCampos(conFuente)) return conFuente.lectura;
+  }
+
+  // La binarizada borra los trazos finos de una foto de camara y devuelve basura
+  // con confianza alta, asi que solo se lee cuando ninguna variante sin binarizar
+  // cubrio los campos; incluso ahi gana solo si aporta claramente mas de lo que
+  // reconocieron las demas (ver la guarda en `leerConVariantes`).
+  let conBinarizada: LecturaEvaluada | null = null;
+  if (!candidatas.some(cubreLosCampos)) {
+    conBinarizada = await leerVariante('binarizada', await preprocesar({ binarizar: true }));
+  }
+
+  const dosColumnas = [...candidatas, conBinarizada].filter(
+    (c): c is LecturaEvaluada => !!c && c.columnas >= 2 && c.solida
+  );
+  if (dosColumnas.length > 0) {
+    return [...dosColumnas].sort((a, b) => comparaPorFormulario(a.lectura, b.lectura))[0].lectura;
+  }
+
+  if (conBinarizada) {
+    const mejorSinBinarizar = [...candidatas].sort((a, b) =>
+      comparaPorFormulario(a.lectura, b.lectura)
+    )[0];
+    const noLeyeronCasiNada =
+      mejorSinBinarizar.lectura.texto.trim().length < CARACTERES_LECTURA_SOLIDA / 4 &&
+      mejorSinBinarizar.lectura.confianza < CONFIANZA_LECTURA_SOLIDA * 100;
+    const ganaClaramente =
+      puntajeFormulario(conBinarizada.lectura.texto) >=
+        puntajeFormulario(mejorSinBinarizar.lectura.texto) + 2 &&
+      conBinarizada.lectura.confianza >= 60;
+    if (!noLeyeronCasiNada && !ganaClaramente) {
+      return mejorSinBinarizar.lectura;
+    }
+  }
+
+  const pool = conBinarizada ? [...candidatas, conBinarizada] : candidatas;
+  if (pool.length === 0) return { texto: '', confianza: 0, cajas: [] };
+  return [...pool].sort((a, b) => comparaPorFormulario(a.lectura, b.lectura))[0].lectura;
+}
+
 /** Proporciones de la imagen, sin pasar por OCR. */
 async function esApaisada(fuente: File | Blob): Promise<boolean> {
   const bitmap = await createImageBitmap(fuente);
@@ -704,9 +872,18 @@ async function reconocerElemento(
     return leerConVariantes(worker, item);
   }
 
+  // Una sola imagen (foto subida por el usuario) se lee de forma exhaustiva:
+  // se prueban todas las preparaciones y gana la que mejor alimenta a los
+  // formularios, sin que el usuario tenga que elegir variante. Un lote de
+  // paginas de PDF escaneado usa la seleccion economica de `leerConVariantes`,
+  // que ya se mide sobre el banco de escaneos.
+  const esImagenUnica = item instanceof File;
+
   // Pagina vertical: se lee primero y solo se sondea la orientacion si salio
   // mal. Es el caso corriente, y asi no paga ninguna sonda.
-  const lectura = await leerConVariantes(worker, item);
+  const lectura = await (esImagenUnica
+    ? leerExhaustivo(worker, item)
+    : leerConVariantes(worker, item));
   if (lecturaSolida(lectura.texto, lectura.confianza / 100)) return lectura;
 
   // NUEVO: Si la primera lectura no es solida, intentar con otros PSM.

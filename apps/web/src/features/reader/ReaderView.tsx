@@ -566,6 +566,28 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   };
 
+  /** Vuelve a la lectura automatica (prueba todas las preparaciones y elige la
+   *  que mejor reconoce los datos) tras haber forzado una variante manual. */
+  const rehacerOcrAuto = async () => {
+    if (!currentFile) return;
+    setIsProcessing(true);
+    setProgressPercent(0);
+    setFuerzaOcr(undefined);
+    try {
+      const result = await processDocument(currentFile, (p, msg) => {
+        setProgressPercent(p);
+        setProgressMessage(msg);
+      });
+      setCurrentResult(result);
+      setShowRawText(true);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al releer la imagen';
+      setNotification({ type: 'error', message: errorMessage });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleNextOrClear = () => {
     if (batchQueue.length > 0 && currentBatchIndex + 1 < batchQueue.length) {
       const nextIdx = currentBatchIndex + 1;
@@ -765,14 +787,30 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                     Releer la imagen con otro preprocesado
                   </h3>
                   <span className="text-[11px] text-steel">
-                    {fuerzaOcr ? `Variante activa: ${etiquetaVariant(fuerzaOcr)}` : 'Lectura automatica'}
+                    {fuerzaOcr
+                      ? `Variante activa: ${etiquetaVariant(fuerzaOcr)}`
+                      : 'Lectura automatica: prueba todas y conserva la mejor'}
                   </span>
                 </div>
                 <p className="text-xs text-steel">
-                  Si el texto no se leyo bien, prueba otra preparacion y vuelve a
-                  generar los formularios. No cambia el archivo original.
+                  Por defecto el lector prueba cada preparacion (gris, contraste,
+                  reduccion de ruido, blanco y negro y original) y conserva la que
+                  mejor reconoce los datos del formulario. Puede forzar una
+                  variante para comparar y volver en cualquier momento al modo
+                  automatico. No cambia el archivo original.
                 </p>
                 <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={rehacerOcrAuto}
+                    disabled={isProcessing}
+                    className={`px-3 py-1.5 rounded border text-xs font-semibold transition-colors disabled:opacity-50 ${
+                      !fuerzaOcr
+                        ? 'border-signal-blue bg-mist text-ink'
+                        : 'border-fog bg-paper hover:bg-mist text-steel'
+                    }`}
+                  >
+                    Automático
+                  </button>
                   {VARIANTES_OCR.map((v) => (
                     <button
                       key={v.valor}
