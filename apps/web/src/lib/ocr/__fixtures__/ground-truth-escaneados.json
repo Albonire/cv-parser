@@ -44,7 +44,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Gestión Documental",
+          "Archivo",
+          "Atención al Cliente"
+        ]
       }
     },
     {
@@ -76,7 +80,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Montacargas",
+          "Control de Calidad",
+          "Trabajo en Equipo"
+        ]
       }
     },
     {
@@ -110,7 +118,11 @@
           "Especialización en Gerencia del Talento Humano",
           "Psicología"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Selección de Personal",
+          "Nómina",
+          "Liderazgo"
+        ]
       }
     },
     {
@@ -142,7 +154,11 @@
         "education[].degree": [
           "Bachiller Técnico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Conducción de Camión",
+          "Mecánica Básica",
+          "Puntualidad"
+        ]
       }
     },
     {
@@ -182,7 +198,12 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "SIIGO",
+          "Helisa",
+          "Facturación Electrónica",
+          "Conciliaciones"
+        ]
       }
     },
     {
@@ -214,7 +235,11 @@
         "education[].degree": [
           "Mantenimiento Electromecánico Industrial"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Soldadura",
+          "Refrigeración Industrial",
+          "Sistemas Hidráulicos"
+        ]
       }
     },
     {
@@ -240,7 +265,10 @@
         "education[].degree": [
           "Servicios Generales y Aseo Institucional"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Puntualidad",
+          "Responsabilidad"
+        ]
       }
     },
     {
@@ -272,7 +300,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Personal",
+          "Control de Acceso",
+          "Primeros Auxilios"
+        ]
       }
     },
     {
@@ -312,7 +344,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Negociación",
+          "Atención al Cliente",
+          "Manejo de CRM"
+        ]
       }
     },
     {
@@ -344,7 +380,11 @@
         "education[].degree": [
           "Gestión Logística"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Inventarios",
+          "Manejo de WMS",
+          "Coordinación de Equipos"
+        ]
       }
     },
     {
@@ -376,7 +416,11 @@
         "education[].degree": [
           "Asistencia Administrativa"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Gestión Documental",
+          "Archivo",
+          "Atención al Cliente"
+        ]
       }
     },
     {
@@ -408,7 +452,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Montacargas",
+          "Control de Calidad",
+          "Trabajo en Equipo"
+        ]
       }
     },
     {
@@ -442,7 +490,11 @@
           "Especialización en Gerencia del Talento Humano",
           "Psicología"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Selección de Personal",
+          "Nómina",
+          "Liderazgo"
+        ]
       }
     },
     {
@@ -482,7 +534,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Conducción de Camión",
+          "Mecánica Básica",
+          "Puntualidad"
+        ]
       }
     },
     {
@@ -514,7 +570,12 @@
         "education[].degree": [
           "Contabilidad y Finanzas"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "SIIGO",
+          "Helisa",
+          "Facturación Electrónica",
+          "Conciliaciones"
+        ]
       }
     },
     {
@@ -546,7 +607,11 @@
         "education[].degree": [
           "Mantenimiento Electromecánico Industrial"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Soldadura",
+          "Refrigeración Industrial",
+          "Sistemas Hidráulicos"
+        ]
       }
     },
     {
@@ -572,7 +637,10 @@
         "education[].degree": [
           "Servicios Generales y Aseo Institucional"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Puntualidad",
+          "Responsabilidad"
+        ]
       }
     },
     {
@@ -612,7 +680,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Personal",
+          "Control de Acceso",
+          "Primeros Auxilios"
+        ]
       }
     },
     {
@@ -644,7 +716,11 @@
         "education[].degree": [
           "Gestión de Mercados"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Negociación",
+          "Atención al Cliente",
+          "Manejo de CRM"
+        ]
       }
     },
     {
@@ -676,7 +752,11 @@
         "education[].degree": [
           "Gestión Logística"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Inventarios",
+          "Manejo de WMS",
+          "Coordinación de Equipos"
+        ]
       }
     },
     {
@@ -708,7 +788,11 @@
         "education[].degree": [
           "Asistencia Administrativa"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Gestión Documental",
+          "Archivo",
+          "Atención al Cliente"
+        ]
       }
     },
     {
@@ -748,7 +832,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Montacargas",
+          "Control de Calidad",
+          "Trabajo en Equipo"
+        ]
       }
     },
     {
@@ -782,7 +870,11 @@
           "Especialización en Gerencia del Talento Humano",
           "Psicología"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Selección de Personal",
+          "Nómina",
+          "Liderazgo"
+        ]
       }
     },
     {
@@ -814,7 +906,11 @@
         "education[].degree": [
           "Bachiller Técnico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Conducción de Camión",
+          "Mecánica Básica",
+          "Puntualidad"
+        ]
       }
     },
     {
@@ -846,7 +942,12 @@
         "education[].degree": [
           "Contabilidad y Finanzas"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "SIIGO",
+          "Helisa",
+          "Facturación Electrónica",
+          "Conciliaciones"
+        ]
       }
     },
     {
@@ -878,7 +979,11 @@
         "education[].degree": [
           "Mantenimiento Electromecánico Industrial"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Soldadura",
+          "Refrigeración Industrial",
+          "Sistemas Hidráulicos"
+        ]
       }
     },
     {
@@ -916,7 +1021,10 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Puntualidad",
+          "Responsabilidad"
+        ]
       }
     },
     {
@@ -948,7 +1056,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Personal",
+          "Control de Acceso",
+          "Primeros Auxilios"
+        ]
       }
     },
     {
@@ -980,7 +1092,11 @@
         "education[].degree": [
           "Gestión de Mercados"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Negociación",
+          "Atención al Cliente",
+          "Manejo de CRM"
+        ]
       }
     },
     {
@@ -1012,7 +1128,11 @@
         "education[].degree": [
           "Gestión Logística"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Inventarios",
+          "Manejo de WMS",
+          "Coordinación de Equipos"
+        ]
       }
     },
     {
@@ -1052,7 +1172,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Gestión Documental",
+          "Archivo",
+          "Atención al Cliente"
+        ]
       }
     },
     {
@@ -1084,7 +1208,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Montacargas",
+          "Control de Calidad",
+          "Trabajo en Equipo"
+        ]
       }
     },
     {
@@ -1118,7 +1246,11 @@
           "Especialización en Gerencia del Talento Humano",
           "Psicología"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Selección de Personal",
+          "Nómina",
+          "Liderazgo"
+        ]
       }
     },
     {
@@ -1150,7 +1282,11 @@
         "education[].degree": [
           "Bachiller Técnico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Conducción de Camión",
+          "Mecánica Básica",
+          "Puntualidad"
+        ]
       }
     },
     {
@@ -1190,7 +1326,12 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "SIIGO",
+          "Helisa",
+          "Facturación Electrónica",
+          "Conciliaciones"
+        ]
       }
     },
     {
@@ -1222,7 +1363,11 @@
         "education[].degree": [
           "Mantenimiento Electromecánico Industrial"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Soldadura",
+          "Refrigeración Industrial",
+          "Sistemas Hidráulicos"
+        ]
       }
     },
     {
@@ -1248,7 +1393,10 @@
         "education[].degree": [
           "Servicios Generales y Aseo Institucional"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Puntualidad",
+          "Responsabilidad"
+        ]
       }
     },
     {
@@ -1280,7 +1428,11 @@
         "education[].degree": [
           "Bachiller Académico"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Manejo de Personal",
+          "Control de Acceso",
+          "Primeros Auxilios"
+        ]
       }
     },
     {
@@ -1312,7 +1464,11 @@
         "education[].degree": [
           "Gestión de Mercados"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Negociación",
+          "Atención al Cliente",
+          "Manejo de CRM"
+        ]
       }
     },
     {
@@ -1352,7 +1508,11 @@
           "Manejo de Herramientas Ofimáticas",
           "Servicio al Cliente y Comunicación Efectiva"
         ],
-        "skills#": 2
+        "skills[].skillName": [
+          "Inventarios",
+          "Manejo de WMS",
+          "Coordinación de Equipos"
+        ]
       }
     }
   ]
