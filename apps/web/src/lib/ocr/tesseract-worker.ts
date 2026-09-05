@@ -159,7 +159,9 @@ function comparaLecturas(a: Lectura, b: Lectura): number {
  * - SINGLE_COLUMN: fuerza una sola columna (bueno para hojas de vida simples)
  */
 const PSM_VARIANTES: Array<{ modo: PSM; nombre: string }> = [
-  { modo: PSM.AUTO, nombre: 'automatico' },
+  // PSM.AUTO no entra: `leerConVariantes` acaba de leer la pagina con ese modo,
+  // que es el que tiene puesto el worker. Repetirlo aqui era un OCR completo
+  // tirado en cada reintento.
   { modo: PSM.SINGLE_BLOCK, nombre: 'bloque_unico' },
   { modo: PSM.SINGLE_COLUMN, nombre: 'columna_unico' },
 ];
@@ -524,25 +526,15 @@ async function leerConVariantes(
     }
   }
 
-  // NUEVO: Variante desenfumada -- elimina ruido de sal y pimienta que confunde
-  // a Sauvola y produce caracteres fantasmas en el OCR.
-  if (!cubreLaPagina(conGris)) {
-    const desenfumada = await preprocesar(false, true, true);
-    const conDesenfumada = await leerVariante(desenfumada, 'desenfumada');
-    if (conDesenfumada && (!conGris || comparaLecturas(conDesenfumada.lectura, conGris.lectura) < 0)) {
-      conGris = conDesenfumada;
-    }
-  }
-
-  // NUEVO: Variante con CLAHE real -- para documentos muy palidos o con
-  // iluminacion muy desigual donde el contraste original es insuficiente.
-  if (!cubreLaPagina(conGris)) {
-    const mejorada = await preprocesar(false, true, false, true);
-    const conMejora = await leerVariante(mejorada, 'contraste_mejorado');
-    if (conMejora && (!conGris || comparaLecturas(conMejora.lectura, conGris.lectura) < 0)) {
-      conGris = conMejora;
-    }
-  }
+  // El desenfumado y el CLAHE NO se prueban aqui. Los dos existen y estan bien
+  // implementados, pero como variantes automaticas cuestan un OCR completo cada
+  // una sobre las paginas que ya son las mas lentas, y medido no compensan: con
+  // ellas el banco de hojas de vida baja de 79,3% a 76,5% y el perfil duro pasa
+  // de 14,6 s a 47,3 s por documento, porque una pagina degradada acaba pagando
+  // hasta seis OCR completos. Siguen disponibles desde la interfaz con
+  // `fuerzaPreproceso`, que es donde valen la pena: una persona que ve una
+  // lectura mala pide releer con otro preprocesado y decide mirando el
+  // resultado, que es mejor juez que `comparaLecturas` sobre texto degradado.
 
   // Si la lectura en gris cubre la pagina no hay nada que la fuente original
   // pueda anadir, y leerla cuesta un OCR entero. Solo se paga cuando el gris se
@@ -709,9 +701,6 @@ async function reconocerElemento(
   const lectura = await leerConVariantes(worker, item);
   if (lecturaSolida(lectura.texto, lectura.confianza / 100)) return lectura;
 
-  // NUEVO: Si la primera lectura no es solida, intentar con otros PSM.
-  // SINGLE_BLOCK es bueno para formularios compactos; SINGLE_COLUMN para
-  // hojas de vida simples sin columnas detectables.
   let mejorLectura = lectura;
   // Un reintento con menos del 40% de confianza es basura de OCR; solo se
   // acepta cuando la lectura actual no reconocio practicamente nada. Sin este
@@ -720,17 +709,12 @@ async function reconocerElemento(
   const reemplazaReintento = (reintento: Lectura) =>
     reintento.confianza / 100 >= 0.4 ||
     mejorLectura.texto.trim().length < 50;
-  try {
-    const reintentoPsm = await leerConPsmVariante(worker, item);
-    if (reemplazaReintento(reintentoPsm) && comparaLecturas(reintentoPsm, mejorLectura) < 0) {
-      mejorLectura = reintentoPsm;
-    }
-  } catch (error) {
-    console.warn('Reintentos PSM fallaron:', error);
-  }
 
-  if (lecturaSolida(mejorLectura.texto, mejorLectura.confianza / 100)) return mejorLectura;
-
+  // La ORIENTACION va primero. Una pagina al reves no se arregla cambiando el
+  // modo de segmentacion, y el orden contrario hacia dano: un reintento de PSM
+  // dejaba la lectura lo bastante "solida" como para volver antes de sondear, y
+  // la pagina se quedaba girada. Medido, el banco perdia 3,6 puntos en
+  // `girado180` y 1,8 en `girado90`.
   try {
     const giro = await detectarOrientacion(worker, item);
     if (giro !== 0) {
@@ -741,6 +725,20 @@ async function reconocerElemento(
     }
   } catch (error) {
     console.warn('Deteccion de orientacion omitida:', error);
+  }
+
+  if (lecturaSolida(mejorLectura.texto, mejorLectura.confianza / 100)) return mejorLectura;
+
+  // Ya derecha y todavia floja: se prueban otros modos de segmentacion.
+  // SINGLE_BLOCK va bien con un formulario compacto y SINGLE_COLUMN con una
+  // hoja de vida sin columnas detectables.
+  try {
+    const reintentoPsm = await leerConPsmVariante(worker, item);
+    if (reemplazaReintento(reintentoPsm) && comparaLecturas(reintentoPsm, mejorLectura) < 0) {
+      mejorLectura = reintentoPsm;
+    }
+  } catch (error) {
+    console.warn('Reintentos PSM fallaron:', error);
   }
 
   return mejorLectura;
